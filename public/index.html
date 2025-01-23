@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>List-IT</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar fixa -->
+        <aside class="sidebar">
+            <h2>List-IT</h2>
+            <button class="btn" id="create-list-btn">Criar Lista</button>
+            <button class="btn" id="favorites">Favoritos</button>
+            <div class="sidebar-lists">
+                <!-- Listas serão exibidas aqui -->
+            </div>
+        </aside>
+
+        <!-- Conteúdo principal -->
+        <main class="main-content">
+            <h1>Bem-vindo!</h1>
+            <p>Selecione uma opção na barra lateral para começar.</p>
+        </main>
+    </div>
+    <div id="modal" class="modal hidden">
+        <div class="modal-content">
+            <span id="close-modal" class="close-btn">&times;</span>
+            <h2>Criar Lista</h2>
+            <form id="list-form">
+                <input type="text" id="list-name" name="list-name" placeholder="Nome da lista:" required>
+                <textarea name="list-description" id="list-description" placeholder="Descrição da lista:" required></textarea>
+                <button class="btn" type="submit">Salvar</button>
+            </form>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
