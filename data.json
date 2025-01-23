@@ -3,5 +3,15 @@
     "name": "Animes",
     "description": "Lista de animes",
     "createdAt": "2025-01-23T18:00:46.817Z"
+  },
+  {
+    "name": "Mangas",
+    "description": "Lista de mangas",
+    "createdAt": "2025-01-23T18:45:47.466Z"
+  },
+  {
+    "name": "Manhwa",
+    "description": "Lista de Manhwas",
+    "createdAt": "2025-01-23T19:09:01.171Z"
   }
 ]
