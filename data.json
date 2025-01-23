@@ -13,5 +13,11 @@
     "name": "Manhwa",
     "description": "Lista de Manhwas",
     "createdAt": "2025-01-23T19:09:01.171Z"
+  },
+  {
+    "name": "Animes",
+    "description": "sorvete",
+    "createdAt": "2025-01-23T20:07:51.152Z",
+    "items": []
   }
 ]

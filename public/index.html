@@ -24,6 +24,8 @@
             <p>Selecione uma opção na barra lateral para começar.</p>
         </main>
     </div>
+
+    <!-- Modal para adicionar Lista -->
     <div id="modal" class="modal hidden">
         <div class="modal-content">
             <span id="close-modal" class="close-btn">&times;</span>
@@ -32,6 +34,58 @@
                 <input type="text" id="list-name" name="list-name" placeholder="Nome da lista:" required>
                 <textarea name="list-description" id="list-description" placeholder="Descrição da lista:" required></textarea>
                 <button class="btn" type="submit">Salvar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para adicionar Linha -->
+    <div id="line-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Adicionar Linha</h2>
+            <form id="line-form">
+                <label for="line-name">Nome:</label>
+                <input type="text" id="line-name" required>
+                
+                <label>Tags:</label>
+                <div>
+                    <input type="checkbox" id="tag1" value="Tag1"> <label for="tag1">Tag1</label>
+                    <input type="checkbox" id="tag2" value="Tag2"> <label for="tag2">Tag2</label>
+                    <input type="checkbox" id="tag3" value="Tag3"> <label for="tag3">Tag3</label>
+                </div>
+
+                <label for="line-content">Conteúdo:</label>
+                <select id="line-content">
+                    <option value="Manga">Manga</option>
+                    <option value="Anime">Anime</option>
+                    <option value="Manhwa">Manhwa</option>
+                    <option value="Hentai">Hentai</option>
+                </select>
+
+                <label for="line-status">Status:</label>
+                <select id="line-status">
+                    <option value="Concluido">Concluído</option>
+                    <option value="Lendo">Lendo</option>
+                    <option value="Assistindo">Assistindo</option>
+                    <option value="Dropado">Dropado</option>
+                    <option value="Cancelado">Cancelado</option>
+                    <option value="Assistir">Assistir</option>
+                    <option value="Ler">Ler</option>
+                </select>
+
+                <label for="line-episode">Episódio/Capítulo:</label>
+                <input type="number" id="line-episode" required>
+
+                <label for="line-opinion">Opinião:</label>
+                <select id="line-opinion">
+                    <option value="Favorito">Favorito</option>
+                    <option value="Recomendo">Recomendo</option>
+                    <option value="Mediano">Mediano</option>
+                    <option value="Ruim">Ruim</option>
+                    <option value="Horrivel">Horrível</option>
+                </select>
+
+                <button type="submit">Salvar Linha</button>
+                <button type="button" id="close-line-modal">Cancelar</button>
             </form>
         </div>
     </div>
