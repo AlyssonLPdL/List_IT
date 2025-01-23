@@ -45,7 +45,7 @@ app.post('/save-list', async (req, res) => {
         // Commit automatico
         await git.add('./*');
         await git.commit('Auto-commit: Nova Lista ${newList.name}');
-        await git.push('origin', 'main');
+        // await git.push('origin', 'main');
         console.log('Commit automatico realizado');
 
     } catch (err) {
