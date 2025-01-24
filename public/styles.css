@@ -108,6 +108,7 @@ body, html {
 }
 
 .item-info {
+  margin: 5px 0px;
   border: black solid 1px;
   width: 90%;
   text-align: center;

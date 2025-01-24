@@ -109,26 +109,46 @@ function showListDetails(list) {
         </div>
     `;
 
-    // Função para filtrar os itens da lista
+    // Adicionar o evento de clique a todos os itens da lista
+    addItemClickEvent(list);
+
+    // Função para filtrar os itens da lista com múltiplos critérios
     document.getElementById('search-input').addEventListener('input', filterItems);
 
     function filterItems(event) {
         const query = event.target.value.toLowerCase(); // Obtém o texto digitado pelo usuário e converte para minúsculas
+        
+        // Se o query contiver um '+', separamos em múltiplos critérios
+        const criteria = query.split('+').map(criterion => criterion.trim());
 
-        // Filtra os itens da lista conforme o texto digitado
+        // Filtra os itens da lista conforme os critérios
         const filteredItems = list.items.filter(item => {
-            return (
-                item.content.toLowerCase().includes(query) ||
-                item.status.toLowerCase().includes(query) ||
-                item.opinion.toLowerCase().includes(query) ||
-                item.tags.some(tag => tag.toLowerCase().includes(query))
-            );
+            return criteria.every(criterion => {
+                // Se a consulta for uma única letra, verificamos se ela está presente nas propriedades
+                if (criterion.length === 1) {
+                    return (
+                        item.content.toLowerCase().includes(criterion) ||
+                        item.status.toLowerCase().includes(criterion) ||
+                        item.opinion.toLowerCase().includes(criterion) ||
+                        item.tags.some(tag => tag.toLowerCase().includes(criterion))
+                    );
+                }
+
+                // Caso contrário, fazemos a filtragem normal para mais de uma palavra-chave
+                const matchesTag = item.tags.some(tag => tag.toLowerCase().includes(criterion));
+                const matchesContent = item.content.toLowerCase().includes(criterion);
+                const matchesStatus = item.status.toLowerCase().includes(criterion);
+                const matchesOpinion = item.opinion.toLowerCase().includes(criterion);
+
+                return matchesTag || matchesContent || matchesStatus || matchesOpinion;
+            });
         });
 
         // Atualiza a exibição com os itens filtrados
         updateItemsDisplay(filteredItems);
     };
 
+    // Função para atualizar a exibição com os itens filtrados
     function updateItemsDisplay(items) {
         const itemsContainer = document.querySelector('.list-items');
         itemsContainer.innerHTML = items.length > 0
@@ -136,6 +156,11 @@ function showListDetails(list) {
             : '<p>Nenhum item encontrado.';
 
         // Garantir que o evento de clique seja adicionado aos itens renderizados
+        addItemClickEvent(list);
+    };
+
+    // Adicionar o evento de clique para cada item da lista
+    function addItemClickEvent(list) {
         document.querySelectorAll('.item-info').forEach(itemElement => {
             itemElement.addEventListener('click', () => {
                 const itemName = itemElement.getAttribute('data-item-id');
@@ -144,6 +169,17 @@ function showListDetails(list) {
             });
         });
     };
+
+    function addItemClickEvent(list) {
+        // Adicionar o evento de clique para cada item da lista
+        document.querySelectorAll('.item-info').forEach(itemElement => {
+            itemElement.addEventListener('click', () => {
+                const itemName = itemElement.getAttribute('data-item-id');
+                const item = list.items.find(i => i.name === itemName);
+                showItemDetails(item);
+            });
+        });
+    }
 
     document.getElementById('add-line-btn').addEventListener('click', () => {
         lineModal.classList.remove('hidden');
@@ -177,7 +213,6 @@ closeLineModal.addEventListener('click', () => {
     lineModal.classList.add('hidden');
 });
 
-
 // ------------------------ Sistema de tags ----------------------------
 
 const tagSearch = document.getElementById('tag-search');
@@ -192,7 +227,13 @@ const allTags = ["Romance",
                 "SciFi",
                 "Romance do bom",
                 "Isekai",
-                "Ecchi"]; // Suas tags possíveis
+                "Ecchi",
+                "Drama",
+                "Slice of life",
+                "Vida Escolar",
+                "Sobrenatural",
+                "Comedia",
+                ]; // Suas tags possíveis
 
 let selectedTags = [];
 

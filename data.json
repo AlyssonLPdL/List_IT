@@ -16,5 +16,11 @@
         "opinion": "Mediano"
       }
     ]
+  },
+  {
+    "name": "Manga/Manhwa",
+    "description": "Lista de Mangas",
+    "createdAt": "2025-01-24T04:24:46.140Z",
+    "items": []
   }
 ]
