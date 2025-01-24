@@ -6,7 +6,10 @@
     "items": [
       {
         "name": "Absolute Duo",
-        "tags": ["Romance", "SciFi"],
+        "tags": [
+          "Romance",
+          "SciFi"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -14,7 +17,10 @@
       },
       {
         "name": "Aharen-san wa Hakarenai",
-        "tags": ["Romance", "Comedia"],
+        "tags": [
+          "Romance",
+          "Comedia"
+        ],
         "content": "Anime",
         "status": "Conheço",
         "episode": "12",
@@ -22,7 +28,10 @@
       },
       {
         "name": "Aho Girl",
-        "tags": ["Comedia", "Beijo"],
+        "tags": [
+          "Comedia",
+          "Beijo"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -30,7 +39,12 @@
       },
       {
         "name": "Akagami No Shirayuki-Hime",
-        "tags": ["Drama", "Romance", "Romance do bom", "Beijo"],
+        "tags": [
+          "Drama",
+          "Romance",
+          "Romance do bom",
+          "Beijo"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -38,7 +52,14 @@
       },
       {
         "name": "Akame ga kill",
-        "tags": ["Ação", "Aventura", "Fantasia", "Drama", "Shounen", "Beijo"],
+        "tags": [
+          "Ação",
+          "Aventura",
+          "Fantasia",
+          "Drama",
+          "Shounen",
+          "Beijo"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "24",
@@ -46,7 +67,11 @@
       },
       {
         "name": "Akuyaku Reijou Nano de Tast Boss wo Kattemimashita",
-        "tags": ["Comedia", "Fantasia", "Romance"],
+        "tags": [
+          "Comedia",
+          "Fantasia",
+          "Romance"
+        ],
         "content": "Anime",
         "status": "Assistir",
         "episode": "12",
@@ -54,7 +79,13 @@
       },
       {
         "name": "Amagiri Brilliant Park",
-        "tags": ["Comedia", "Drama", "Fantasia", "Magia", "Beijo"],
+        "tags": [
+          "Comedia",
+          "Drama",
+          "Fantasia",
+          "Magia",
+          "Beijo"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "13",
@@ -77,7 +108,10 @@
       },
       {
         "name": "Another",
-        "tags": ["Sobrenatural", "Vida Escolar"],
+        "tags": [
+          "Sobrenatural",
+          "Vida Escolar"
+        ],
         "content": "Anime",
         "status": "Conheço",
         "episode": "13",
@@ -85,7 +119,12 @@
       },
       {
         "name": "Ansatsu Kyoushitsu",
-        "tags": ["Ação", "Comedia", "Vida Escolar", "Shounen"],
+        "tags": [
+          "Ação",
+          "Comedia",
+          "Vida Escolar",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "22",
@@ -93,7 +132,12 @@
       },
       {
         "name": "Ansatsu Kyoushitsu II",
-        "tags": ["Ação", "Comedia", "Vida Escolar", "Shounen"],
+        "tags": [
+          "Ação",
+          "Comedia",
+          "Vida Escolar",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Assistir",
         "episode": "25",
@@ -101,7 +145,13 @@
       },
       {
         "name": "Arakawa Under the Bridge",
-        "tags": ["Comedia", "Romance", "Romance do bom", "Beijo", "Namoro"],
+        "tags": [
+          "Comedia",
+          "Romance",
+          "Romance do bom",
+          "Beijo",
+          "Namoro"
+        ],
         "content": "Anime",
         "status": "Assistir",
         "episode": "13",
@@ -109,7 +159,10 @@
       },
       {
         "name": "Arakawa Under the Bridge X Bridge",
-        "tags": ["Comedia", "Romance"],
+        "tags": [
+          "Comedia",
+          "Romance"
+        ],
         "content": "Anime",
         "status": "Assistir",
         "episode": "0",
@@ -164,7 +217,10 @@
       },
       {
         "name": "Assassins Pride",
-        "tags": ["Fantasia", "Beijo"],
+        "tags": [
+          "Fantasia",
+          "Beijo"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -172,7 +228,12 @@
       },
       {
         "name": "Basou Shoujo Machiavellianism",
-        "tags": ["Ação", "Comedia", "Vida Escolar", "Shounen"],
+        "tags": [
+          "Ação",
+          "Comedia",
+          "Vida Escolar",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -180,7 +241,11 @@
       },
       {
         "name": "Baka to Test to Shoukanjuu",
-        "tags": ["Comedia", "Romance", "Vida Escolar"],
+        "tags": [
+          "Comedia",
+          "Romance",
+          "Vida Escolar"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -188,7 +253,13 @@
       },
       {
         "name": "Black Clover",
-        "tags": ["Ação", "Comedia", "Magia", "Fantasia", "Shounen"],
+        "tags": [
+          "Ação",
+          "Comedia",
+          "Magia",
+          "Fantasia",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -196,7 +267,10 @@
       },
       {
         "name": "Blend S",
-        "tags": ["Slice of life", "Comedia"],
+        "tags": [
+          "Slice of life",
+          "Comedia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -204,7 +278,12 @@
       },
       {
         "name": "Blood-C",
-        "tags": ["Ação", "Vida Escolar", "Gore", "Sobrenatural"],
+        "tags": [
+          "Ação",
+          "Vida Escolar",
+          "Gore",
+          "Sobrenatural"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -212,7 +291,9 @@
       },
       {
         "name": "Blue Lock",
-        "tags": ["Esporte"],
+        "tags": [
+          "Esporte"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "24",
@@ -220,7 +301,10 @@
       },
       {
         "name": "BNA",
-        "tags": ["Fantasia", "SciFi"],
+        "tags": [
+          "Fantasia",
+          "SciFi"
+        ],
         "content": "Filme",
         "status": "Concluido",
         "episode": "1",
@@ -228,7 +312,11 @@
       },
       {
         "name": "Bocchi the Rock!",
-        "tags": ["Musical", "Comedia", "Slice of life"],
+        "tags": [
+          "Musical",
+          "Comedia",
+          "Slice of life"
+        ],
         "content": "Anime",
         "status": "Assistir",
         "episode": "0",
@@ -236,7 +324,9 @@
       },
       {
         "name": "Boku Dake ga Inai Machi",
-        "tags": ["Sobrenatural"],
+        "tags": [
+          "Sobrenatural"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -244,7 +334,12 @@
       },
       {
         "name": "Boku no Hero Academia",
-        "tags": ["Ação", "Comedia", "Vida Escolar", "Shounen"],
+        "tags": [
+          "Ação",
+          "Comedia",
+          "Vida Escolar",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "13",
@@ -252,7 +347,12 @@
       },
       {
         "name": "Boku no Hero Academia 2",
-        "tags": ["Ação", "Comedia", "Vida Escolar", "Shounen"],
+        "tags": [
+          "Ação",
+          "Comedia",
+          "Vida Escolar",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "25",
@@ -260,7 +360,12 @@
       },
       {
         "name": "Boku no Hero Academia 3",
-        "tags": ["Ação", "Comedia", "Shounen", "Vida Escolar"],
+        "tags": [
+          "Ação",
+          "Comedia",
+          "Shounen",
+          "Vida Escolar"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -268,7 +373,11 @@
       },
       {
         "name": "Boku no Kanojo ga Majimesugiru Sho-bitch na Ken",
-        "tags": ["Comedia", "Romance", "Ecchi"],
+        "tags": [
+          "Comedia",
+          "Romance",
+          "Ecchi"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "10",
@@ -276,7 +385,11 @@
       },
       {
         "name": "Boruto",
-        "tags": ["Ação", "Aventura", "Shounen"],
+        "tags": [
+          "Ação",
+          "Aventura",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -317,7 +430,11 @@
       },
       {
         "name": "Chainsaw Man",
-        "tags": ["Ação", "Gore", "Aventura"],
+        "tags": [
+          "Ação",
+          "Gore",
+          "Aventura"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -325,7 +442,12 @@
       },
       {
         "name": "Charlotte",
-        "tags": ["Drama", "Romance", "Vida Escolar", "Namoro"],
+        "tags": [
+          "Drama",
+          "Romance",
+          "Vida Escolar",
+          "Namoro"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "13",
@@ -333,7 +455,11 @@
       },
       {
         "name": "Cheat Kusushi no Slow Life: Isekai ni Tsukurou Drugstore",
-        "tags": ["Isekai", "Comedia", "Fantasia"],
+        "tags": [
+          "Isekai",
+          "Comedia",
+          "Fantasia"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -341,7 +467,12 @@
       },
       {
         "name": "Chu-Bra!!",
-        "tags": ["Ecchi", "Comedia", "Vida Escolar", "Shoujo-ai"],
+        "tags": [
+          "Ecchi",
+          "Comedia",
+          "Vida Escolar",
+          "Shoujo-ai"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -364,7 +495,13 @@
       },
       {
         "name": "Chuunibyou Demo Koi ga Shitai! Ren",
-        "tags": ["Comedia", "Vida Escolar", "Romance", "Drama", "Namoro"],
+        "tags": [
+          "Comedia",
+          "Vida Escolar",
+          "Romance",
+          "Drama",
+          "Namoro"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -404,7 +541,12 @@
       },
       {
         "name": "Code Geass: Hangyaku no Lelouch",
-        "tags": ["Ação", "SciFi", "Drama", "Mecha"],
+        "tags": [
+          "Ação",
+          "SciFi",
+          "Drama",
+          "Mecha"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -412,7 +554,13 @@
       },
       {
         "name": "Code:Breaker",
-        "tags": ["Ação", "Comedia", "Vida Escolar", "Shounen", "Sobrenatural"],
+        "tags": [
+          "Ação",
+          "Comedia",
+          "Vida Escolar",
+          "Shounen",
+          "Sobrenatural"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -470,7 +618,11 @@
       },
       {
         "name": "Darwin's Game",
-        "tags": ["Romance", "Ação", "Shounen"],
+        "tags": [
+          "Romance",
+          "Ação",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "11",
@@ -493,7 +645,10 @@
       },
       {
         "name": "Death Note",
-        "tags": ["Sobrenatural", "Shounen"],
+        "tags": [
+          "Sobrenatural",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "37",
@@ -501,7 +656,10 @@
       },
       {
         "name": "Death Parade",
-        "tags": ["Sobrenatural", "Drama"],
+        "tags": [
+          "Sobrenatural",
+          "Drama"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -509,7 +667,10 @@
       },
       {
         "name": "Deatte 5-byou de Battle",
-        "tags": ["Ação", "Sobrenatural"],
+        "tags": [
+          "Ação",
+          "Sobrenatural"
+        ],
         "content": "Anime",
         "status": "Conheço",
         "episode": "0",
@@ -535,7 +696,11 @@
       },
       {
         "name": "Dr Stone",
-        "tags": ["SciFi", "Aventura", "Shounen"],
+        "tags": [
+          "SciFi",
+          "Aventura",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "24",
@@ -543,7 +708,13 @@
       },
       {
         "name": "Dragon Ball",
-        "tags": ["Aventura", "Ação", "Magia", "Sobrenatural", "Shounen"],
+        "tags": [
+          "Aventura",
+          "Ação",
+          "Magia",
+          "Sobrenatural",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "153",
@@ -551,7 +722,14 @@
       },
       {
         "name": "Dragon Ball Z",
-        "tags": ["Ação", "Comedia", "Aventura", "Magia", "Shounen", "Fantasia"],
+        "tags": [
+          "Ação",
+          "Comedia",
+          "Aventura",
+          "Magia",
+          "Shounen",
+          "Fantasia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "291",
@@ -559,7 +737,13 @@
       },
       {
         "name": "Dragon Ball Kai",
-        "tags": ["Ação", "Aventura", "Fantasia", "Magia", "Shounen"],
+        "tags": [
+          "Ação",
+          "Aventura",
+          "Fantasia",
+          "Magia",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "26",
@@ -567,7 +751,14 @@
       },
       {
         "name": "Dragon Ball GT",
-        "tags": ["Ação", "Comedia", "Aventura", "Fantasia", "Shounen", "SciFi"],
+        "tags": [
+          "Ação",
+          "Comedia",
+          "Aventura",
+          "Fantasia",
+          "Shounen",
+          "SciFi"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "64",
@@ -575,7 +766,14 @@
       },
       {
         "name": "Dragon Ball Super",
-        "tags": ["Ação", "Aventura", "Fantasia", "SciFi", "Shounen", "Comedia"],
+        "tags": [
+          "Ação",
+          "Aventura",
+          "Fantasia",
+          "SciFi",
+          "Shounen",
+          "Comedia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "131",
@@ -583,7 +781,14 @@
       },
       {
         "name": "Dragon Ball Super Movie: Broly",
-        "tags": ["Ação", "Aventura", "Comedia", "Shounen", "Fantasia", "SciFi"],
+        "tags": [
+          "Ação",
+          "Aventura",
+          "Comedia",
+          "Shounen",
+          "Fantasia",
+          "SciFi"
+        ],
         "content": "Filme",
         "status": "Concluido",
         "episode": "1",
@@ -591,7 +796,12 @@
       },
       {
         "name": "Dumbbell Nan Kilo Moteru?",
-        "tags": ["Comedia", "Ecchi", "Slice of life", "Esporte"],
+        "tags": [
+          "Comedia",
+          "Ecchi",
+          "Slice of life",
+          "Esporte"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -599,7 +809,13 @@
       },
       {
         "name": "Dungeon ni Deai wo Motomeru no wa Michigatteiru Darou",
-        "tags": ["Ação", "Aventura", "Comedia", "Romance", "Fantasia"],
+        "tags": [
+          "Ação",
+          "Aventura",
+          "Comedia",
+          "Romance",
+          "Fantasia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "13",
@@ -607,7 +823,13 @@
       },
       {
         "name": "Dungeon ni Deai wo Motomeru no wa Michigatteiru Darou Ka II",
-        "tags": ["Ação", "Aventura", "Comedia", "Fantasia", "Romance"],
+        "tags": [
+          "Ação",
+          "Aventura",
+          "Comedia",
+          "Fantasia",
+          "Romance"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -615,7 +837,13 @@
       },
       {
         "name": "Dungeon ni Deai wo Motomeru no wa Michigatteiru Darou Ka III",
-        "tags": ["Ação", "Aventura", "Comedia", "Romance", "Fantasia"],
+        "tags": [
+          "Ação",
+          "Aventura",
+          "Comedia",
+          "Romance",
+          "Fantasia"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -623,7 +851,12 @@
       },
       {
         "name": "Enen no Shouboutai",
-        "tags": ["Ação", "Sobrenatural", "Shounen", "Ecchi"],
+        "tags": [
+          "Ação",
+          "Sobrenatural",
+          "Shounen",
+          "Ecchi"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -646,7 +879,13 @@
       },
       {
         "name": "Eromanga-Sensei",
-        "tags": ["Incesto", "Comedia", "Drama", "Romance", "Ecchi"],
+        "tags": [
+          "Incesto",
+          "Comedia",
+          "Drama",
+          "Romance",
+          "Ecchi"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -654,7 +893,14 @@
       },
       {
         "name": "Fairy Tail",
-        "tags": ["Magia", "Aventura", "Ação", "Fantasia", "Comedia", "Shounen"],
+        "tags": [
+          "Magia",
+          "Aventura",
+          "Ação",
+          "Fantasia",
+          "Comedia",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -662,7 +908,13 @@
       },
       {
         "name": "Futoku no Guild",
-        "tags": ["Monstros", "Ecchi", "Nudez", "Aventura", "Comedia"],
+        "tags": [
+          "Monstros",
+          "Ecchi",
+          "Nudez",
+          "Aventura",
+          "Comedia"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -670,7 +922,13 @@
       },
       {
         "name": "Fuufu Ijou, Koibito Miman.",
-        "tags": ["Morar Juntos", "Beijo", "Romance", "Comedia", "Drama"],
+        "tags": [
+          "Morar Juntos",
+          "Beijo",
+          "Romance",
+          "Comedia",
+          "Drama"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -709,7 +967,12 @@
       },
       {
         "name": "Go-toubun no Hanayome",
-        "tags": ["Romance", "Comedia", "Vida Escolar", "Dormitorios"],
+        "tags": [
+          "Romance",
+          "Comedia",
+          "Vida Escolar",
+          "Dormitorios"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -732,7 +995,12 @@
       },
       {
         "name": "Godzilla: Singular Point",
-        "tags": ["Ação", "SciFi", "Sobrenatural", "Monstros"],
+        "tags": [
+          "Ação",
+          "SciFi",
+          "Sobrenatural",
+          "Monstros"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "13",
@@ -757,7 +1025,12 @@
       },
       {
         "name": "Grand Blue",
-        "tags": ["Comedia", "Romance", "Slice of life", "Ecchi"],
+        "tags": [
+          "Comedia",
+          "Romance",
+          "Slice of life",
+          "Ecchi"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -853,7 +1126,12 @@
       },
       {
         "name": "Hataraku Saibou",
-        "tags": ["SciFi", "Drama", "Comedia", "Aventura"],
+        "tags": [
+          "SciFi",
+          "Drama",
+          "Comedia",
+          "Aventura"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -861,7 +1139,12 @@
       },
       {
         "name": "Hidan no Aria",
-        "tags": ["Romance", "Ação", "Vida Escolar", "Comedia"],
+        "tags": [
+          "Romance",
+          "Ação",
+          "Vida Escolar",
+          "Comedia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -899,7 +1182,12 @@
       },
       {
         "name": "Himegoto",
-        "tags": ["Comedia", "Vida Escolar", "Slice of life", "Ecchi"],
+        "tags": [
+          "Comedia",
+          "Vida Escolar",
+          "Slice of life",
+          "Ecchi"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "13",
@@ -941,7 +1229,11 @@
       },
       {
         "name": "Hyouken no Majutsushi ga Sekai wo Suberu",
-        "tags": ["Ação", "Fantasia", "Magia"],
+        "tags": [
+          "Ação",
+          "Fantasia",
+          "Magia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -949,7 +1241,12 @@
       },
       {
         "name": "Ijiranaide, Nagatoro-san",
-        "tags": ["Romance", "Vida Escolar", "Comedia", "Slice of life"],
+        "tags": [
+          "Romance",
+          "Vida Escolar",
+          "Comedia",
+          "Slice of life"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1047,7 +1344,11 @@
       },
       {
         "name": "Isekai Quartet",
-        "tags": ["Comedia", "Fantasia", "Isekai"],
+        "tags": [
+          "Comedia",
+          "Fantasia",
+          "Isekai"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1055,7 +1356,11 @@
       },
       {
         "name": "Isekai Quartet",
-        "tags": ["Comedia", "Isekai", "Fantasia"],
+        "tags": [
+          "Comedia",
+          "Isekai",
+          "Fantasia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1079,7 +1384,13 @@
       },
       {
         "name": "Ishuzoku Reviewers",
-        "tags": ["Ecchi", "Nudez", "Monstros", "Comedia", "Fantasia"],
+        "tags": [
+          "Ecchi",
+          "Nudez",
+          "Monstros",
+          "Comedia",
+          "Fantasia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1102,7 +1413,9 @@
       },
       {
         "name": "Jaku-Chara Tomozaki-kun",
-        "tags": ["Romance"],
+        "tags": [
+          "Romance"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -1110,7 +1423,12 @@
       },
       {
         "name": "Jojo’s bizarre adventure",
-        "tags": ["Aventura", "Ação", "Sobrenatural", "Shounen"],
+        "tags": [
+          "Aventura",
+          "Ação",
+          "Sobrenatural",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Dropado",
         "episode": "0",
@@ -1118,7 +1436,13 @@
       },
       {
         "name": "Jojo’s bizarre adventure II",
-        "tags": ["Ação", "Comedia", "Aventura", "Sobrenatural", "Shounen"],
+        "tags": [
+          "Ação",
+          "Comedia",
+          "Aventura",
+          "Sobrenatural",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "13",
@@ -1126,7 +1450,13 @@
       },
       {
         "name": "Jojo’s bizarre adventure III",
-        "tags": ["Ação", "Aventura", "Sobrenatural", "Drama", "Shounen"],
+        "tags": [
+          "Ação",
+          "Aventura",
+          "Sobrenatural",
+          "Drama",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "24",
@@ -1149,7 +1479,13 @@
       },
       {
         "name": "Jojo’s bizarre adventure V",
-        "tags": ["Ação", "Aventura", "Shounen", "Comedia", "Overpower"],
+        "tags": [
+          "Ação",
+          "Aventura",
+          "Shounen",
+          "Comedia",
+          "Overpower"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "41",
@@ -1157,7 +1493,11 @@
       },
       {
         "name": "Jojo’s bizarre adventure VI",
-        "tags": ["Ação", "Shoujo-ai", "Aventura"],
+        "tags": [
+          "Ação",
+          "Shoujo-ai",
+          "Aventura"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1196,7 +1536,12 @@
       },
       {
         "name": "Kaguya-sama: Love is War",
-        "tags": ["Romance", "Comedia", "Slice of life", "Vida Escolar"],
+        "tags": [
+          "Romance",
+          "Comedia",
+          "Slice of life",
+          "Vida Escolar"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1204,7 +1549,12 @@
       },
       {
         "name": "Kaguya-sama: Love is War II",
-        "tags": ["Romance", "Comedia", "Vida Escolar", "Slice of life"],
+        "tags": [
+          "Romance",
+          "Comedia",
+          "Vida Escolar",
+          "Slice of life"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1228,7 +1578,10 @@
       },
       {
         "name": "Kakegurui",
-        "tags": ["Drama", "Shounen"],
+        "tags": [
+          "Drama",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1250,7 +1603,12 @@
       },
       {
         "name": "Kanojo, Okarishimasu",
-        "tags": ["Cringe", "Romance", "Comedia", "Vida Escolar"],
+        "tags": [
+          "Cringe",
+          "Romance",
+          "Comedia",
+          "Vida Escolar"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1279,7 +1637,12 @@
       },
       {
         "name": "Kami Nomi zo Shiru Sekai",
-        "tags": ["Comedia", "Romance", "Shounen", "Sobrenatural"],
+        "tags": [
+          "Comedia",
+          "Romance",
+          "Shounen",
+          "Sobrenatural"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1287,7 +1650,13 @@
       },
       {
         "name": "Katanagatari",
-        "tags": ["Ação", "Aventura", "Romance", "Tristeza", "Overpower"],
+        "tags": [
+          "Ação",
+          "Aventura",
+          "Romance",
+          "Tristeza",
+          "Overpower"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1309,7 +1678,14 @@
       },
       {
         "name": "Killing Bites",
-        "tags": ["Ação", "Monstros", "Shoujo-ai", "Ecchi", "Gore", "SciFi"],
+        "tags": [
+          "Ação",
+          "Monstros",
+          "Shoujo-ai",
+          "Ecchi",
+          "Gore",
+          "SciFi"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1317,7 +1693,12 @@
       },
       {
         "name": "Kimetsu no Yaiba",
-        "tags": ["Ação", "Demonio", "Shounen", "Sobrenatural"],
+        "tags": [
+          "Ação",
+          "Demonio",
+          "Shounen",
+          "Sobrenatural"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "26",
@@ -1325,7 +1706,11 @@
       },
       {
         "name": "Kimetsu no Yaiba: Mugen Ressha-hen",
-        "tags": ["Ação", "Demonio", "Sobrenatural"],
+        "tags": [
+          "Ação",
+          "Demonio",
+          "Sobrenatural"
+        ],
         "content": "Filme",
         "status": "Concluido",
         "episode": "1",
@@ -1333,7 +1718,11 @@
       },
       {
         "name": "Kimetsu no Yaiba: Yuukaku-Hen",
-        "tags": ["Ação", "Demonio", "Sobrenatural"],
+        "tags": [
+          "Ação",
+          "Demonio",
+          "Sobrenatural"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "11",
@@ -1341,7 +1730,12 @@
       },
       {
         "name": "Kimi no Na wa",
-        "tags": ["Romance", "Sobrenatural", "Vida Escolar", "Drama"],
+        "tags": [
+          "Romance",
+          "Sobrenatural",
+          "Vida Escolar",
+          "Drama"
+        ],
         "content": "Filme",
         "status": "Concluido",
         "episode": "1",
@@ -1349,7 +1743,11 @@
       },
       {
         "name": "Kimi to Boku no Saigo no Senjou, Aruiwa Sekai ga Hajimaru Seisen",
-        "tags": ["Ação", "Romance", "Fantasia"],
+        "tags": [
+          "Ação",
+          "Romance",
+          "Fantasia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1377,7 +1775,14 @@
       },
       {
         "name": "Kiseijuu: Sei no Kakuritsu",
-        "tags": ["Ação", "SciFi", "Vida Escolar", "Gore", "Drama", "Beijo"],
+        "tags": [
+          "Ação",
+          "SciFi",
+          "Vida Escolar",
+          "Gore",
+          "Drama",
+          "Beijo"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "24",
@@ -1385,7 +1790,13 @@
       },
       {
         "name": "Kishuku Gakkou no Juliet",
-        "tags": ["Romance", "Comedia", "Vida Escolar", "Ação", "Namoro"],
+        "tags": [
+          "Romance",
+          "Comedia",
+          "Vida Escolar",
+          "Ação",
+          "Namoro"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1410,7 +1821,12 @@
       },
       {
         "name": "Kiznaiver",
-        "tags": ["SciFi", "Vida Escolar", "Drama", "Romance"],
+        "tags": [
+          "SciFi",
+          "Vida Escolar",
+          "Drama",
+          "Romance"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1452,7 +1868,11 @@
       },
       {
         "name": "Koe no Katachi",
-        "tags": ["Drama", "Shounen", "Vida Escolar"],
+        "tags": [
+          "Drama",
+          "Shounen",
+          "Vida Escolar"
+        ],
         "content": "Filme",
         "status": "Concluido",
         "episode": "1",
@@ -1505,7 +1925,14 @@
       },
       {
         "name": "Kono Subarashii Sekai ni Shukufuku wo!",
-        "tags": ["Comedia", "Ecchi", "Aventura", "Isekai", "Fantasia", "Magia"],
+        "tags": [
+          "Comedia",
+          "Ecchi",
+          "Aventura",
+          "Isekai",
+          "Fantasia",
+          "Magia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "10",
@@ -1513,7 +1940,14 @@
       },
       {
         "name": "Kono Subarashii Sekai ni Shukufuku wo! II",
-        "tags": ["Comedia", "Ecchi", "Aventura", "Isekai", "Fantasia", "Magia"],
+        "tags": [
+          "Comedia",
+          "Ecchi",
+          "Aventura",
+          "Isekai",
+          "Fantasia",
+          "Magia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "10",
@@ -1521,7 +1955,12 @@
       },
       {
         "name": "Kotoura-San",
-        "tags": ["Comedia", "Drama", "Romance", "Vida Escolar"],
+        "tags": [
+          "Comedia",
+          "Drama",
+          "Romance",
+          "Vida Escolar"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1529,7 +1968,13 @@
       },
       {
         "name": "Kuma Kuma Kuma Bear",
-        "tags": ["Shoujo-ai", "Aventura", "Isekai", "Comedia", "Fantasia"],
+        "tags": [
+          "Shoujo-ai",
+          "Aventura",
+          "Isekai",
+          "Comedia",
+          "Fantasia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1553,7 +1998,11 @@
       },
       {
         "name": "Lycoris Recoil",
-        "tags": ["SciFi", "Ação", "Comedia"],
+        "tags": [
+          "SciFi",
+          "Ação",
+          "Comedia"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "13",
@@ -1645,7 +2094,13 @@
       },
       {
         "name": "Masamune-kun no Revenge",
-        "tags": ["Beijo", "Romance", "Vida Escolar", "Comedia", "Shounen"],
+        "tags": [
+          "Beijo",
+          "Romance",
+          "Vida Escolar",
+          "Comedia",
+          "Shounen"
+        ],
         "content": "Anime",
         "status": "Concluido",
         "episode": "12",
@@ -1691,12 +2146,23 @@
     "items": [
       {
         "name": "My Student Grew Huge and Proposed to Me",
-        "tags": ["Romance", "Drama", "Ecchi", "Slice of life"],
+        "tags": [
+          "Romance",
+          "Drama",
+          "Ecchi",
+          "Slice of life"
+        ],
         "content": "Manga",
         "status": "Ler",
         "episode": "1",
         "opinion": "Não Vi"
       }
     ]
+  },
+  {
+    "name": "Cebolas",
+    "description": "Ceb",
+    "createdAt": "2025-01-24T17:35:39.192Z",
+    "items": []
   }
 ]

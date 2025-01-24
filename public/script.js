@@ -199,12 +199,46 @@ function showItemDetails(item) {
         <p><strong>Opinião:</strong> ${item.opinion}</p>
         <p><strong>Tags:</strong> ${item.tags.join(', ')}</p>
         <button type="button" id="close-modal-btn">&times;</button>
+        <button id="deleteLineButton">Apagar Linha</button>
     `;
 
     // Fechar modal de item
     const closeModalInfo = document.getElementById('close-modal-btn');
     closeModalInfo.addEventListener('click', () => {
         modalInfo.classList.add('hidden');
+    });
+
+    // Configura o botão de apagar linha
+    const deleteLineButton = document.getElementById('deleteLineButton');
+    deleteLineButton.addEventListener('click', async () => {
+        const confirmed = confirm(`Tem certeza que deseja apagar a linha "${item.name}"?`);
+        if (confirmed) {
+            try {
+                const response = await fetch('/delete-line', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        listName: item.listName, // Nome da lista
+                        lineName: item.name, // Nome do item a ser apagado
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(result.message);
+                    modalInfo.classList.add('hidden'); // Fecha o modal
+                    refreshList(); // Atualiza a lista no frontend
+                } else {
+                    alert(result.message);
+                }
+            } catch (error) {
+                console.error('Erro ao apagar linha:', error);
+                alert('Erro ao apagar a linha.');
+            }
+        }
     });
 };
 

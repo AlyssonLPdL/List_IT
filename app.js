@@ -107,11 +107,13 @@ app.post('/add-line', async (req, res) => {
     }
 });
 
-// Rota PUT para atualizar uma linha existente em uma lista
-app.put('/update-line', async (req, res) => {
-    const updatedLine = req.body; // Linha atualizada
-    console.log(updatedLine); // Verifique se os campos estão sendo passados corretamente
-    const listName = updatedLine.listName;
+// Rota DELETE para deletar uma linha selecionada
+app.delete('/delete-line', async (req, res) => {
+    const { listName, lineName } = req.body; // Nome da lista e da linha
+
+    if (!listName || !lineName) {
+        return res.status(400).json({ message: 'Os campos "listName" e "lineName" são obrigatórios.' });
+    }
 
     const filePath = path.join(__dirname, 'data.json');
 
@@ -123,34 +125,26 @@ app.put('/update-line', async (req, res) => {
 
         // Encontre a lista correspondente
         const listIndex = lists.findIndex(list => list.name === listName);
-        
+
         if (listIndex !== -1) {
-            const lineIndex = lists[listIndex].items.findIndex(item => item.name === updatedLine.originalName);
-            
+            // Remova a linha correspondente
+            const lineIndex = lists[listIndex].items.findIndex(item => item.name === lineName);
+
             if (lineIndex !== -1) {
-                // Atualize a linha
-                lists[listIndex].items[lineIndex] = {
-                    ...lists[listIndex].items[lineIndex],
-                    name: updatedLine.name || lists[listIndex].items[lineIndex].name,
-                    tags: updatedLine.tags || lists[listIndex].items[lineIndex].tags,
-                    content: updatedLine.content || lists[listIndex].items[lineIndex].content,
-                    status: updatedLine.status || lists[listIndex].items[lineIndex].status,
-                    episode: updatedLine.episode || lists[listIndex].items[lineIndex].episode,
-                    opinion: updatedLine.opinion || lists[listIndex].items[lineIndex].opinion,
-                };
+                lists[listIndex].items.splice(lineIndex, 1);
 
                 // Salva novamente no arquivo JSON
                 await fs.promises.writeFile(filePath, JSON.stringify(lists, null, 2), 'utf8');
-                res.status(200).json({ message: 'Linha atualizada com sucesso!' });
+                res.status(200).json({ message: 'Linha apagada com sucesso!' });
             } else {
-                return res.status(400).json({ message: 'Linha não encontrada' });
+                return res.status(404).json({ message: 'Linha não encontrada.' });
             }
         } else {
-            return res.status(400).json({ message: 'Lista não encontrada' });
+            return res.status(404).json({ message: 'Lista não encontrada.' });
         }
     } catch (err) {
-        console.error('Erro ao atualizar linha:', err);
-        res.status(500).json({ message: 'Erro ao atualizar linha.' });
+        console.error('Erro ao apagar linha:', err);
+        res.status(500).json({ message: 'Erro ao apagar linha.' });
     }
 });
 
