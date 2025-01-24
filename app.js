@@ -45,7 +45,7 @@ app.post('/save-list', async (req, res) => {
         // Commit automatico
         await git.add('./*');
         await git.commit('Auto-commit: Nova Lista ${newList.name}');
-        // await git.push('origin', 'main');
+        await git.push('origin', 'main');
         console.log('Commit automatico realizado');
 
     } catch (err) {
@@ -67,6 +67,44 @@ app.get('/lists', (req, res) => {
         const lists = data ? JSON.parse(data) : [] // Converte para array ou usa uma arrray vazia
         res.status(200).json(lists); // retorna as listas como JSON
     });
+});
+
+// Rota POST para adicionar nova linha à lista existente
+app.post('/add-line', async (req, res) => {
+    const newLine = req.body; // Nova linha
+    const listName = req.body.listName;
+
+    const filePath = path.join(__dirname, 'data.json');
+
+    try {
+        const data = fs.existsSync(filePath)
+            ? await fs.promises.readFile(filePath, 'utf8')
+            :'[]';
+        const lists = JSON.parse(data);
+
+        // Encontre a lista correspondente e adicione a nova linha
+        const listIndex = lists.findIndex(list => list.name === listName);
+        
+        if (listIndex !== -1) {
+            lists[listIndex].items.push({
+                name: newLine.name,
+                tags: newLine.tags,
+                content: newLine.content,
+                status: newLine.status,
+                episode: newLine.episode,
+                opinion: newLine.opinion
+            });
+        } else {
+            return res.status(400).json({ message: 'Lista não encontrada' });
+        }
+
+        await fs.promises.writeFile(filePath, JSON.stringify(lists, null, 2), 'utf8');
+
+        res.status(200).json({ message: 'Linha salva com sucesso!' });
+    } catch (err) {
+        console.log('Erro ao adicionar linha:', err)
+        res.status(500).json({ message: 'Erro ao adicionar linha.' });
+    }
 });
 
 // Inicia o servidor

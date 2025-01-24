@@ -1,8 +1,20 @@
 [
   {
     "name": "Animes",
-    "description": "Lista de animes",
-    "createdAt": "2025-01-23T20:11:21.766Z",
-    "items": []
+    "description": "Lista de Animes",
+    "createdAt": "2025-01-23T21:02:01.324Z",
+    "items": [
+      {
+        "name": "Absolute Duo",
+        "tags": [
+          "Romance",
+          "SciFi"
+        ],
+        "content": "Anime",
+        "status": "Concluido",
+        "episode": "12",
+        "opinion": "Mediano"
+      }
+    ]
   }
 ]

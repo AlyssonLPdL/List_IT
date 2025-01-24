@@ -12,7 +12,6 @@
         <aside class="sidebar">
             <h2>List-IT</h2>
             <button class="btn" id="create-list-btn">Criar Lista</button>
-            <button class="btn" id="favorites">Favoritos</button>
             <div class="sidebar-lists">
                 <!-- Listas serão exibidas aqui -->
             </div>
@@ -23,6 +22,10 @@
             <h1>Bem-vindo!</h1>
             <p>Selecione uma opção na barra lateral para começar.</p>
         </main>
+        <div id="hatsune-miku_1">
+            <img src="img/hd-adorable-hatsune-miku-art-anuzjvsnrxg422dt.jpg"
+             alt="Hatsune Miku">
+        </div>
     </div>
 
     <!-- Modal para adicionar Lista -->
@@ -43,39 +46,33 @@
         <div class="modal-content">
             <h2>Adicionar Linha</h2>
             <form id="line-form">
-                <label for="line-name">Nome:</label>
-                <input type="text" id="line-name" required>
-                
-                <label>Tags:</label>
-                <div>
-                    <input type="checkbox" id="tag1" value="Tag1"> <label for="tag1">Tag1</label>
-                    <input type="checkbox" id="tag2" value="Tag2"> <label for="tag2">Tag2</label>
-                    <input type="checkbox" id="tag3" value="Tag3"> <label for="tag3">Tag3</label>
-                </div>
+                <input type="text" id="line-name" placeholder="Nome" required>
 
-                <label for="line-content">Conteúdo:</label>
+                <div class="tag-input-container">
+                    <input type="text" id="tag-search" placeholder="Pesquise uma tag..." autocomplete="off">
+                    <div id="selected-tags" class="selected-tags"></div>
+                    <div id="suggestions" class="suggestions"></div>
+                </div>                             
+
                 <select id="line-content">
-                    <option value="Manga">Manga</option>
                     <option value="Anime">Anime</option>
+                    <option value="Manga">Manga</option>
                     <option value="Manhwa">Manhwa</option>
                     <option value="Hentai">Hentai</option>
                 </select>
 
-                <label for="line-status">Status:</label>
                 <select id="line-status">
-                    <option value="Concluido">Concluído</option>
-                    <option value="Lendo">Lendo</option>
-                    <option value="Assistindo">Assistindo</option>
-                    <option value="Dropado">Dropado</option>
-                    <option value="Cancelado">Cancelado</option>
                     <option value="Assistir">Assistir</option>
                     <option value="Ler">Ler</option>
+                    <option value="Assistindo">Assistindo</option>
+                    <option value="Lendo">Lendo</option>
+                    <option value="Dropado">Dropado</option>
+                    <option value="Cancelado">Cancelado</option>
+                    <option value="Concluido">Concluído</option>
                 </select>
 
-                <label for="line-episode">Episódio/Capítulo:</label>
-                <input type="number" id="line-episode" required>
+                <input type="number" id="line-episode" placeholder="Episódio/Capítulo" required>
 
-                <label for="line-opinion">Opinião:</label>
                 <select id="line-opinion">
                     <option value="Favorito">Favorito</option>
                     <option value="Recomendo">Recomendo</option>
@@ -85,8 +82,16 @@
                 </select>
 
                 <button type="submit">Salvar Linha</button>
-                <button type="button" id="close-line-modal">Cancelar</button>
+                <button type="button" id="close-line-modal">&times;</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal para exibir dados -->
+    <div id="info-modal" class="modal hidden">
+        <div class="modal-content">
+            <!-- info modal aqui -->
+             <button type="button" id="close-modal-btn">&times;</button>
         </div>
     </div>
     <script src="script.js"></script>
