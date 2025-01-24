@@ -107,6 +107,53 @@ app.post('/add-line', async (req, res) => {
     }
 });
 
+// Rota PUT para atualizar uma linha existente em uma lista
+app.put('/update-line', async (req, res) => {
+    const updatedLine = req.body; // Linha atualizada
+    console.log(updatedLine); // Verifique se os campos estão sendo passados corretamente
+    const listName = updatedLine.listName;
+
+    const filePath = path.join(__dirname, 'data.json');
+
+    try {
+        const data = fs.existsSync(filePath)
+            ? await fs.promises.readFile(filePath, 'utf8')
+            : '[]';
+        const lists = JSON.parse(data);
+
+        // Encontre a lista correspondente
+        const listIndex = lists.findIndex(list => list.name === listName);
+        
+        if (listIndex !== -1) {
+            const lineIndex = lists[listIndex].items.findIndex(item => item.name === updatedLine.originalName);
+            
+            if (lineIndex !== -1) {
+                // Atualize a linha
+                lists[listIndex].items[lineIndex] = {
+                    ...lists[listIndex].items[lineIndex],
+                    name: updatedLine.name || lists[listIndex].items[lineIndex].name,
+                    tags: updatedLine.tags || lists[listIndex].items[lineIndex].tags,
+                    content: updatedLine.content || lists[listIndex].items[lineIndex].content,
+                    status: updatedLine.status || lists[listIndex].items[lineIndex].status,
+                    episode: updatedLine.episode || lists[listIndex].items[lineIndex].episode,
+                    opinion: updatedLine.opinion || lists[listIndex].items[lineIndex].opinion,
+                };
+
+                // Salva novamente no arquivo JSON
+                await fs.promises.writeFile(filePath, JSON.stringify(lists, null, 2), 'utf8');
+                res.status(200).json({ message: 'Linha atualizada com sucesso!' });
+            } else {
+                return res.status(400).json({ message: 'Linha não encontrada' });
+            }
+        } else {
+            return res.status(400).json({ message: 'Lista não encontrada' });
+        }
+    } catch (err) {
+        console.error('Erro ao atualizar linha:', err);
+        res.status(500).json({ message: 'Erro ao atualizar linha.' });
+    }
+});
+
 // Inicia o servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
