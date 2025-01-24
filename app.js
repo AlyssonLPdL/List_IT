@@ -107,47 +107,6 @@ app.post('/add-line', async (req, res) => {
     }
 });
 
-// Rota DELETE para deletar uma linha selecionada
-app.delete('/delete-line', async (req, res) => {
-    const { listName, lineName } = req.body; // Nome da lista e da linha
-
-    if (!listName || !lineName) {
-        return res.status(400).json({ message: 'Os campos "listName" e "lineName" são obrigatórios.' });
-    }
-
-    const filePath = path.join(__dirname, 'data.json');
-
-    try {
-        const data = fs.existsSync(filePath)
-            ? await fs.promises.readFile(filePath, 'utf8')
-            : '[]';
-        const lists = JSON.parse(data);
-
-        // Encontre a lista correspondente
-        const listIndex = lists.findIndex(list => list.name === listName);
-
-        if (listIndex !== -1) {
-            // Remova a linha correspondente
-            const lineIndex = lists[listIndex].items.findIndex(item => item.name === lineName);
-
-            if (lineIndex !== -1) {
-                lists[listIndex].items.splice(lineIndex, 1);
-
-                // Salva novamente no arquivo JSON
-                await fs.promises.writeFile(filePath, JSON.stringify(lists, null, 2), 'utf8');
-                res.status(200).json({ message: 'Linha apagada com sucesso!' });
-            } else {
-                return res.status(404).json({ message: 'Linha não encontrada.' });
-            }
-        } else {
-            return res.status(404).json({ message: 'Lista não encontrada.' });
-        }
-    } catch (err) {
-        console.error('Erro ao apagar linha:', err);
-        res.status(500).json({ message: 'Erro ao apagar linha.' });
-    }
-});
-
 // Inicia o servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
