@@ -5,6 +5,16 @@ body, html {
   font-family: Arial, sans-serif;
 }
 
+#modal-photo {
+  background-color: white;
+  display: flex;
+  border-radius: 0px 10px 10px 0;
+  height: 334px;
+  width: 250px;
+  justify-content: center;
+  align-items: center;
+}
+
 .tags-container {
   border: #34495e solid 1px;
   width: 300px;
@@ -188,7 +198,7 @@ body, html {
   .modal-content {
     background-color: white;
     padding: 20px;
-    border-radius: 10px;
+    border-radius: 10px 0 0 10px;
     width: 400px;
     text-align: center;
   }

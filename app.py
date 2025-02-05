@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 import sqlite3
-import json
+import requests
 
 app = Flask(__name__)
 
@@ -78,6 +78,61 @@ def add_lista():
     return jsonify({"id": linha_id, "lista_id": data["lista_id"], "nome": data["nome"]})
 
 # <-------------- Rotas da API para Gerenciar Linhas --------------->
+# Função para buscar o ID do anime pelo nome
+def fetch_anime_id(query):
+    url = f"https://api.jikan.moe/v4/anime?q={query}&limit=1"  # Limitar para 1 anime
+
+    try:
+        # Fazendo a requisição
+        response = requests.get(url)
+        data = response.json()
+
+        # Verificando se há resultados
+        if 'data' in data and len(data['data']) > 0:
+            print('Id:', data['data'][0]['mal_id'])
+            return data['data'][0]['mal_id']  # Retorna o ID do anime
+        else:
+            print('Id não encontrado')
+            return None  # Retorna None caso não encontre o anime
+
+    except Exception as e:
+        print(f"Erro ao buscar ID do anime: {e}")
+        return None  # Retorna None em caso de erro
+
+# Função para buscar a imagem do anime pelo ID
+def fetch_image_url(query, content_type):
+    # Definir se será uma busca por anime ou mangá
+    category = "anime" if content_type.lower() == "anime" else "manga"
+    url = f"https://api.jikan.moe/v4/{category}?q={query}&limit=1"
+
+    try:
+        response = requests.get(url)
+        data = response.json()
+
+        if 'data' in data and len(data['data']) > 0:
+            return data['data'][0]['images']['jpg']['large_image_url']
+        else:
+            return 'https://via.placeholder.com/150'  # Imagem padrão
+
+    except Exception as e:
+        print(f"Erro ao buscar imagem: {e}")
+        return 'https://via.placeholder.com/150'  # Imagem padrão em caso de erro
+
+@app.route('/search_image', methods=['GET'])
+def search_image():
+    query = request.args.get('q', '')  # Nome do anime/mangá
+    content_type = request.args.get('type', 'anime')  # Tipo: anime ou mangá
+
+    # Primeiro busca o ID do anime
+    anime_id = fetch_anime_id(query)
+    print('Nome do anime:', query)
+    print('Anime-Id:', anime_id)
+
+    if not query:
+        return jsonify({'error': 'Query parameter is required'}), 400
+
+    image_url = fetch_image_url(query, content_type)
+    return jsonify({'image_url': image_url})
 
 @app.route("/linhas/<int:lista_id>", methods=["GET"])
 def get_linhas(lista_id):

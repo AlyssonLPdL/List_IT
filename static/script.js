@@ -6,6 +6,7 @@ const listForm = document.getElementById('list-form');
 const lineModal = document.getElementById('line-modal');
 const closeLineModal = document.getElementById('close-line-modal');
 const modalInfo = document.getElementById('info-modal');
+const modalPhoto = document.getElementById('modal-photo');
 const mainInfoContent = modalInfo.querySelector('.modal-content');
 
 // ---------------------------- EVENTOS DE MODAL ----------------------------
@@ -205,9 +206,39 @@ function addItemClickEvent(linhas) {
     });
 }
 
+// ✅ Função para buscar imagem
+async function fetchImageUrl(query, contentType) {
+    const apiUrl = `/search_image?q=${encodeURIComponent(query)}&type=${encodeURIComponent(contentType)}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        if (data.image_url) {
+            return data.image_url; // Retorna a URL da imagem
+        } else {
+            return "https://via.placeholder.com/150"; // Imagem padrão
+        }
+    } catch (error) {
+        console.error("Erro ao buscar imagem:", error);
+        return "https://via.placeholder.com/150"; // Imagem padrão em caso de erro
+    }
+}
+
 // Exibir detalhes de uma linha
-function showItemDetails(item) {
+async function showItemDetails(item) {
     modalInfo.classList.remove('hidden');
+
+    // Determinar se é anime ou mangá
+    let contentType = "anime"; // Padrão é anime
+    if (item.conteudo.toLowerCase().includes("manga") || 
+        item.conteudo.toLowerCase().includes("manhwa") || 
+        item.conteudo.toLowerCase().includes("webtoon")) {
+        contentType = "manga";
+    }
+
+    // Buscar imagem do item
+    const imageUrl = await fetchImageUrl(item.nome, contentType);
 
     mainInfoContent.innerHTML = `
         <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
@@ -220,6 +251,12 @@ function showItemDetails(item) {
         <p><strong>Opinião:</strong> ${item.opiniao}</p>
         <button id="editLineButton"><i class="fas fa-edit"></i></button>
     `;
+
+    modalPhoto.innerHTML = `
+        <img src="${imageUrl}" alt="${item.nome}" style="max-width: 100%; height: 330px; border-radius: 10px;">
+    `;
+
+    modalPhoto.style.height = `${mainInfoContent.offsetHeight}px`;
 
     document.getElementById('deleteLineButton').addEventListener('click', () => deleteLine(item.id));
     document.getElementById('editLineButton').addEventListener('click', () => openEditModal(item));
