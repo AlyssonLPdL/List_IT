@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>List-IT</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
     <div class="container">
@@ -22,8 +23,8 @@
             <h1>Bem-vindo!</h1>
             <p>Selecione uma opção na barra lateral para começar.</p>
         </main>
-        <div id="hatsune-miku_1" class="hidden">
-            <img src="img/hd-adorable-hatsune-miku-art-anuzjvsnrxg422dt.jpg"
+        <div id="hatsune-miku_1">
+            <img src="/static/img/hd-adorable-hatsune-miku-art-anuzjvsnrxg422dt.jpg"
              alt="Hatsune Miku">
         </div>
     </div>
@@ -43,7 +44,14 @@
 
     <!-- Modal para adicionar Linha -->
     <div id="line-modal" class="modal hidden">
+        <div class="tags-container">
+            <h2>Tags</h2>
+            <div class="tags-container-div">
+                <!-- Tags -->
+            </div>
+        </div>
         <div class="modal-content">
+            <button type="button" id="close-line-modal">&times;</button>
             <h2>Adicionar Linha</h2>
             <form id="line-form">
                 <input type="text" id="line-name" placeholder="Nome" required>
@@ -88,7 +96,6 @@
                 </select>
 
                 <button type="submit">Salvar Linha</button>
-                <button type="button" id="close-line-modal">&times;</button>
             </form>
         </div>
     </div>
@@ -97,10 +104,13 @@
     <div id="info-modal" class="modal hidden">
         <div class="modal-content">
             <!-- info modal aqui -->
-            <button type="button" id="close-modal-btn">&times;</button>
-            <button id="deleteLineButton">Apagar Linha</button>
+            <span id="close-modal-btn">&times;</span>
+            <button id="deleteLineButton">&#128465;</button>
+        </div>
+        <div class="modal-photo">
+            <!-- photo modal -->
         </div>
     </div>
-    <script src="script.js"></script>
+    <script src="/static/script.js"></script>
 </body>
 </html>

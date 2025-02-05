@@ -5,6 +5,38 @@ body, html {
   font-family: Arial, sans-serif;
 }
 
+.tags-container {
+  border: #34495e solid 1px;
+  width: 300px;
+  height: 526px;
+  border-radius: 10px;
+  padding: 20px;
+  background: white;
+  margin-right: 20px;
+}
+
+.tags-container h2 {
+  text-align: center;
+}
+
+.tags-container-div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  max-height: 450px;
+  overflow-y: auto;
+}
+
+.tags-container-div .tag {
+  background-color: #34495e;
+  color: white;
+  width: 200px;
+  border-radius: 10px;
+  font-size: 20px;
+  text-align: center;
+}
+
 #hatsune-miku_1 {
   position: absolute;
   right: 0;
@@ -13,8 +45,8 @@ body, html {
 }
 
 #hatsune-miku_1 img {
-  height: 968px;
-  width: 480px;
+  height: 965px;
+  width: 490px;
 }
 
 /* Container principal */
@@ -94,13 +126,23 @@ body, html {
   margin-bottom: 20px;
 }
 
-.list-items {
+.container-list-items {
   border: black solid 1px;
   width: 600px;
   height: 700px;
   border-radius: 10px;
   padding: 20px;
-  max-height: 700px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.list-items {
+  width: 550px;
+  height: 650px;
+  border-radius: 10px;
+  padding: 20px;
+  max-height: 650px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -237,9 +279,7 @@ body, html {
 }
 
 #close-line-modal {
-  align-self: flex-end;
-  left: 25px;
-  top: -455px;
+  left: 180px;
   position: relative;
   font-size: 24px;
   background: none;
@@ -316,13 +356,6 @@ body, html {
   background-color: #f0f0f0;
 }
 
-.selected-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
 .selected-tags span {
   background-color: #2c3e50;
   color: white;
@@ -347,18 +380,6 @@ body, html {
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-#close-line-modal {
-  align-self: flex-end;
-  left: 25px;
-  top: -455px;
-  position: relative;
-  font-size: 24px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #333;
 }
 
 /* Input and select styling */
@@ -430,10 +451,10 @@ body, html {
 }
 
 .selected-tags {
-  display: flex;
+  display: none;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 10px;
+  margin: 5px 0;
 }
 
 .selected-tags span {
@@ -449,3 +470,30 @@ body, html {
   background-color: #334250;
 }
 
+#filter-input {
+  width: 300px;
+  height: 30px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+#close-modal-btn {
+  position: relative;
+  top: -10px;
+  right: -175px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #333;
+}
+
+#deleteLineButton {
+  position: relative;
+  right: 170px;
+  font-size: 20px;
+  cursor: pointer;
+  color: #ffffff;
+  background: #ff0000;
+  border: #ffffff solid 1px;
+  border-radius: 5px;
+  padding: 5px 10px;
+}
