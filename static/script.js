@@ -230,11 +230,20 @@ async function showItemDetails(item) {
     modalInfo.classList.remove('hidden');
 
     // Determinar se é anime ou mangá
-    let contentType = "anime"; // Padrão é anime
-    if (item.conteudo.toLowerCase().includes("manga") || 
-        item.conteudo.toLowerCase().includes("manhwa") || 
-        item.conteudo.toLowerCase().includes("webtoon")) {
-        contentType = "manga";
+    let contentType; // Padrão é anime
+    switch (item.conteudo) {
+        case "Anime":
+        case "Filme":
+        case "Hentai":
+            contentType = "anime";
+            break;
+        case "Manga":
+        case "Manhwa":
+        case "Webtoon":
+            contentType = "manga";
+            break;
+        default:
+            contentType = "anime";
     }
 
     // Buscar imagem do item
