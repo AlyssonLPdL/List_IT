@@ -8,7 +8,8 @@ const closeLineModal = document.getElementById('close-line-modal');
 const modalInfo = document.getElementById('info-modal');
 const modalPhoto = document.getElementById('modal-photo');
 const mainInfoContent = modalInfo.querySelector('.modal-content');
-
+const mainInfoContentId = document.getElementById('mainInfoContent');
+const tagsContainerId = document.getElementById('tags-container');
 // ---------------------------- EVENTOS DE MODAL ----------------------------
 // Abrir modal de criar lista
 createListBtn.addEventListener('click', () => modal.classList.remove('hidden'));
@@ -151,6 +152,13 @@ async function showListDetails(lista) {
         selectedTags = []; // Limpa as tags selecionadas
         updateSelectedTags(); // Atualiza a interface
         lineModal.classList.remove('hidden');
+        const resizeObserver = new ResizeObserver(() => {
+            // Ajusta a altura de tagsContainerId sempre que mainInfoContentId mudar de tamanho
+            tagsContainerId.style.height = `${mainInfoContentId.offsetHeight - 40}px`;
+        });
+        
+        // Inicia a observação do elemento
+        resizeObserver.observe(mainInfoContentId);
     });
 
     const filterInput = document.getElementById('filter-input');
@@ -290,6 +298,13 @@ function openEditModal(item) {
 
     document.querySelector('button[type="submit"]').textContent = 'Salvar Alterações';
     lineModal.classList.remove('hidden');
+    const resizeObserver = new ResizeObserver(() => {
+        // Ajusta a altura de tagsContainerId sempre que mainInfoContentId mudar de tamanho
+        tagsContainerId.style.height = `${mainInfoContentId.offsetHeight - 40}px`;
+    });
+    
+    // Inicia a observação do elemento
+    resizeObserver.observe(mainInfoContentId);
 }
 
 // Atualizar uma linha
@@ -394,7 +409,8 @@ const allTags = [
     "Fantasia", "Shounen", "Yuri", "Beijo", "Namoro", "Casamento", "Esporte", 
     "Musical", "Mecha", "Incesto", "Tristeza", "Nudez", "Demônio", "Monstros", "Morar Juntos",
     "Dormitorios", "Romance do bom", "Noivado", "Sexo", "Overpower", "Kemonomimi", "Goat",
-    "Teve Filho", "Gravidez", "VR/Jogo"
+    "Teve Filho", "Gravidez", "VR/Jogo", "Deuses", "Gender bender", "Fofo", "Dungeon", "Cringe",
+    "Reencarnar", "MC vilão", "NTR", "Shoujo-ai"
 ];
 let selectedTags = [];
 
@@ -462,6 +478,7 @@ function showAllTags() {
     // Ordena as tags
     const sortedTags = allTags.sort();
 
+    
     // Cria um elemento para cada tag
     sortedTags.forEach(tag => {
         const tagElement = document.createElement('span');
@@ -469,6 +486,7 @@ function showAllTags() {
         tagElement.textContent = tag;
 
         tagsContainer.appendChild(tagElement);
+        
     });
 }
 

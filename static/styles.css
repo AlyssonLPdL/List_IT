@@ -16,10 +16,8 @@ body, html {
 }
 
 .tags-container {
-  border: #34495e solid 1px;
   width: 300px;
-  height: 526px;
-  border-radius: 10px;
+  border-radius: 0 10px 10px 0;
   padding: 20px;
   background: white;
   margin-right: 20px;
@@ -27,6 +25,7 @@ body, html {
 
 .tags-container h2 {
   text-align: center;
+  padding-right: 15px;
 }
 
 .tags-container-div {
@@ -34,7 +33,7 @@ body, html {
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  max-height: 450px;
+  max-height: 85%;
   overflow-y: auto;
 }
 
@@ -285,7 +284,6 @@ body, html {
   padding: 20px;
   background-color: white;
   border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 #close-line-modal {
