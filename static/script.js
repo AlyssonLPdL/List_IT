@@ -403,15 +403,81 @@ const tagSearch = document.getElementById('tag-search');
 const suggestionsContainer = document.getElementById('suggestions');
 const selectedTagsContainer = document.getElementById('selected-tags');
 
-const allTags = [
-    "Romance", "Terror", "Ação", "Magia", "Gore", "SciFi", "Isekai", "Ecchi", 
-    "Drama", "Slice of Life", "Vida Escolar", "Sobrenatural", "Comédia", "Aventura",
-    "Fantasia", "Shounen", "Yuri", "Beijo", "Namoro", "Casamento", "Esporte", 
-    "Musical", "Mecha", "Incesto", "Tristeza", "Nudez", "Demônio", "Monstros", "Morar Juntos",
-    "Dormitorios", "Romance do bom", "Noivado", "Sexo", "Overpower", "Kemonomimi", "Goat",
-    "Teve Filho", "Gravidez", "VR/Jogo", "Deuses", "Gender bender", "Fofo", "Dungeon", "Cringe",
-    "Reencarnar", "MC vilão", "NTR", "Shoujo-ai"
+// Tags relacionadas a romance
+const romanceTags = [
+    "Romance", "Beijo", "Namoro", "Casamento", "Morar Juntos", "Noivado", 
+    "Romance do bom", "Teve Filho", "Gravidez"
 ];
+
+// Tags relacionadas a ação e aventura
+const actionAdventureTags = [
+    "Ação", "Aventura", "Overpower", "Dungeon", "Mecha", "Demônio", "Monstros"
+];
+
+// Tags relacionadas a fantasia e sobrenatural
+const fantasySupernaturalTags = [
+    "Magia", "Fantasia", "Sobrenatural", "Deuses", "Reencarnar"
+];
+
+// Tags relacionadas a drama e emoção
+const dramaEmotionalTags = [
+    "Drama", "Tristeza", "Cringe"
+];
+
+// Tags relacionadas a ficção científica e tecnologia
+const sciFiTechTags = [
+    "SciFi", "VR/Jogo"
+];
+
+// Tags relacionadas a vida cotidiana
+const sliceOfLifeTags = [
+    "Slice of Life", "Vida Escolar", "Dormitorios"
+];
+
+// Tags relacionadas a comédia e diversão
+const comedyTags = [
+    "Comédia", "Fofo"
+];
+
+// Tags relacionadas a terror e suspense
+const horrorTags = [
+    "Terror", "Gore"
+];
+
+// Tags relacionadas a esportes e música
+const sportsMusicTags = [
+    "Esporte", "Musical"
+];
+
+// Tags relacionadas a gêneros e mudanças de gênero
+const genderTags = [
+    "Shounen", "Shoujo-ai", "Yuri", "Gender bender"
+];
+
+// Tags relacionadas a temas adultos e polêmicos
+const adultControversialTags = [
+    "Ecchi", "Nudez", "Sexo", "Incesto", "NTR"
+];
+
+// Tags relacionadas a mundos paralelos e reencarnação
+const isekaiTags = [
+    "Isekai", "MC vilão"
+];
+
+// Tags relacionadas a personagens específicos
+const characterTags = [
+    "Kemonomimi", "Goat"
+];
+
+// Junta todas as tags organizadas em uma única lista
+const allTags = [
+    ...romanceTags, ...actionAdventureTags, ...fantasySupernaturalTags, 
+    ...dramaEmotionalTags, ...sciFiTechTags, ...sliceOfLifeTags, 
+    ...comedyTags, ...horrorTags, ...sportsMusicTags, 
+    ...genderTags, ...adultControversialTags, ...isekaiTags, 
+    ...characterTags
+];
+
 let selectedTags = [];
 
 // Buscar tags
@@ -484,9 +550,8 @@ function showAllTags() {
         const tagElement = document.createElement('span');
         tagElement.classList.add('tag');
         tagElement.textContent = tag;
-
         tagsContainer.appendChild(tagElement);
-        
+        tagElement.addEventListener('click', () => selectTag(tag));
     });
 }
 
