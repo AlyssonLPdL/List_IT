@@ -460,6 +460,9 @@ body, html {
 }
 
 .selected-tags {
+  border: #cbc7c7 solid 1px;
+  border-radius: 4px;
+  padding: 5px;
   display: none;
   flex-wrap: wrap;
   gap: 8px;

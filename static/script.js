@@ -20,7 +20,6 @@ closeModal.addEventListener('click', () => modal.classList.add('hidden'));
 // Fechar modal de adicionar linha
 closeLineModal.addEventListener('click', () => {
     selectedTags = []; // Limpa as tags selecionadas
-    suggestionsContainer.style.display = 'none'; // Esconde as sugestões
     updateSelectedTags(); // Atualiza a interface
     lineModal.classList.add('hidden');
 });
@@ -144,7 +143,6 @@ async function showListDetails(lista) {
             </div>    
         </div>
     `;
-
 
     document.getElementById('add-line-btn').addEventListener('click', () => {
         formMode = 'add'; // Define o modo como 'adicionar'
@@ -456,7 +454,7 @@ const genderTags = [
 
 // Tags relacionadas a temas adultos e polêmicos
 const adultControversialTags = [
-    "Ecchi", "Nudez", "Sexo", "Incesto", "NTR"
+    "Ecchi", "Nudez", "Sexo", "Incesto", "NTR", "Harem"
 ];
 
 // Tags relacionadas a mundos paralelos e reencarnação
@@ -480,35 +478,12 @@ const allTags = [
 
 let selectedTags = [];
 
-// Buscar tags
-tagSearch.addEventListener('input', () => {
-    const query = tagSearch.value.toLowerCase();
-    suggestionsContainer.innerHTML = '';
-
-    if (query) {
-        const filteredTags = allTags.filter(tag => tag.toLowerCase().includes(query));
-        suggestionsContainer.style.display = filteredTags.length > 0 ? 'block' : 'none';
-
-        filteredTags.forEach(tag => {
-            const suggestionDiv = document.createElement('div');
-            suggestionDiv.classList.add('suggestion-item');
-            suggestionDiv.textContent = tag;
-            suggestionDiv.addEventListener('click', () => selectTag(tag));
-            suggestionsContainer.appendChild(suggestionDiv);
-        });
-    } else {
-        suggestionsContainer.style.display = 'none';
-    }
-});
-
 // Função para selecionar tags
 function selectTag(tag) {
     if (!selectedTags.includes(tag)) {
         selectedTags.push(tag);
         updateSelectedTags();
     }
-    tagSearch.value = '';
-    suggestionsContainer.style.display = 'none';
 }
 
 // Função para atualizar as tags selecionadas na interface
