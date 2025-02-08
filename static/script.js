@@ -259,19 +259,24 @@ async function showItemDetails(item) {
         <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
         <span id="close-modal-btn">&times;</span>
         <h2>${item.nome}</h2>
-        <p><strong>Conteúdo:</strong> ${item.conteudo}</p>
-        <p><strong>Tags:</strong> ${item.tags}</p>
-        <p><strong>Status:</strong> ${item.status}</p>
-        <p><strong>Episódio/Capítulo:</strong> ${item.episodio}</p>
-        <p><strong>Opinião:</strong> ${item.opiniao}</p>
+        <div id="info-div-box">
+            <p><strong>Conteúdo:</strong> ${item.conteudo}</p>
+            <fieldset>
+                <legend style="font-weight:600;">Tags:</legend>
+                <p style="margin: 0; border: 0;">${item.tags}</p>
+            </fieldset>
+            <p><strong>Status:</strong> ${item.status}</p>
+            <p><strong>Episódio/Capítulo:</strong> ${item.episodio}</p>
+            <p><strong>Opinião:</strong> ${item.opiniao}</p>
+        </div>
         <button id="editLineButton"><i class="fas fa-edit"></i></button>
     `;
 
     modalPhoto.innerHTML = `
-        <img src="${imageUrl}" alt="${item.nome}" style="max-width: 100%; height: 330px; border-radius: 10px;">
+        <img src="${imageUrl}" alt="${item.nome}" style="max-width: 100%; height: 400px; border-radius: 10px;">
     `;
 
-    modalPhoto.style.height = `${mainInfoContent.offsetHeight}px`;
+    modalPhoto.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
 
     document.getElementById('deleteLineButton').addEventListener('click', () => deleteLine(item.id));
     document.getElementById('editLineButton').addEventListener('click', () => openEditModal(item));
@@ -404,7 +409,7 @@ const selectedTagsContainer = document.getElementById('selected-tags');
 // Tags relacionadas a romance
 const romanceTags = [
     "Romance", "Beijo", "Namoro", "Casamento", "Morar Juntos", "Noivado", 
-    "Romance do bom", "Teve Filho", "Gravidez"
+    "Romance do bom", "Fez Filho(s)", "Gravidez"
 ];
 
 // Tags relacionadas a ação e aventura
