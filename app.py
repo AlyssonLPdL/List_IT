@@ -62,20 +62,11 @@ def add_lista():
     data = request.json
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    cursor.execute("SELECT COUNT(*) FROM linhas WHERE nome = ? AND lista_id = ?", (data["nome"], data["lista_id"]))
-    count = cursor.fetchone()[0]
-    
-    if count > 0:
-        return jsonify({"error": "A linha com esse nome já existe nesta lista."}), 400
-
-    cursor.execute("""
-    INSERT INTO linhas (lista_id, nome, tags, conteudo, status, episodio, opiniao)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (data["lista_id"], data["nome"], data["tags"], data["conteudo"], data["status"], data["episodio"], data["opiniao"]))
+    cursor.execute("INSERT INTO listas (nome) VALUES (?)", (data["nome"],))
     conn.commit()
-    linha_id = cursor.lastrowid
-    return jsonify({"id": linha_id, "lista_id": data["lista_id"], "nome": data["nome"]})
+    lista_id = cursor.lastrowid
+    conn.close()
+    return jsonify({"id": lista_id, "nome": data["nome"]})
 
 # <-------------- Rotas da API para Gerenciar Linhas --------------->
 # Função para buscar o ID do anime pelo nome
@@ -103,14 +94,22 @@ def fetch_anime_id(query):
 def fetch_image_url(query, content_type):
     # Definir se será uma busca por anime ou mangá
     category = "anime" if content_type.lower() == "anime" else "manga"
-    url = f"https://api.jikan.moe/v4/{category}?q={query}&limit=1"
+    url = f"https://api.jikan.moe/v4/{category}?q={query}&limit=5"  # Pegando até 5 resultados
 
     try:
         response = requests.get(url)
         data = response.json()
 
         if 'data' in data and len(data['data']) > 0:
-            return data['data'][0]['images']['jpg']['large_image_url']
+            # Verifica se termina com (TV) ou (MV)
+            if query.strip().endswith("(TV)") or query.strip().endswith("(MV)"):
+                if len(data['data']) > 1:
+                    return data['data'][1]['images']['jpg']['large_image_url']  # Pega o segundo
+                else:
+                    return data['data'][0]['images']['jpg']['large_image_url']  # Se não tiver, pega o primeiro mesmo
+            else:
+                return data['data'][0]['images']['jpg']['large_image_url']  # Caso normal
+
         else:
             return 'https://via.placeholder.com/150'  # Imagem padrão
 
