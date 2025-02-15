@@ -418,7 +418,7 @@ const romanceTags = [
 
 // Tags relacionadas a ação e aventura
 const actionAdventureTags = [
-    "Ação", "Aventura", "Overpower", "Dungeon", "Mecha", "Demônio", "Monstros"
+    "Ação", "Poder", "Aventura", "Overpower", "Dungeon", "Mecha", "Demônio", "Monstros"
 ];
 
 // Tags relacionadas a fantasia e sobrenatural
@@ -458,12 +458,12 @@ const sportsMusicTags = [
 
 // Tags relacionadas a gêneros e mudanças de gênero
 const genderTags = [
-    "Shounen", "Shoujo-ai", "Yuri", "Gender bender"
+    "Shounen", "Shoujo-ai", "Mahou Shoujo", "Yuri", "Gender bender"
 ];
 
 // Tags relacionadas a temas adultos e polêmicos
 const adultControversialTags = [
-    "Ecchi", "Nudez", "Sexo", "Incesto", "NTR", "Harem"
+    "Ecchi", "Nudez", "Sexo", "Incesto", "NTR", "Harem", "Nudez Nippleless"
 ];
 
 // Tags relacionadas a mundos paralelos e reencarnação
