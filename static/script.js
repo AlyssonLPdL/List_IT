@@ -87,6 +87,22 @@ function handleFormSubmit(event) {
     }
 }
 
+function getClasseExtra(item) {
+    if (item.tags.includes("Goat")) {
+        return "Goat";
+    }
+
+    if (
+        item.tags.includes("Beijo") &&
+        item.tags.includes("Romance do bom") &&
+        (item.tags.includes("Namoro") || item.tags.includes("Casamento"))
+    ) {
+        return "Amor";
+    }
+
+    return "";
+}
+
 // Configurar o evento de submissão do formulário de linha
 const lineForm = document.getElementById('line-form');
 lineForm.removeEventListener('submit', handleFormSubmit); // Remove evento anterior, se existir
@@ -139,7 +155,11 @@ async function showListDetails(lista) {
         <button id="add-line-btn">+ Adicionar Linha</button>
         <div class="container-list-items">
             <div class="list-items">
-                ${linhas.map(item => `<div class="item-info" data-item-id="${item.id}">${item.nome}</div>`).join('')}
+                ${linhas.map(item => `
+                    <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
+                        ${item.nome}
+                    </div>
+                `).join('')}
             </div>    
         </div>
     `;
@@ -192,9 +212,11 @@ function filterItems(linhas) {
 // Função para exibir os itens filtrados
 function showItems(linhas) {
     const listItemsContainer = document.querySelector('.list-items');
-    listItemsContainer.innerHTML = linhas.map(item => 
-        `<div class="item-info" data-item-id="${item.id}">${item.nome}</div>`
-    ).join('');
+    listItemsContainer.innerHTML = linhas.map(item => `
+        <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
+            ${item.nome}
+        </div>
+    `).join('')
 
     addItemClickEvent(linhas);
 }

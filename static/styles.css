@@ -313,8 +313,56 @@ body, html {
   color: #2c3e50;
   border: #2c3e50 solid 1px;
   font-weight: 600;
+}.Favorito {
+  background-color: cyan;
+  color: black;
+}.Horrivel {
+  background-color: rgb(165, 165, 165);
+  color: black;
+}.Ruim {
+  background-color: #5d6c71;
+  color: black;
+}.Muito {
+  background-color: #009bbb;
+}.Goat {
+  background-size: 400% 400%;
+  background-image: linear-gradient(45deg, #ff0000, #1aff00, #0084ff, #ff00f2);
+  color: white;
+  font-weight: 600;
+  display: inline-block;
+  background-position: 0% 50%;
+  -webkit-background-clip: padding-box; /* Faz com que o fundo não afete o texto */
+  background-clip: padding-box; /* Faz com que o fundo não afete o texto */
+  animation: gradientAnimation 3s ease infinite; /* Transição suave para fundo e cor */
 }
 
+.Goat:hover {
+  background-color: white; /* Fundo branco no hover */
+  color: transparent; /* Texto transparente para exibir o gradiente */
+  background-clip: text; /* Faz com que o gradiente seja aplicado ao texto */
+  animation: gradientAnimation 3s ease infinite; /* Animação do gradiente no hover */
+}
+.Amor {
+  background-size: 400% 400%;
+  background-image: linear-gradient(45deg, #fd00a4, #ad0000, #ad0000, #fd00a4);
+  color: white;
+  font-weight: 600;
+  display: inline-block;
+  background-position: 0% 50%;
+  -webkit-background-clip: padding-box; /* Faz com que o fundo não afete o texto */
+  background-clip: padding-box; /* Faz com que o fundo não afete o texto */
+  animation: gradientAnimation 3s ease infinite; /* Transição suave para fundo e cor */
+}.Amor:hover {
+  background-color: white; /* Fundo branco no hover */
+  color: transparent; /* Texto transparente para exibir o gradiente */
+  background-clip: text; /* Faz com que o gradiente seja aplicado ao texto */
+  animation: gradientAnimation 3s ease infinite; /* Animação do gradiente no hover */
+}
+@keyframes gradientAnimation {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
 /* modal de Linhas */
 
 /* Modal Styling */
