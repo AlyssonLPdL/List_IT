@@ -258,7 +258,7 @@ async function showItemDetails(item) {
     mainInfoContent.innerHTML = `
         <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
         <span id="close-modal-btn">&times;</span>
-        <h2>${item.nome}</h2>
+        <h2 id="itemNameh2" class="clickable-title">${item.nome}</h2>
         <div id="info-div-box">
             <p><strong>Conteúdo:</strong> ${item.conteudo}</p>
             <fieldset>
@@ -281,6 +281,10 @@ async function showItemDetails(item) {
     document.getElementById('deleteLineButton').addEventListener('click', () => deleteLine(item.id));
     document.getElementById('editLineButton').addEventListener('click', () => openEditModal(item));
     document.getElementById('close-modal-btn').addEventListener('click', () => modalInfo.classList.add('hidden'));
+    document.querySelector('#itemNameh2').addEventListener('click', () => {
+        const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.nome)}`;
+        window.open(googleSearchUrl, '_blank');
+    });
 }
 
 // Abrir modal de edição
@@ -419,7 +423,7 @@ const actionAdventureTags = [
 
 // Tags relacionadas a fantasia e sobrenatural
 const fantasySupernaturalTags = [
-    "Magia", "Fantasia", "Sobrenatural", "Deuses", "Reencarnar"
+    "Magia", "Fantasia", "Sobrenatural", "Deuses", "Reencarnar", "Medieval"
 ];
 
 // Tags relacionadas a drama e emoção

@@ -227,6 +227,12 @@ body, html {
     border-radius: 5px;
   }
 
+  .clickable-title {
+    cursor: pointer;
+  }.clickable-title:hover {
+    color: blue;
+  }
+
   #editLineButton {
     margin-top: 10px;
     color: white;
