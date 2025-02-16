@@ -334,12 +334,11 @@ body, html {
   -webkit-background-clip: padding-box; /* Faz com que o fundo não afete o texto */
   background-clip: padding-box; /* Faz com que o fundo não afete o texto */
   animation: gradientAnimation 3s ease infinite; /* Transição suave para fundo e cor */
-}
-
-.Goat:hover {
+}.Goat:hover {
   background-color: white; /* Fundo branco no hover */
   color: transparent; /* Texto transparente para exibir o gradiente */
   background-clip: text; /* Faz com que o gradiente seja aplicado ao texto */
+  border: #f2ff00 solid 1px;
   animation: gradientAnimation 3s ease infinite; /* Animação do gradiente no hover */
 }
 .Amor {
@@ -356,7 +355,11 @@ body, html {
   background-color: white; /* Fundo branco no hover */
   color: transparent; /* Texto transparente para exibir o gradiente */
   background-clip: text; /* Faz com que o gradiente seja aplicado ao texto */
+  border: #fd0202 solid 1px;
   animation: gradientAnimation 3s ease infinite; /* Animação do gradiente no hover */
+}
+.Putaria {
+  background-color: pink;
 }
 @keyframes gradientAnimation {
   0% { background-position: 0% 50%; }

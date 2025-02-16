@@ -100,6 +100,21 @@ function getClasseExtra(item) {
         return "Amor";
     }
 
+    if (
+        item.tags.includes("Ecchi") &&      // Deve ter a tag "Ecchi"
+        item.tags.includes("Nudez") &&      // Deve ter a tag "Nudez"
+        (
+            item.tags.includes("Incesto") ||    // Ou uma das tags adicionais
+            item.tags.includes("Sexo") ||
+            item.tags.includes("Yuri") ||
+            item.tags.includes("Vida Escolar") ||
+            item.tags.includes("Dormitorios") ||
+            (item.opiniao === "Mediano" || item.opiniao === "Ruim" || item.opiniao === "Horrivel") // Opinião obrigatória
+        )
+    ) {
+        return "Putaria";
+    }    
+
     return "";
 }
 
