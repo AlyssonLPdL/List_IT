@@ -338,7 +338,7 @@ body, html {
   background-color: white; /* Fundo branco no hover */
   color: transparent; /* Texto transparente para exibir o gradiente */
   background-clip: text; /* Faz com que o gradiente seja aplicado ao texto */
-  border: #f2ff00 solid 1px;
+  border: #fff700 solid 1px;
   animation: gradientAnimation 3s ease infinite; /* Animação do gradiente no hover */
 }
 .Amor {

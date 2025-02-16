@@ -102,7 +102,7 @@ function getClasseExtra(item) {
 
     if (
         item.tags.includes("Ecchi") &&      // Deve ter a tag "Ecchi"
-        item.tags.includes("Nudez") &&      // Deve ter a tag "Nudez"
+        (item.tags.includes("Nudez") || item.tags.includes("Nudez Nippleless")) &&      // Deve ter a tag "Nudez"
         (
             item.tags.includes("Incesto") ||    // Ou uma das tags adicionais
             item.tags.includes("Sexo") ||
