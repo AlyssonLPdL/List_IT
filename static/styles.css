@@ -359,7 +359,14 @@ body, html {
   animation: gradientAnimation 3s ease infinite; /* Animação do gradiente no hover */
 }
 .Putaria {
-  background-color: pink;
+  border: red solid 5px;
+  width: 88%;
+  background: linear-gradient(356deg, white 50%, red 40%, red 60%, white 50%);
+  color: black;
+  font-weight: 700;
+}.Putaria:hover {
+  border: red solid 5px;
+  color: black;
 }
 @keyframes gradientAnimation {
   0% { background-position: 0% 50%; }
