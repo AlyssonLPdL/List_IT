@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import sqlite3
 import requests
+import re
 
 app = Flask(__name__)
 
@@ -114,35 +115,60 @@ def fetch_anime_image_url(query):
 
 # Função para buscar a imagem do mangá no MangaDex
 def fetch_manga_image_url(query):
-    url = f"https://api.jikan.moe/v4/manga?q={query}&limit=5"
+    # Definindo a URL e o corpo da requisição GraphQL
+    url = "https://graphql.anilist.co"
+    query_graphql = """
+    query($search: String) {
+        Page(page: 1, perPage: 5) {
+            media(search: $search, type: MANGA) {
+                title {
+                    romaji
+                    english
+                }
+                coverImage {
+                    large
+                }
+            }
+        }
+    }
+    """
+    
+    # Remove todos os caracteres especiais, deixando apenas letras e números
+    cleanTitle = re.sub(r'[^\w\s]', '', query)  # Remove caracteres especiais
 
-    try:
-        print(f"Buscando imagem para o mangá: {query}")
-        response = requests.get(url)
-        data = response.json()
+    # Variantes para a busca
+    variations = [cleanTitle, query]  # Usa o título limpo e o original (com caracteres especiais)
 
-        if 'data' in data and len(data['data']) > 0:
-            # Pega o primeiro mangá da lista
-            manga = data['data'][0]
-            print(f"Verificando mangá: {manga['title']}")
+    for variation in variations:
+        variables = {
+            'search': variation
+        }
 
-            # Verifica se há uma imagem associada e retorna a URL da imagem
-            if 'images' in manga and 'jpg' in manga['images']:
-                image_url = manga['images']['jpg']['image_url']
-                print(f"Imagem encontrada: {image_url}")
-                return image_url
+        try:
+            print(f"Buscando imagem para o mangá: {variation}")
+            
+            # Faz a requisição POST com o título de busca
+            response = requests.post(url, json={'query': query_graphql, 'variables': variables})
+            
+            if response.status_code == 200:
+                data = response.json()
+                media = data['data']['Page']['media']
+                
+                if media:
+                    # Sempre pega a imagem do primeiro resultado
+                    first_result = media[0]
+                    image_url = first_result['coverImage']['large']
+                    print(f"Imagem encontrada: {image_url}")
+                    return image_url
+                else:
+                    print(f"Nenhum resultado encontrado para {variation}.")
+            else:
+                print(f"Erro na requisição AniList API: Status {response.status_code}")
 
-            # Se não tiver imagem, retorna uma imagem padrão
-            print("Imagem não encontrada, retornando imagem padrão.")
-            return 'https://via.placeholder.com/300x450.png?text=Sem+Capa'
+        except requests.exceptions.RequestException as e:
+            print(f"Erro ao fazer a requisição: {e}")
 
-        else:
-            print("Nenhum mangá encontrado, retornando imagem padrão.")
-            return 'https://via.placeholder.com/150'
-
-    except Exception as e:
-        print(f"Erro ao buscar imagem do mangá: {e}")
-        return 'https://via.placeholder.com/150'
+    return 'https://via.placeholder.com/300x450.png?text=Sem+Capa'
 
 # Função para buscar imagens de acordo com o tipo de conteúdo (anime ou manga)
 @app.route('/search_image', methods=['GET'])
