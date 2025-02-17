@@ -109,11 +109,19 @@ function getClasseExtra(item) {
             item.tags.includes("Yuri") ||
             item.tags.includes("Vida Escolar") ||
             item.tags.includes("Dormitorios") ||
-            (item.opiniao === "Mediano" || item.opiniao === "Ruim" || item.opiniao === "Horrivel") // Opinião obrigatória
+            (item.opiniao === "Mediano" || 
+                item.opiniao === "Ruim" || 
+                item.opiniao === "Horrivel") // Opinião obrigatória
         )
     ) {
         return "Putaria";
     }    
+
+    if (
+        item.status === "Cancelado"
+    ) {
+        return "Cancelado"
+    }
 
     return "";
 }
