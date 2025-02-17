@@ -69,68 +69,97 @@ def add_lista():
     return jsonify({"id": lista_id, "nome": data["nome"]})
 
 # <-------------- Rotas da API para Gerenciar Linhas --------------->
-# Função para buscar o ID do anime pelo nome
+# Função para buscar o ID do anime pelo nome (usando Jikan/MyAnimeList)
 def fetch_anime_id(query):
-    url = f"https://api.jikan.moe/v4/anime?q={query}&limit=1"  # Limitar para 1 anime
+    url = f"https://api.jikan.moe/v4/anime?q={query}&limit=1"
 
     try:
-        # Fazendo a requisição
         response = requests.get(url)
         data = response.json()
 
-        # Verificando se há resultados
         if 'data' in data and len(data['data']) > 0:
             print('Id:', data['data'][0]['mal_id'])
-            return data['data'][0]['mal_id']  # Retorna o ID do anime
+            return data['data'][0]['mal_id']
         else:
             print('Id não encontrado')
-            return None  # Retorna None caso não encontre o anime
+            return None
 
     except Exception as e:
         print(f"Erro ao buscar ID do anime: {e}")
-        return None  # Retorna None em caso de erro
+        return None
 
-# Função para buscar a imagem do anime pelo ID
-def fetch_image_url(query, content_type):
-    # Definir se será uma busca por anime ou mangá
-    category = "anime" if content_type.lower() == "anime" else "manga"
-    url = f"https://api.jikan.moe/v4/{category}?q={query}&limit=5"  # Pegando até 5 resultados
+# Função para buscar a imagem do anime no MyAnimeList
+def fetch_anime_image_url(query):
+    url = f"https://api.jikan.moe/v4/anime?q={query}&limit=5"
 
     try:
         response = requests.get(url)
         data = response.json()
 
         if 'data' in data and len(data['data']) > 0:
-            # Verifica se termina com (TV) ou (MV)
             if query.strip().endswith("(TV)") or query.strip().endswith("(MV)"):
                 if len(data['data']) > 1:
-                    return data['data'][1]['images']['jpg']['large_image_url']  # Pega o segundo
+                    image_url = data['data'][1]['images']['jpg']['large_image_url']
                 else:
-                    return data['data'][0]['images']['jpg']['large_image_url']  # Se não tiver, pega o primeiro mesmo
+                    image_url = data['data'][0]['images']['jpg']['large_image_url']
             else:
-                return data['data'][0]['images']['jpg']['large_image_url']  # Caso normal
-
+                image_url = data['data'][0]['images']['jpg']['large_image_url']
+            return image_url
         else:
-            return 'https://via.placeholder.com/150'  # Imagem padrão
+            return 'https://via.placeholder.com/150'
 
     except Exception as e:
-        print(f"Erro ao buscar imagem: {e}")
-        return 'https://via.placeholder.com/150'  # Imagem padrão em caso de erro
+        print(f"Erro ao buscar imagem do anime: {e}")
+        return 'https://via.placeholder.com/150'
 
+# Função para buscar a imagem do mangá no MangaDex
+def fetch_manga_image_url(query):
+    url = f"https://api.jikan.moe/v4/manga?q={query}&limit=5"
+
+    try:
+        print(f"Buscando imagem para o mangá: {query}")
+        response = requests.get(url)
+        data = response.json()
+
+        if 'data' in data and len(data['data']) > 0:
+            # Pega o primeiro mangá da lista
+            manga = data['data'][0]
+            print(f"Verificando mangá: {manga['title']}")
+
+            # Verifica se há uma imagem associada e retorna a URL da imagem
+            if 'images' in manga and 'jpg' in manga['images']:
+                image_url = manga['images']['jpg']['image_url']
+                print(f"Imagem encontrada: {image_url}")
+                return image_url
+
+            # Se não tiver imagem, retorna uma imagem padrão
+            print("Imagem não encontrada, retornando imagem padrão.")
+            return 'https://via.placeholder.com/300x450.png?text=Sem+Capa'
+
+        else:
+            print("Nenhum mangá encontrado, retornando imagem padrão.")
+            return 'https://via.placeholder.com/150'
+
+    except Exception as e:
+        print(f"Erro ao buscar imagem do mangá: {e}")
+        return 'https://via.placeholder.com/150'
+
+# Função para buscar imagens de acordo com o tipo de conteúdo (anime ou manga)
 @app.route('/search_image', methods=['GET'])
 def search_image():
-    query = request.args.get('q', '')  # Nome do anime/mangá
-    content_type = request.args.get('type', 'anime')  # Tipo: anime ou mangá
-
-    # Primeiro busca o ID do anime
-    anime_id = fetch_anime_id(query)
-    print('Nome do anime:', query)
-    print('Anime-Id:', anime_id)
+    query = request.args.get('q', '').strip()
+    content_type = request.args.get('type', 'anime').lower()
 
     if not query:
         return jsonify({'error': 'Query parameter is required'}), 400
 
-    image_url = fetch_image_url(query, content_type)
+    if content_type == 'anime':
+        image_url = fetch_anime_image_url(query)
+    elif content_type == 'manga':
+        image_url = fetch_manga_image_url(query)
+    else:
+        return jsonify({'error': 'Invalid content type. Use "anime" or "manga".'}), 400
+
     return jsonify({'image_url': image_url})
 
 @app.route("/linhas/<int:lista_id>", methods=["GET"])

@@ -268,6 +268,13 @@ async function fetchImageUrl(query, contentType) {
     }
 }
 
+function displayImage(imageUrl) {
+    const imgElement = document.createElement('img');
+    imgElement.src = imageUrl;
+    imgElement.alt = 'Imagem do conteúdo';
+    document.getElementById('image-container').appendChild(imgElement); // Coloca a imagem no container
+}
+
 // Exibir detalhes de uma linha
 async function showItemDetails(item) {
     modalInfo.classList.remove('hidden');
@@ -291,6 +298,7 @@ async function showItemDetails(item) {
 
     // Buscar imagem do item
     const imageUrl = await fetchImageUrl(item.nome, contentType);
+    console.log("URL da imagem:", imageUrl);  // Verifique a URL aqui
 
     mainInfoContent.innerHTML = `
         <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
