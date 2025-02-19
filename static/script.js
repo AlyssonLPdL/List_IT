@@ -93,9 +93,15 @@ function getClasseExtra(item) {
     }
 
     if (
+        item.status === "Cancelado"
+    ) {
+        return "Cancelado"
+    }
+
+    if (
         item.tags.includes("Beijo") &&
         item.tags.includes("Romance do bom") &&
-        (item.tags.includes("Namoro") || item.tags.includes("Casamento"))
+        (item.tags.includes("Namoro") || item.tags.includes("Casamento") || item.tags.includes("Noivado"))
     ) {
         return "Amor";
     }
@@ -116,12 +122,6 @@ function getClasseExtra(item) {
     ) {
         return "Putaria";
     }    
-
-    if (
-        item.status === "Cancelado"
-    ) {
-        return "Cancelado"
-    }
 
     return "";
 }
