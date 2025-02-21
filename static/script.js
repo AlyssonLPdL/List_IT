@@ -125,11 +125,13 @@ function getClasseExtra(item) {
 
     if (
         item.tags.includes("Ação") &&
-        (item.opiniao === "Recomendo" ||
-            item.opiniao === "Muito Bom" ||
-            ((item.opiniao === "Bom" || item.opiniao === "Favorito") &&
-            item.tags.includes("Shounen") &&
-            !item.tags.includes("Dormitorio")
+        (
+            item.opiniao === "Recomendo" ||
+            (
+                (item.opiniao === "Muito Bom" || item.opiniao === "Bom" || item.opiniao === "Favorito") &&
+                item.tags.includes("Shounen") &&
+                !item.tags.includes("Dormitorio") &&
+                !(item.tags.includes("Fez Filho(s)") && item.tags.includes("Gravidez"))
             )
         )
     ) {
