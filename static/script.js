@@ -123,6 +123,19 @@ function getClasseExtra(item) {
         return "Putaria";
     }    
 
+    if (
+        item.tags.includes("Ação") &&
+        (item.opiniao === "Recomendo" ||
+            item.opiniao === "Muito Bom" ||
+            ((item.opiniao === "Bom" || item.opiniao === "Favorito") &&
+            item.tags.includes("Shounen") &&
+            !item.tags.includes("Dormitorio")
+            )
+        )
+    ) {
+        return "Pika"
+    }
+    
     return "";
 }
 
@@ -591,6 +604,9 @@ function showAllTags() {
         tagElement.addEventListener('click', () => selectTag(tag));
     });
 }
+
+// ---------------------------- Animação ---------------------------------
+
 
 // ---------------------------- INICIALIZAÇÃO ----------------------------
 document.addEventListener('DOMContentLoaded', () => {

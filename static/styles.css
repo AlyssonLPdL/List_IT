@@ -377,6 +377,14 @@ body, html {
 }.Cancelado:hover {
   color: red;
 }
+.Pika {
+  color: black;
+  font-weight: 600;
+  background: url('/static/img/fire-102.gif');
+  background-size: cover;
+  background-position: bottom;
+}
+
 @keyframes gradientAnimation {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
