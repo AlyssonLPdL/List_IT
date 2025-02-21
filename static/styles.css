@@ -383,6 +383,11 @@ body, html {
   background: url('/static/img/fire-102.gif');
   background-size: cover;
   background-position: bottom;
+}.Pika:hover {
+  background-color: white; /* Fundo branco no hover */
+  color: transparent; /* Texto transparente para exibir o gradiente */
+  background-clip: text;
+  -webkit-text-stroke: 0.5px #ffccb2;
 }
 
 @keyframes gradientAnimation {
