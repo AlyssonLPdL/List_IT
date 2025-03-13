@@ -333,13 +333,13 @@ body, html {
   background-position: 0% 50%;
   -webkit-background-clip: padding-box; /* Faz com que o fundo não afete o texto */
   background-clip: padding-box; /* Faz com que o fundo não afete o texto */
-  animation: gradientAnimation 3s ease infinite; /* Transição suave para fundo e cor */
+  animation: gradientAnimation 3s linear infinite; /* Transição suave para fundo e cor */
 }.Goat:hover {
   background-color: white; /* Fundo branco no hover */
   color: transparent; /* Texto transparente para exibir o gradiente */
   background-clip: text; /* Faz com que o gradiente seja aplicado ao texto */
   border: #fff700 solid 1px;
-  animation: gradientAnimation 3s ease infinite; /* Animação do gradiente no hover */
+  animation: gradientAnimation 3s linear infinite; /* Animação do gradiente no hover */
 }
 .Amor {
   background-size: 400% 400%;
@@ -389,11 +389,33 @@ body, html {
   background-clip: text;
   -webkit-text-stroke: 0.5px #ffccb2;
 }
+.GoAmor {
+  background-size: 400% 400%;
+  background-image: linear-gradient(90deg, #ff0000, #fbff00, #1aff00, #00ffd7, #0008ff, #b900ff);
+  color: white;
+  font-weight: 600;
+  display: inline-block;
+  background-position: 0% 50%;
+  -webkit-background-clip: padding-box; /* Faz com que o fundo não afete o texto */
+  background-clip: padding-box; /* Faz com que o fundo não afete o texto */
+  animation: infinityAnimation 1s linear infinite; /* Transição suave para fundo e cor */
+}.GoAmor:hover {
+  background-color: white; /* Fundo branco no hover */
+  color: transparent; /* Texto transparente para exibir o gradiente */
+  background-clip: text; /* Faz com que o gradiente seja aplicado ao texto */
+  border: #fff700 solid 1px;
+  animation: infinityAnimation 1s linear infinite;
+}
 
 @keyframes gradientAnimation {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+
+@keyframes infinityAnimation {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
 }
 /* modal de Linhas */
 

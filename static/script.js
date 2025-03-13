@@ -88,6 +88,19 @@ function handleFormSubmit(event) {
 }
 
 function getClasseExtra(item) {
+    const hasClassList = item.classList && typeof item.classList.contains === 'function';
+    
+    // Verifica a combinação de classes
+    if (item.tags.includes("Goat") &&
+    (
+        item.tags.includes("Beijo") &&
+        item.tags.includes("Romance do bom") &&
+        (item.tags.includes("Namoro") || item.tags.includes("Casamento") || item.tags.includes("Noivado"))
+    )
+    ) {
+        return "GoAmor";
+    }
+
     if (item.tags.includes("Goat")) {
         return "Goat";
     }

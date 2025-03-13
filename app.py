@@ -113,9 +113,8 @@ def fetch_anime_image_url(query):
         print(f"Erro ao buscar imagem do anime: {e}")
         return 'https://via.placeholder.com/150'
 
-# Função para buscar a imagem do mangá no MangaDex
+# Função para buscar a imagem do mangá no AniList
 def fetch_manga_image_url(query):
-    # Definindo a URL e o corpo da requisição GraphQL
     url = "https://graphql.anilist.co"
     query_graphql = """
     query($search: String) {
@@ -133,40 +132,33 @@ def fetch_manga_image_url(query):
     }
     """
     
-    # Remove todos os caracteres especiais, deixando apenas letras e números
-    cleanTitle = re.sub(r'[^\w\s]', '', query)  # Remove caracteres especiais
+    # Remove "(SKP)" para a busca, mantendo apenas o nome real do mangá
+    clean_query = re.sub(r'\(SKP\)', '', query).strip()
+    clean_query = re.sub(r'[^\w\s]', '', clean_query)  # Remove outros caracteres especiais
 
-    # Variantes para a busca
-    variations = [cleanTitle, query]  # Usa o título limpo e o original (com caracteres especiais)
+    variables = {'search': clean_query}
 
-    for variation in variations:
-        variables = {
-            'search': variation
-        }
+    try:
+        print(f"Buscando imagem para: {clean_query}")
+        response = requests.post(url, json={'query': query_graphql, 'variables': variables})
+        
+        if response.status_code == 200:
+            data = response.json()
+            media = data['data']['Page']['media']
 
-        try:
-            print(f"Buscando imagem para o mangá: {variation}")
-            
-            # Faz a requisição POST com o título de busca
-            response = requests.post(url, json={'query': query_graphql, 'variables': variables})
-            
-            if response.status_code == 200:
-                data = response.json()
-                media = data['data']['Page']['media']
-                
-                if media:
-                    # Sempre pega a imagem do primeiro resultado
-                    first_result = media[0]
-                    image_url = first_result['coverImage']['large']
-                    print(f"Imagem encontrada: {image_url}")
-                    return image_url
-                else:
-                    print(f"Nenhum resultado encontrado para {variation}.")
+            if media:
+                # Decide qual imagem usar (primeira ou segunda) baseado na presença de "(SKP)" no nome original
+                index = 1 if "(SKP)" in query and len(media) > 1 else 0
+                image_url = media[index]['coverImage']['large']
+                print(f"Imagem encontrada: {image_url}")
+                return image_url
             else:
-                print(f"Erro na requisição AniList API: Status {response.status_code}")
+                print(f"Nenhum resultado encontrado para {clean_query}.")
+        else:
+            print(f"Erro na API AniList: Status {response.status_code}")
 
-        except requests.exceptions.RequestException as e:
-            print(f"Erro ao fazer a requisição: {e}")
+    except requests.exceptions.RequestException as e:
+        print(f"Erro na requisição: {e}")
 
     return 'https://via.placeholder.com/300x450.png?text=Sem+Capa'
 
