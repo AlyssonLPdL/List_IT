@@ -1,0 +1,128 @@
+                            ================================
+                            =                              =
+                            =           TUTORIAL           =
+                            =                              =
+                            ================================
+
+Primeiro de tudo, você deve ter certeza de instalar o Python;
+no google, no VScode e talvez no Microsoft Store.
+Segue os passos abaixo para conseguir sem problemas.
+
+Se veio aqui apenas conferir, segue o glossario:
+[ Ctrl + F ] e digite o codigo;
+Download Python Google: #1122
+Download Python VSCode: #3344
+Download Python Microsoft Store: #5566
+Como Rodar o Codigo: #7788
+Como Ver Atualizações: #9900
+Boas praticas | Salvar Reverter Mudança: #0000
+
+=============================================================================================================
+
+                           ==============#1122===============
+                           =                                =
+                           =         PYTHON GOOGLE          =
+                           =                                =
+                           ==================================
+
+1 - Primeiro você precisa ir ate o link do google para baixar; 
+Link: https://www.python.org/downloads/release/python-3110/
+
+1.2 - Depois de ir no link, você desce ate o final da pagina e baixa o "Windows Installer"
+----- Recomendado o de 64bits
+
+1.3 - Depois de baixar, você abre o Downloader e segue o protocolo de segurança
+----- (Os que tem o escudo do Windows Defender)
+
+1.4 - Depois disso, você fecha e abre o VSCode.
+
+                           ==============#3344===============
+                           =                                =
+                           =         PYTHON VSCODE          =
+                           =                                =
+                           ==================================
+
+2 - Ao olhar para o lado esquerdo na interface do VScode (Lado de ca <<<< idiota)
+--- Você nota botões, e clicando no (talvez) terceiro de baixo para cima (Os cubos)
+--- você encontra a area para baixar extenções.
+
+2.1 - Clicando na area de extenções, você agora pode pesquisar por "Python".
+----- Vão aparecer muitos resultados, mas você ta atras do "Python" e do "Python Debbugger".
+----- Provavelmente outros vão baixar junto por consequencia, mas é o normal.
+
+
+                           ==============#5566===============
+                           =                                =
+                           =         PYTHON STORE           =
+                           =                                =
+                           ==================================
+
+3 - Se necessario, por ultimo baixe o Python na Microsoft Store do seu pc.
+--- Abra a loja e pesquise por "Python", lembre de baixar o 3.11
+
+
+                           ===============#7788==============
+                           =                                =
+                           =         RODAR O CODIGO         =
+                           =                                =
+                           ==================================
+
+4 - Primeiro, o codigo usa arquivos e bibliotecas baixadas da net,
+--- então se quiser rodar, vai precisar baixar.
+
+4.1 - Roda o codigo [ pip install -r requirements.txt ] abaixo no terminal e de [ Enter ].
+----- Caso não veja o terminal, precione [ Ctrl + ' ] (<<< isso é aspas)
+
+4.2 - Depois de rodar o codigo e esperar baixar tudo, novamente no terminal você vai rodar;
+----- [ python app.py ], isso fará rodar o codigo principal.
+----- O link para a pagina vai aparecer no terminal assim que terminar de rodar o codigo.
+
+
+                           ===============#9900==============
+                           =                                =
+                           =        CONFERIR MUDANÇAS       =
+                           =                                =
+                           ==================================
+
+5 - Para conferir caso tenha alguma atualização, você precisa rodar mais comandos no terminal.
+--- [ git pull ].
+--- Tenha certeza de não fazer nenhuma mudança no codigo, ou isso vai influenciar o funcionamento do comando
+--- Caso não funcione, digite em sequencia;
+--- [ git add . ]
+--- [ git commit -m "Q" ]
+--- Em seguida, rode o [ git pull ] novamente. Caso não funcione de novo, rode [ git pull origin main].
+
+
+                           ===============#0000==============
+                           =                                =
+                           =         BOAS PRATICAS          =
+                           =                                =
+                           ==================================
+
+6 - Ao fazer qualquer coisa no site, é importante você lembrar que a lista é compartilhada
+--- então tente evitar ao maximo remover, editar ou adicionar animes sem antes me consultar.
+
+6.1 - Caso eu permita, ao fazer qualquer mudança, tenha certeza de reiniciar o site
+----- para que tudo funcione da forma como deveria. (F5)
+
+6.2 - Caso eu permita e você venha a fazer alguma alteração, segue os comandos;
+
+============================ SALVAR =============================
+=      No terminal, digite em sequencia:                        =
+=      [ git add .]                                             =
+=      [ git commit -m "Mudança-feita" ]                        =
+=      [ git push ]                                             =
+=                                                               =
+=      !!Lember-se de escrever oque você mudou no git commit    =
+=================================================================
+
+=========================== REVERTER ============================
+=      No sidebar (Botões lateral esquerda <<<) você vai        =
+=      Clicar na opção abaixo da lupa (Parece uns fios)         =
+=      la, você vai ver uma area abaixo de um botão azul        =
+=      chamada [ Changes ].                                     =
+=                                                               =
+=      Logo ao lado desse nome, ao passar o mouse por cima      =
+=      vai aparecer botões, e nesses botões, você clica no      =
+=      que parece uma seta dando a volta, antes do [ + ].       =
+=================================================================
