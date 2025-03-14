@@ -514,7 +514,7 @@ const dramaEmotionalTags = [
 
 // Tags relacionadas a ficção científica e tecnologia
 const sciFiTechTags = [
-    "SciFi", "VR/Jogo"
+    "SciFi", "VR/Jogo", "System"
 ];
 
 // Tags relacionadas a vida cotidiana
