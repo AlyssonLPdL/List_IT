@@ -1,6 +1,6 @@
                             ================================
                             =                              =
-                            =           TUTORIAL           =
+=============================           TUTORIAL           =============================
                             =                              =
                             ================================
 
@@ -17,7 +17,7 @@ Como Rodar o Codigo: #7788
 Como Ver Atualizações: #9900
 Boas praticas | Salvar Reverter Mudança: #0000
 
-=============================================================================================================
+========================================================================================
 
                            ==============#1122===============
                            =                                =
@@ -38,7 +38,7 @@ Link: https://www.python.org/downloads/release/python-3110/
 
                            ==============#3344===============
                            =                                =
-                           =         PYTHON VSCODE          =
+============================         PYTHON VSCODE          =============================
                            =                                =
                            ==================================
 
@@ -53,7 +53,7 @@ Link: https://www.python.org/downloads/release/python-3110/
 
                            ==============#5566===============
                            =                                =
-                           =         PYTHON STORE           =
+============================         PYTHON STORE           ============================
                            =                                =
                            ==================================
 
@@ -63,7 +63,7 @@ Link: https://www.python.org/downloads/release/python-3110/
 
                            ===============#7788==============
                            =                                =
-                           =         RODAR O CODIGO         =
+============================         RODAR O CODIGO         ============================
                            =                                =
                            ==================================
 
@@ -80,22 +80,28 @@ Link: https://www.python.org/downloads/release/python-3110/
 
                            ===============#9900==============
                            =                                =
-                           =        CONFERIR MUDANÇAS       =
+============================        CONFERIR MUDANÇAS       ============================
                            =                                =
                            ==================================
 
 5 - Para conferir caso tenha alguma atualização, você precisa rodar mais comandos no terminal.
 --- [ git pull ].
---- Tenha certeza de não fazer nenhuma mudança no codigo, ou isso vai influenciar o funcionamento do comando
---- Caso não funcione, digite em sequencia;
---- [ git add . ]
---- [ git commit -m "Q" ]
---- Em seguida, rode o [ git pull ] novamente. Caso não funcione de novo, rode [ git pull origin main].
+--- Tenha certeza de não fazer nenhuma mudança no codigo,
+--- ou isso vai afetar o funcionamento do comando
+
+5.1 - Se não tiver nenhuma mudança, você vai receber uma mensagem escrito [ Already up to date. ]
+----- Caso tenha alguma mudança, você apenas espera tudo atualizar
+
+5.2 - Caso não funcione, digite em sequencia;
+----- [ git add . ]
+----- [ git commit -m "Q" ]
+----- Em seguida, rode o [ git pull ] novamente.
+----- Caso não funcione de novo, rode [ git pull origin main].
 
 
                            ===============#0000==============
                            =                                =
-                           =         BOAS PRATICAS          =
+============================         BOAS PRATICAS          ============================
                            =                                =
                            ==================================
 
