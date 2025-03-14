@@ -1,32 +1,63 @@
-/* Reset básico */
+/* =======================================
+   RESET & BASE STYLES
+======================================= */
 body, html {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
 }
 
+/* =======================================
+   CSS VARIABLES
+======================================= */
+:root {
+  --color-primary: #2c3e50;
+  --color-secondary: #34495e;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-cyan: cyan;
+  --color-red: #ff0000;
+  --color-grey: #ccc;
+}
+
+/* =======================================
+   MODAL PHOTO & IMAGENS
+======================================= */
 #modal-photo {
-  background-color: white;
+  background-color: var(--color-white);
   display: flex;
-  border-radius: 0px 10px 10px 0;
+  border-radius: 0 10px 10px 0;
   width: 310px;
   justify-content: start;
   align-items: center;
 }
 
+#hatsune-miku_1 {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 0;
+  margin: 0;
+}
+#hatsune-miku_1 img {
+  height: 425px;
+  width: 225px;
+}
+
+/* =======================================
+   TAGS CONTAINER
+======================================= */
 .tags-container {
   width: 300px;
   border-radius: 0 10px 10px 0;
   padding: 20px;
-  background: white;
+  background: var(--color-white);
   margin-right: 20px;
 }
-
 .tags-container h2 {
   text-align: center;
   padding-right: 15px;
 }
-
 .tags-container-div {
   display: flex;
   flex-direction: column;
@@ -35,10 +66,9 @@ body, html {
   max-height: 85%;
   overflow-y: auto;
 }
-
 .tags-container-div .tag {
-  background-color: #34495e;
-  color: white;
+  background-color: var(--color-secondary);
+  color: var(--color-white);
   width: 200px;
   border-radius: 10px;
   font-size: 20px;
@@ -46,97 +76,101 @@ body, html {
   cursor: pointer;
 }
 
-#hatsune-miku_1 {
-  position: absolute;
-  right: 0;
-  padding: 0;
-  margin: 0;
-}
-
-#hatsune-miku_1 img {
-  height: 965px;
-  width: 490px;
-}
-
-/* Container principal */
+/* =======================================
+   LAYOUT PRINCIPAL
+======================================= */
 .container {
   display: flex;
   height: 100vh;
 }
 
-/* Sidebar fixa */
+/* Sidebar */
 .sidebar {
   width: 250px;
-  background-color: #2c3e50;
-  color: white;
+  background-color: var(--color-primary);
+  color: var(--color-white);
   padding: 20px;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }
-
 .sidebar h2 {
   margin-top: 0;
 }
-
 .sidebar .btn {
   display: block;
   width: 100%;
   padding: 10px 15px;
   margin: 10px 0;
-  background-color: #34495e;
+  background-color: var(--color-secondary);
   border: none;
   border-radius: 5px;
-  color: white;
+  color: var(--color-white);
   cursor: pointer;
   text-align: left;
 }
-
 .sidebar .btn:hover {
-  background-color: white;
-  color: #2c3e50;
-  border: #2c3e50 solid 1px;
+  background-color: var(--color-white);
+  color: var(--color-primary);
+  border: var(--color-primary) solid 1px;
   font-weight: 500;
 }
 
-/* Conteúdo principal */
+.sidebar-lists {
+  border: var(--color-white), solid, 1px;
+  padding: 10px;
+  border-radius: 10px;
+  background: white;
+}
+
+.list-item {
+  background: var(--color-primary);
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin: 15px 0px;
+}
+
+.list-item:hover {
+  background-color: var(--color-white);
+  color: var(--color-primary);
+  border: var(--color-primary) solid 1px;
+  font-weight: 600;
+}
+
+/* Conteúdo Principal */
 .main-content {
   display: flex;
   flex: 1;
   padding: 20px;
-  background-color: white;
+  background-color: var(--color-white);
   overflow-y: auto;
   flex-direction: column;
   align-items: center;
 }
-
 .main-content h1 {
   margin-top: 0;
 }
 
-#add-line-btn {
-  width: 150px;
-  height: 30px;
-  margin-bottom: 20px;
-  border-radius: 10px;
-  background-color: #2c3e50;
-  color: white;
-  cursor: pointer;
-}#add-line-btn:hover {
-  background-color: white;
-  color: #2c3e50;
-  border: #2c3e50 solid 1px;
-  font-weight: 600;
+/* =======================================
+   GRAF LIST & LIST ITEMS
+======================================= */
+.graf-list {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
-
-#search-input {
+.graficos {
+  border: var(--color-black) solid 1px;
+  border-radius: 10px;
+  padding: 20px;
+  margin-left: 100px;
+  height: 700px;
   width: 300px;
-  height: 30px;
-  font-size: 20px;
-  border-radius: 10px;
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
 }
-
 .container-list-items {
-  border: black solid 1px;
+  border: var(--color-black) solid 1px;
   width: 600px;
   height: 700px;
   border-radius: 10px;
@@ -145,7 +179,6 @@ body, html {
   flex-direction: column;
   align-items: center;
 }
-
 .list-items {
   width: 550px;
   height: 650px;
@@ -157,445 +190,79 @@ body, html {
   flex-direction: column;
   align-items: center;
 }
-
 .item-info {
-  margin: 5px 0px;
-  border: black solid 1px;
+  margin: 5px 0;
+  border: var(--color-black) solid 1px;
   width: 90%;
   text-align: center;
   font-size: 20px;
-  padding: 5px 0px;
-  height: auto;
+  padding: 5px 0;
   border-radius: 10px;
   cursor: pointer;
-  background-color: #2c3e50;
-  color: white;
-}.item-info:hover {
-  background-color: white;
-  color: #2c3e50;
-  border: #2c3e50 solid 1px;
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+.item-info:hover {
+  background-color: var(--color-white);
+  color: var(--color-primary);
+  border: var(--color-primary) solid 1px;
 }
 
-/* Modal de Listas */
-  .modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-
-  .modal.hidden {
-    display: none;
-  }
-
-  .modal-content {
-    background-color: white;
-    padding: 20px;
-    border-radius: 10px 0 0 10px;
-    width: 400px;
-    text-align: center;
-  }
-
-  #info-div-box {
-    justify-items: start;
-    border: black solid 1px;
-    border-radius: 10px;
-    padding: 5px;
-    background-color: #2c3e50;
-  }
-
-  #info-div-box p {
-    background-color: white;
-    padding: 5px;
-    border-radius: 10px;
-    border: grey solid 1px;
-  }
-
-  fieldset {
-    background-color: white;
-    border-radius: 10px;
-  }
-
-  legend {
-    background-color: white;
-    border-radius: 5px;
-  }
-
-  .clickable-title {
-    cursor: pointer;
-  }.clickable-title:hover {
-    color: blue;
-  }
-
-  #editLineButton {
-    margin-top: 10px;
-    color: white;
-    background-color: green;
-    cursor: pointer;
-    border: 0;
-    border-radius: 5px;
-    font-size: 20px;
-    padding: 5px 10px;
-  }
-
-  /* Modal form */
-  #list-form h2 {
-    margin: 10px;
-  }
-
-  #list-form {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-  }
-
-  #list-name {
-    width: 300px;
-    height: 30px;
-    border-radius: 10px;
-    font-size: 20px;
-  }
-
-  #list-description {
-    width: 300px;
-    height: 135px;
-    border-radius: 10px;
-    font-size: 15px;
-  }
-
-  #list-form .btn {
-    width: 100px;
-    height: 30px;
-    border-radius: 10px;
-    background: #2c3e50;
-    border: none;
-    color: white;
-    cursor: pointer;
-  } #list-form .btn:hover {
-    background-color: white;
-    color: #2c3e50;
-    border: #2c3e50 solid 1px;
-    font-weight: 600;
-  }
-
-  .close-btn {
-    position: relative;
-    top: -15px;
-    right: -200px;
-    font-size: 24px;
-    cursor: pointer;
-    color: #333;
-  }
-
-/* Listas */
-.sidebar-lists {
-  border: white, solid, 1px;
-  padding: 10px;
+/* =======================================
+   BOTÕES GERAIS
+======================================= */
+#add-line-btn {
+  width: 150px;
+  height: 30px;
+  margin-bottom: 20px;
   border-radius: 10px;
-  background: white;
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  cursor: pointer;
 }
-
-.list-item {
-  background: #2c3e50;
-  padding: 10px;
+#add-line-btn:hover {
+  background-color: var(--color-white);
+  color: var(--color-primary);
+  border: var(--color-primary) solid 1px;
+  font-weight: 600;
+}
+#search-input {
+  width: 300px;
+  height: 30px;
+  font-size: 20px;
   border-radius: 10px;
-  cursor: pointer;
-  margin: 15px 0px;
-}.list-item:hover {
-  background-color: white;
-  color: #2c3e50;
-  border: #2c3e50 solid 1px;
-  font-weight: 600;
-}.Favorito {
-  background-color: cyan;
-  color: black;
-}.Horrivel {
-  background-color: rgb(165, 165, 165);
-  color: black;
-}.Ruim {
-  background-color: #5d6c71;
-  color: black;
-}.Muito {
-  background-color: #009bbb;
-}.Goat {
-  background-size: 400% 400%;
-  background-image: linear-gradient(45deg, #ff0000, #1aff00, #0084ff, #ff00f2);
+  margin-bottom: 20px;
+}
+.info-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #007bff;
   color: white;
-  font-weight: 600;
-  display: inline-block;
-  background-position: 0% 50%;
-  -webkit-background-clip: padding-box; /* Faz com que o fundo não afete o texto */
-  background-clip: padding-box; /* Faz com que o fundo não afete o texto */
-  animation: gradientAnimation 3s linear infinite; /* Transição suave para fundo e cor */
-}.Goat:hover {
-  background-color: white; /* Fundo branco no hover */
-  color: transparent; /* Texto transparente para exibir o gradiente */
-  background-clip: text; /* Faz com que o gradiente seja aplicado ao texto */
-  border: #fff700 solid 1px;
-  animation: gradientAnimation 3s linear infinite; /* Animação do gradiente no hover */
-}
-.Amor {
-  background-size: 400% 400%;
-  background-image: linear-gradient(45deg, #fd00a4, #ad0000, #ad0000, #fd00a4);
-  color: white;
-  font-weight: 600;
-  display: inline-block;
-  background-position: 0% 50%;
-  -webkit-background-clip: padding-box; /* Faz com que o fundo não afete o texto */
-  background-clip: padding-box; /* Faz com que o fundo não afete o texto */
-  animation: gradientAnimation 3s ease infinite; /* Transição suave para fundo e cor */
-}.Amor:hover {
-  background-color: white; /* Fundo branco no hover */
-  color: transparent; /* Texto transparente para exibir o gradiente */
-  background-clip: text; /* Faz com que o gradiente seja aplicado ao texto */
-  border: #fd0202 solid 1px;
-  animation: gradientAnimation 3s ease infinite; /* Animação do gradiente no hover */
-}
-.Putaria {
-  border: red solid 5px;
-  width: 88%;
-  background: linear-gradient(356deg, white 50%, red 40%, red 60%, white 50%);
-  color: black;
-  font-weight: 700;
-}.Putaria:hover {
-  border: red solid 5px;
-  color: black;
-}
-.Cancelado {
-  color: transparent;
-  background-image: linear-gradient(91deg, #ff0000, #ffe0e0, #fff);
-  background-clip: text;
-  -webkit-background-clip: text;
-  display: inline-block;
-}.Cancelado:hover {
-  color: red;
-}
-.Pika {
-  color: black;
-  font-weight: 600;
-  background: url('/static/img/fire-102.gif');
-  background-size: cover;
-  background-position: bottom;
-}.Pika:hover {
-  background-color: white; /* Fundo branco no hover */
-  color: transparent; /* Texto transparente para exibir o gradiente */
-  background-clip: text;
-  -webkit-text-stroke: 0.5px #ffccb2;
-}
-.GoAmor {
-  background-size: 400% 400%;
-  background-image: linear-gradient(90deg, #ff0000, #fbff00, #1aff00, #00ffd7, #0008ff, #ff002b);
-  color: white;
-  font-weight: 600;
-  display: inline-block;
-  background-position: 0% 50%;
-  -webkit-background-clip: padding-box; /* Faz com que o fundo não afete o texto */
-  background-clip: padding-box; /* Faz com que o fundo não afete o texto */
-  animation: infinityAnimation 1s linear infinite; /* Transição suave para fundo e cor */
-}.GoAmor:hover {
-  background-color: white; /* Fundo branco no hover */
-  color: transparent; /* Texto transparente para exibir o gradiente */
-  background-clip: text; /* Faz com que o gradiente seja aplicado ao texto */
-  border: #fff700 solid 1px;
-  animation: infinityAnimation 1s linear infinite;
-}
-
-@keyframes gradientAnimation {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes infinityAnimation {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 100% 50%; }
-}
-/* modal de Linhas */
-
-/* Modal Styling */
-#line-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  width: 360px;
-  padding: 20px;
-  background-color: white;
-  border-radius: 8px;
-}
-
-#close-line-modal {
-  left: 180px;
-  position: relative;
-  font-size: 24px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #333;
-}
-
-/* Input and select styling */
-#line-form input,
-#line-form select {
-  padding: 8px;
+  text-align: center;
   font-size: 14px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-
-#line-form input[type="checkbox"] {
-  margin-right: 5px;
-}
-
-#line-form input::placeholder,
-#line-form select {
-  color: #666;
-}
-
-#line-form button[type="submit"] {
-  padding: 10px 15px;
-  background-color: #2c3e50;
-  color: white;
-  border: none;
-  border-radius: 4px;
+  font-weight: bold;
   cursor: pointer;
-}
-
-#line-form button[type="submit"]:hover {
-  background-color: white;
-  color: #2c3e50;
-  border: #2c3e50 solid 1px;
-  font-weight: 400;
-}
-
-.tag-input-container {
   position: relative;
-  width: 100%;
 }
 
-#tag-search {
-  width: 343px;
-  padding: 8px;
-  font-size: 14px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-
-.suggestions {
+.info-icon:hover::after {
+  content: attr(data-message);
   position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  background-color: white;
-  border: 1px solid #ccc;
-  max-height: 150px;
-  overflow-y: auto;
-  display: none;
-}
-
-.suggestions div {
-  padding: 8px;
-  cursor: pointer;
-}
-
-.suggestions div:hover {
-  background-color: #f0f0f0;
-}
-
-.selected-tags span {
-  background-color: #2c3e50;
+  left: 50%;
+  top: 130%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
   color: white;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.selected-tags span:hover {
-  background-color: #334250;
-}
-
-/*Modal edit*/
-
-#edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  width: 360px;
-  padding: 20px;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Input and select styling */
-#edit-form input,
-#edit-form select {
-  padding: 8px;
-  font-size: 14px;
+  padding: 6px;
   border-radius: 4px;
-  border: 1px solid #ccc;
+  font-size: 12px;
+  white-space: pre-line;
+  width: 530px;
+  text-align: justify;
+  line-height: 1.4;
 }
-
-#edit-form input[type="checkbox"] {
-  margin-right: 5px;
-}
-
-#edit-form input::placeholder,
-#edit-form select {
-  color: #666;
-}
-
-#edit-form button[type="submit"] {
-  padding: 10px 15px;
-  background-color: #2c3e50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-#edit-form button[type="submit"]:hover {
-  background-color: white;
-  color: #2c3e50;
-  border: #2c3e50 solid 1px;
-  font-weight: 400;
-}
-
-.tag-input-container {
-  position: relative;
-  width: 100%;
-}
-
-.selected-tags {
-  border: #cbc7c7 solid 1px;
-  border-radius: 4px;
-  padding: 5px;
-  display: none;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 5px 0;
-}
-
-.selected-tags span {
-  background-color: #2c3e50;
-  color: white;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.selected-tags span:hover {
-  background-color: #334250;
-}
-
 #filter-input {
   width: 300px;
   height: 30px;
@@ -603,6 +270,32 @@ body, html {
   margin-bottom: 15px;
 }
 
+/* =======================================
+   MODAIS
+======================================= */
+/* Modal de Listas */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.modal.hidden {
+  display: none;
+}
+.modal-content {
+  background-color: var(--color-white);
+  padding: 20px;
+  border-radius: 10px 0 0 10px;
+  width: 400px;
+  text-align: center;
+}
 #close-modal-btn {
   position: relative;
   top: -10px;
@@ -612,14 +305,350 @@ body, html {
   color: #333;
 }
 
+/* Modal de Linhas */
+#line-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 360px;
+  padding: 20px;
+  background-color: var(--color-white);
+  border-radius: 8px;
+}
+#close-line-modal {
+  position: relative;
+  left: 180px;
+  font-size: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #333;
+}
+
+/* Modal Edit */
+#edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 360px;
+  padding: 20px;
+  background-color: var(--color-white);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* =======================================
+   FORMULÁRIOS (INPUTS, SELECTS, BOTÕES)
+======================================= */
+#line-form input,
+#line-form select,
+#edit-form input,
+#edit-form select {
+  padding: 8px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--color-grey);
+}
+#line-form input[type="checkbox"],
+#edit-form input[type="checkbox"] {
+  margin-right: 5px;
+}
+#line-form input::placeholder,
+#line-form select,
+#edit-form input::placeholder,
+#edit-form select {
+  color: #666;
+}
+#line-form button[type="submit"],
+#edit-form button[type="submit"] {
+  padding: 10px 15px;
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#line-form button[type="submit"]:hover,
+#edit-form button[type="submit"]:hover {
+  background-color: var(--color-white);
+  color: var(--color-primary);
+  border: var(--color-primary) solid 1px;
+  font-weight: 400;
+}
+
+/* Tag Input & Sugestões */
+.tag-input-container {
+  position: relative;
+  width: 100%;
+}
+#tag-search {
+  width: 343px;
+  padding: 8px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--color-grey);
+}
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background-color: var(--color-white);
+  border: 1px solid var(--color-grey);
+  max-height: 150px;
+  overflow-y: auto;
+  display: none;
+}
+.suggestions div {
+  padding: 8px;
+  cursor: pointer;
+}
+.suggestions div:hover {
+  background-color: #f0f0f0;
+}
+.selected-tags {
+  border: #cbc7c7 solid 1px;
+  border-radius: 4px;
+  padding: 5px;
+  display: none;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 5px 0;
+}
+.selected-tags span {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.selected-tags span:hover {
+  background-color: #334250;
+}
+
+/* =======================================
+   INFO DIV BOX (DETALHES MODAL)
+======================================= */
+#info-div-box {
+  justify-items: start;
+  border: var(--color-black) solid 1px;
+  border-radius: 10px;
+  padding: 5px;
+  background-color: var(--color-primary);
+}
+#info-div-box p {
+  background-color: var(--color-white);
+  padding: 5px;
+  border-radius: 10px;
+  border: grey solid 1px;
+}
+fieldset {
+  background-color: var(--color-white);
+  border-radius: 10px;
+}
+legend {
+  background-color: var(--color-white);
+  border-radius: 5px;
+}
+
+/* =======================================
+   TÍTULOS CLICÁVEIS & BOTÕES ADICIONAIS
+======================================= */
+.clickable-title {
+  cursor: pointer;
+}
+.clickable-title:hover {
+  color: blue;
+}
 #deleteLineButton {
   position: relative;
   right: 170px;
   font-size: 20px;
   cursor: pointer;
-  color: #ffffff;
-  background: #ff0000;
-  border: #ffffff solid 1px;
+  color: var(--color-white);
+  background: var(--color-red);
+  border: var(--color-white) solid 1px;
   border-radius: 5px;
   padding: 5px 10px;
+}
+#editLineButton {
+  margin-top: 10px;
+  color: var(--color-white);
+  background-color: green;
+  cursor: pointer;
+  border: 0;
+  border-radius: 5px;
+  font-size: 20px;
+  padding: 5px 10px;
+}
+
+/* =======================================
+   FORMULÁRIO DE LISTAS
+======================================= */
+#list-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+#list-form h2 {
+  margin: 10px;
+}
+#list-name {
+  width: 300px;
+  height: 30px;
+  border-radius: 10px;
+  font-size: 20px;
+}
+#list-description {
+  width: 300px;
+  height: 135px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+#list-form .btn {
+  width: 100px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--color-primary);
+  border: none;
+  color: var(--color-white);
+  cursor: pointer;
+}
+#list-form .btn:hover {
+  background-color: var(--color-white);
+  color: var(--color-primary);
+  border: var(--color-primary) solid 1px;
+  font-weight: 600;
+}
+
+/* =======================================
+   TAG STYLES (ESTILIZAÇÃO DAS CLASSES DE TAGS)
+======================================= */
+.Favorito {
+  background-color: var(--color-cyan);
+  color: var(--color-black);
+}
+
+.Horrivel {
+  background-color: rgb(165, 165, 165);
+  color: var(--color-black);
+}
+
+.Ruim {
+  background-color: #5d6c71;
+  color: var(--color-black);
+}
+
+.Muito {
+  background-color: #009bbb;
+}
+
+.Goat {
+  background-size: 400% 400%;
+  background-image: linear-gradient(45deg, #ff0000, #1aff00, #0084ff, #ff00f2);
+  color: var(--color-white);
+  font-weight: 600;
+  display: inline-block;
+  background-position: 0% 50%;
+  -webkit-background-clip: padding-box;
+  background-clip: padding-box;
+  animation: gradientAnimation 3s linear infinite;
+}
+.Goat:hover {
+  background-color: var(--color-white);
+  color: transparent;
+  background-clip: text;
+  border: #fff700 solid 1px;
+  animation: gradientAnimation 3s linear infinite;
+}
+
+.Amor {
+  background-size: 400% 400%;
+  background-image: linear-gradient(45deg, #fd00a4, #ad0000, #ad0000, #fd00a4);
+  color: var(--color-white);
+  font-weight: 600;
+  display: inline-block;
+  background-position: 0% 50%;
+  -webkit-background-clip: padding-box;
+  background-clip: padding-box;
+  animation: gradientAnimation 3s ease infinite;
+}
+.Amor:hover {
+  background-color: var(--color-white);
+  color: transparent;
+  background-clip: text;
+  border: #fd0202 solid 1px;
+  animation: gradientAnimation 3s ease infinite;
+}
+
+.Putaria {
+  border: var(--color-red) solid 5px;
+  width: 88%;
+  background: linear-gradient(356deg, var(--color-white) 50%, var(--color-red) 40%, var(--color-red) 60%, var(--color-white) 50%);
+  color: var(--color-black);
+  font-weight: 700;
+}
+.Putaria:hover {
+  border: var(--color-red) solid 5px;
+  color: var(--color-black);
+}
+
+.Cancelado {
+  color: transparent;
+  background-image: linear-gradient(91deg, #ff0000, #ffe0e0, #fff);
+  background-clip: text;
+  -webkit-background-clip: text;
+  display: inline-block;
+}
+.Cancelado:hover {
+  color: red;
+}
+
+.Pika {
+  color: var(--color-black);
+  font-weight: 600;
+  background: url('/static/img/fire-102.gif');
+  background-size: cover;
+  background-position: bottom;
+}
+.Pika:hover {
+  background-color: var(--color-white);
+  color: transparent;
+  background-clip: text;
+  -webkit-text-stroke: 0.5px #ffccb2;
+}
+
+.GoAmor {
+  background-size: 400% 400%;
+  background-image: linear-gradient(90deg, #ff0000, #fbff00, #1aff00, #00ffd7, #0008ff, #ff002b);
+  color: var(--color-white);
+  font-weight: 600;
+  display: inline-block;
+  background-position: 0% 50%;
+  -webkit-background-clip: padding-box;
+  background-clip: padding-box;
+  animation: infinityAnimation 1s linear infinite;
+}
+.GoAmor:hover {
+  background-color: var(--color-white);
+  color: transparent;
+  background-clip: text;
+  border: #fff700 solid 1px;
+  animation: infinityAnimation 1s linear infinite;
+}
+
+/* =======================================
+   ANIMAÇÕES
+======================================= */
+@keyframes gradientAnimation {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes infinityAnimation {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
 }
