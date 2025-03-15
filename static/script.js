@@ -138,7 +138,7 @@
              (item.tags.includes("Namoro") || item.tags.includes("Casamento") || item.tags.includes("Noivado"))
             )
         ) {
-            return "GoAmor";
+            return "BestLove";
         }
 
         if (item.tags.includes("Goat")) {
@@ -154,7 +154,7 @@
             item.tags.includes("Romance do bom") &&
             (item.tags.includes("Namoro") || item.tags.includes("Casamento") || item.tags.includes("Noivado"))
         ) {
-            return "Amor";
+            return "Love";
         }
 
         if (
@@ -302,21 +302,20 @@
         // Filtrar os itens corretamente
         const filteredLinhas = linhas.filter(item => {
             const tags = item.tags ? item.tags.split(',').map(tag => tag.trim().toLowerCase()) : [];
+            const extraClass = getClasseExtra(item).toLowerCase(); // Obtém a classe extra gerada
             
+            // Criar um array contendo todas as informações possíveis para pesquisa
+            const allFilters = [...tags, item.status.toLowerCase(), item.opiniao.toLowerCase(), item.nome.toLowerCase()];
+            if (extraClass) allFilters.push(extraClass); // Adiciona a classe especial se existir
+    
             // Verifica se o item contém TODOS os filtros positivos
-            const matchesInclude = includeFilters.every(filter =>
-                tags.some(tag => tag.includes(filter)) ||
-                item.status.toLowerCase().includes(filter) ||
-                item.opiniao.toLowerCase().includes(filter) ||
-                item.nome.toLowerCase().includes(filter)
+            const matchesInclude = includeFilters.every(filter => 
+                allFilters.some(data => data.includes(filter))
             );
     
             // Verifica se NÃO contém nenhum dos filtros negativos
             const matchesExclude = excludeFilters.every(filter =>
-                !tags.some(tag => tag.includes(filter)) &&
-                !item.status.toLowerCase().includes(filter) &&
-                !item.opiniao.toLowerCase().includes(filter) &&
-                !item.nome.toLowerCase().includes(filter)
+                !allFilters.some(data => data.includes(filter))
             );
     
             return matchesInclude && matchesExclude;
