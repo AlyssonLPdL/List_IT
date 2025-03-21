@@ -348,6 +348,8 @@
         });
     }
 
+    const imageCache = {};
+
     // Função para buscar imagem
     async function fetchImageUrl(query, contentType) {
         const apiUrl = `/search_image?q=${encodeURIComponent(query)}&type=${encodeURIComponent(contentType)}`;
@@ -395,7 +397,7 @@
         mainInfoContent.innerHTML = `
             <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
             <span id="close-modal-btn">&times;</span>
-            <h2 id="itemNameh2" class="clickable-title">${item.nome}</h2>
+            <h2 class="clickable-title">${item.nome}</h2>
             <div id="info-div-box">
                 <p><strong>Conteúdo:</strong> ${item.conteudo}</p>
                 <fieldset>
@@ -405,6 +407,11 @@
                 <p><strong>Status:</strong> ${item.status}</p>
                 <p><strong>Episódio/Capítulo:</strong> ${item.episodio}</p>
                 <p><strong>Opinião:</strong> ${item.opiniao}</p>
+                <div class="pesquisasContainer">
+                    <img class="pesquisaBtn" id="mangaDex" src="/static/img/MangaDex.png" alt="MangaDex">
+                    <img class="pesquisaBtn" id="slimeread" src="/static/img/SlimeRead.png" alt="SlimeRead">
+                    <img class="pesquisaBtn" id="google" src="/static/img/Google.png" alt="Google">
+                </div>
             </div>
             <button id="editLineButton"><i class="fas fa-edit"></i></button>
         `;
@@ -418,9 +425,33 @@
         document.getElementById('deleteLineButton').addEventListener('click', () => deleteLine(item.id));
         document.getElementById('editLineButton').addEventListener('click', () => openEditModal(item));
         document.getElementById('close-modal-btn').addEventListener('click', () => modalInfo.classList.add('hidden'));
-        document.querySelector('#itemNameh2').addEventListener('click', () => {
+        // Função para abrir a busca no MangaDex
+        document.querySelector('#mangaDex').addEventListener('click', () => {
+            const mangaDexSearchUrl = `https://mangadex.org/search?q=${encodeURIComponent(item.nome)}`;
+            window.open(mangaDexSearchUrl, '_blank');
+        });
+
+        // Função para abrir a busca no Slimeread
+        document.querySelector('#slimeread').addEventListener('click', () => {
+            const slimeReadSearchUrl = `https://slimeread.com/busca?search=${encodeURIComponent(item.nome)}&genre=&status=&nsfw=&publicationYear=&views=&chapter=&sortBy=most_viewed&page=1`;
+            window.open(slimeReadSearchUrl, '_blank');
+        });
+
+        // Função para abrir a busca no Google
+        document.querySelector('#google').addEventListener('click', () => {
             const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.nome)}`;
             window.open(googleSearchUrl, '_blank');
+        });
+
+        document.querySelectorAll('.clickable-title').forEach(title => {
+            title.addEventListener('click', () => {
+                // Copiar o conteúdo do nome (innerText) para a área de transferência
+                const textToCopy = title.innerText;
+        
+                // Usando o método moderno do Clipboard API
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                });
+            });
         });
     }
 

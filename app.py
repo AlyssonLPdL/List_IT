@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import sqlite3
 import requests
 import re
+import time
 
 app = Flask(__name__)
 
@@ -70,24 +71,9 @@ def add_lista():
     return jsonify({"id": lista_id, "nome": data["nome"]})
 
 # <-------------- Rotas da API para Gerenciar Linhas --------------->
-# Função para buscar o ID do anime pelo nome (usando Jikan/MyAnimeList)
-def fetch_anime_id(query):
-    url = f"https://api.jikan.moe/v4/anime?q={query}&limit=1"
 
-    try:
-        response = requests.get(url)
-        data = response.json()
-
-        if 'data' in data and len(data['data']) > 0:
-            print('Id:', data['data'][0]['mal_id'])
-            return data['data'][0]['mal_id']
-        else:
-            print('Id não encontrado')
-            return None
-
-    except Exception as e:
-        print(f"Erro ao buscar ID do anime: {e}")
-        return None
+# Dicionário de cache para armazenar resultados
+cache = {}
 
 # Função para buscar a imagem do anime no MyAnimeList
 def fetch_anime_image_url(query):
@@ -171,12 +157,23 @@ def search_image():
     if not query:
         return jsonify({'error': 'Query parameter is required'}), 400
 
+    # Verifica se a imagem já está no cache
+    if query in cache:
+        cached_data = cache[query]
+        # Verifica se o cache ainda é válido (5 minutos de expiração)
+        if time.time() - cached_data['timestamp'] < 300:
+            return jsonify({'image_url': cached_data['image_url']})
+
+    # Se não estiver no cache ou o cache expirou, faz a requisição
     if content_type == 'anime':
         image_url = fetch_anime_image_url(query)
     elif content_type == 'manga':
         image_url = fetch_manga_image_url(query)
     else:
         return jsonify({'error': 'Invalid content type. Use "anime" or "manga".'}), 400
+
+    # Armazena no cache a imagem e o timestamp
+    cache[query] = {'image_url': image_url, 'timestamp': time.time()}
 
     return jsonify({'image_url': image_url})
 
