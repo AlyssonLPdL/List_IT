@@ -454,14 +454,26 @@
     
         // Adicionar event listeners para as buscas de anime
         document.querySelector('#betterAnimes').addEventListener('click', () => {
-            const betterAnimesSearchUrl = `https://www.betteranimes.com/?search=${encodeURIComponent(item.nome)}`;
+            // Substituir espaços por "+" e remover caracteres especiais
+            const formattedQuery = item.nome
+                .replace(/[^\w\s-]/g, '')  // Remove caracteres não alfanuméricos (mantém apenas letras, números e espaços)
+                .replace(/\s+/g, '+')      // Substitui espaços por "+"
+                .toLowerCase();           // Converte para minúsculo, se necessário
+            
+            const betterAnimesSearchUrl = `https://betteranime.net/pesquisa?searchTerm=${formattedQuery}`;
             window.open(betterAnimesSearchUrl, '_blank');
         });
     
         document.querySelector('#animesFire').addEventListener('click', () => {
-            const animesFireSearchUrl = `https://www.animesfire.com/?search=${encodeURIComponent(item.nome)}`;
+            // Substituir espaços e outros caracteres especiais por "-"
+            const formattedQuery = item.nome
+                .replace(/[^\w\s-]/g, '')  // Remove caracteres não alfanuméricos (mantém apenas letras, números e espaços)
+                .replace(/\s+/g, '-')      // Substitui espaços por "-"
+                .toLowerCase();           // Converte para minúsculo, se necessário
+            
+            const animesFireSearchUrl = `https://animefire.plus/pesquisar/${formattedQuery}`;
             window.open(animesFireSearchUrl, '_blank');
-        });
+        });     
     
         document.getElementById('deleteLineButton').addEventListener('click', () => deleteLine(item.id));
         document.getElementById('editLineButton').addEventListener('click', () => openEditModal(item));
