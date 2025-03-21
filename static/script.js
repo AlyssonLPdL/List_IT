@@ -373,7 +373,7 @@
     // Exibir detalhes de uma linha
     async function showItemDetails(item) {
         modalInfo.classList.remove('hidden');
-
+    
         // Determinar tipo de conteúdo
         let contentType;
         switch (item.conteudo) {
@@ -390,10 +390,10 @@
             default:
                 contentType = "anime";
         }
-
+    
         const imageUrl = await fetchImageUrl(item.nome, contentType);
         console.log("URL da imagem:", imageUrl);
-
+    
         mainInfoContent.innerHTML = `
             <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
             <span id="close-modal-btn">&times;</span>
@@ -408,40 +408,64 @@
                 <p><strong>Episódio/Capítulo:</strong> ${item.episodio}</p>
                 <p><strong>Opinião:</strong> ${item.opiniao}</p>
                 <div class="pesquisasContainer">
+                    <img class="pesquisaBtn" id="google" src="/static/img/Google.png" alt="Google">
                     <img class="pesquisaBtn" id="mangaDex" src="/static/img/MangaDex.png" alt="MangaDex">
                     <img class="pesquisaBtn" id="slimeread" src="/static/img/SlimeRead.png" alt="SlimeRead">
-                    <img class="pesquisaBtn" id="google" src="/static/img/Google.png" alt="Google">
+                    <!-- Ícones de pesquisa de Anime -->
+                    <img class="pesquisaBtn animeSearch" id="betterAnimes" src="/static/img/BetterAnimes.png" alt="BetterAnimes" style="display:none;">
+                    <img class="pesquisaBtn animeSearch" id="animesFire" src="/static/img/AnimesFire.png" alt="AnimesFire" style="display:none;">
                 </div>
             </div>
             <button id="editLineButton"><i class="fas fa-edit"></i></button>
         `;
-
+    
         modalPhoto.innerHTML = `
             <img src="${imageUrl}" alt="${item.nome}" style="max-width: 100%; height: 400px; border-radius: 10px;">
         `;
-
+    
         modalPhoto.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
-
-        document.getElementById('deleteLineButton').addEventListener('click', () => deleteLine(item.id));
-        document.getElementById('editLineButton').addEventListener('click', () => openEditModal(item));
-        document.getElementById('close-modal-btn').addEventListener('click', () => modalInfo.classList.add('hidden'));
-        // Função para abrir a busca no MangaDex
+    
+        // Exibir/ocultar os botões de pesquisa de acordo com o tipo de conteúdo
+        if (contentType === "anime") {
+            document.querySelectorAll('.animeSearch').forEach(el => el.style.display = 'block');
+            document.querySelector('#mangaDex').style.display = 'none';
+            document.querySelector('#slimeread').style.display = 'none';
+        } else if (contentType === "manga") {
+            document.querySelectorAll('.animeSearch').forEach(el => el.style.display = 'none');
+            document.querySelector('#mangaDex').style.display = 'block';
+            document.querySelector('#slimeread').style.display = 'block';
+        }
+    
+        // Adicionar event listeners para abrir as buscas
         document.querySelector('#mangaDex').addEventListener('click', () => {
             const mangaDexSearchUrl = `https://mangadex.org/search?q=${encodeURIComponent(item.nome)}`;
             window.open(mangaDexSearchUrl, '_blank');
         });
-
-        // Função para abrir a busca no Slimeread
+    
         document.querySelector('#slimeread').addEventListener('click', () => {
             const slimeReadSearchUrl = `https://slimeread.com/busca?search=${encodeURIComponent(item.nome)}&genre=&status=&nsfw=&publicationYear=&views=&chapter=&sortBy=most_viewed&page=1`;
             window.open(slimeReadSearchUrl, '_blank');
         });
-
-        // Função para abrir a busca no Google
+    
         document.querySelector('#google').addEventListener('click', () => {
             const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.nome)}`;
             window.open(googleSearchUrl, '_blank');
         });
+    
+        // Adicionar event listeners para as buscas de anime
+        document.querySelector('#betterAnimes').addEventListener('click', () => {
+            const betterAnimesSearchUrl = `https://www.betteranimes.com/?search=${encodeURIComponent(item.nome)}`;
+            window.open(betterAnimesSearchUrl, '_blank');
+        });
+    
+        document.querySelector('#animesFire').addEventListener('click', () => {
+            const animesFireSearchUrl = `https://www.animesfire.com/?search=${encodeURIComponent(item.nome)}`;
+            window.open(animesFireSearchUrl, '_blank');
+        });
+    
+        document.getElementById('deleteLineButton').addEventListener('click', () => deleteLine(item.id));
+        document.getElementById('editLineButton').addEventListener('click', () => openEditModal(item));
+        document.getElementById('close-modal-btn').addEventListener('click', () => modalInfo.classList.add('hidden'));
 
         document.querySelectorAll('.clickable-title').forEach(title => {
             title.addEventListener('click', () => {

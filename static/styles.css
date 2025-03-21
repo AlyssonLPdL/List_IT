@@ -511,6 +511,7 @@ legend {
 .pesquisasContainer {
   gap: 44px;
   display: flex;
+  margin-bottom: 10px;
 }
 #deleteLineButton {
   position: relative;
