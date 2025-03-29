@@ -32,7 +32,6 @@ def init_db():
         )
         """)
         conn.commit()
-
 init_db()
 
 def get_db_connection():
