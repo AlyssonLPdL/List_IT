@@ -118,6 +118,24 @@
 
     // ---------------------------- GERENCIAMENTO DE LINHAS ----------------------------
     // Função para lidar com o envio do formulário de linha
+    document.addEventListener("DOMContentLoaded", () => {
+        const refreshButtons = document.querySelectorAll(".refreshImages");
+    
+        refreshButtons.forEach(button => {
+            button.addEventListener("click", async () => {
+                try {
+                    const resposta = await fetch('/refresh_images', { method: 'POST' });
+                    const resultado = await resposta.json();
+                    alert(resultado.mensagem);
+                    location.reload(); // Atualiza a página para refletir as imagens corrigidas
+                } catch (erro) {
+                    alert("Erro ao atualizar imagens.");
+                    console.error(erro);
+                }
+            });
+        });
+    });    
+
     function handleFormSubmit(event) {
         event.preventDefault();
         if (formMode === 'edit') {
@@ -270,6 +288,7 @@
             const itemId = element.getAttribute('data-item-id');
             const item = linhas.find(i => i.id == itemId);
         
+            // Só faz a busca se imagem estiver vazia ou for placeholder
             if (!item.imagem_url || item.imagem_url.includes("via.placeholder.com")) {
                 let contentType;
                 switch (item.conteudo) {
@@ -290,26 +309,27 @@
                 try {
                     const response = await fetch(`/search_image?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
                     const data = await response.json();
-                    const imageUrl = data.image_url || 'https://via.placeholder.com/150';
+                    const imageUrl = data.image_url;
         
-                    // Atualiza DOM
+                    // Atualiza imagem no DOM
                     element.querySelector('.item-image img').src = imageUrl;
         
-                    // Atualiza o banco
-                    await fetch(`/linhas/${item.id}/imagem`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ imagem_url: imageUrl })
-                    }).then(res => {
-                        if (!res.ok) throw new Error("Erro ao atualizar imagem no banco");
-                    });
+                    // ❌ Só salva no banco se NÃO for placeholder
+                    if (!imageUrl.includes("via.placeholder.com")) {
+                        console.log("Salvando imagem no banco:", imageUrl, item.id);
+                        await fetch(`/linhas/${item.id}/imagem`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ imagem_url: imageUrl })
+                        });
+                    }
         
                 } catch (err) {
-                    console.error("Erro ao buscar/atualizar imagem:", err);
+                    console.error("Erro ao buscar imagem:", err);
                 }
             }
-        });                   
-
+        });
+        
         document.getElementById('add-line-btn').addEventListener('click', () => {
             formMode = 'add';
             lineForm.reset();
@@ -377,7 +397,7 @@
         listItemsContainer.innerHTML = linhas.map(item => `
             <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
                 <div class="item-image">
-                    <img src="https://via.placeholder.com/150" alt="${item.nome}" style="height:220px;width:150px;padding-top:15px;border-radius:10px;">
+                    <img src="${item.imagem_url && !item.imagem_url.includes('via.placeholder.com') ? item.imagem_url : 'https://via.placeholder.com/150'}" alt="${item.nome}" style="height:220px;width:150px;padding-top:15px;border-radius:10px;">
                 </div>
                 <div class="item-text">${item.nome}</div>
             </div>
@@ -385,12 +405,12 @@
 
         addItemClickEvent(linhas);
 
-        // Após renderizar os itens...
-        document.querySelectorAll('.item-info').forEach((element, index) => {
-            setTimeout(async () => {
-                const itemId = element.getAttribute('data-item-id');
-                const item = linhas.find(i => i.id == itemId);
+        document.querySelectorAll('.item-info').forEach(async (element) => {
+            const itemId = element.getAttribute('data-item-id');
+            const item = linhas.find(i => i.id == itemId);
         
+            // Só faz a busca se imagem estiver vazia ou for placeholder
+            if (!item.imagem_url || item.imagem_url.includes("via.placeholder.com")) {
                 let contentType;
                 switch (item.conteudo) {
                     case "Anime":
@@ -408,14 +428,27 @@
                 }
         
                 try {
-                    const imageUrl = await fetchImageUrl(item.nome, contentType);
-                    if (imageUrl) {
-                        element.querySelector('.item-image img').src = imageUrl;
+                    const response = await fetch(`/search_image?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
+                    const data = await response.json();
+                    const imageUrl = data.image_url;
+        
+                    // Atualiza imagem no DOM
+                    element.querySelector('.item-image img').src = imageUrl;
+        
+                    // ❌ Só salva no banco se NÃO for placeholder
+                    if (!imageUrl.includes("via.placeholder.com")) {
+                        console.log("Salvando imagem no banco:", imageUrl, item.id);
+                        await fetch(`/linhas/${item.id}/imagem`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ imagem_url: imageUrl })
+                        });
                     }
-                } catch (error) {
-                    console.error(`Erro ao buscar imagem de "${item.nome}":`, error);
+        
+                } catch (err) {
+                    console.error("Erro ao buscar imagem:", err);
                 }
-            }, index * 250); // 250ms entre cada chamada
+            }
         });        
     }
 
@@ -431,8 +464,6 @@
             }
         });
     }    
-
-    const imageCache = {};
 
     // Função para buscar imagem
     async function fetchImageUrl(query, contentType) {
@@ -504,11 +535,36 @@
         `;
     
         modalPhoto.innerHTML = `
-            <img src="${imageUrl}" alt="${item.nome}" style="max-width: 100%; height: 400px; border-radius: 10px;">
+            <img id="modalImage" src="${item.imagem_url}" alt="${item.nome}" style="max-width: 100%; height: 400px; border-radius: 10px;">
+            <div style="text-align: center; margin-top: 10px;">
+                <button id="refreshImageBtn" style="padding: 6px 12px; border-radius: 8px; background: green; color: white; border: none; cursor: pointer;">
+                    <i class="fas fa-rotate-right"></i>
+                </button>
+            </div>
         `;
-    
+
         modalPhoto.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
     
+        document.getElementById('refreshImageBtn').addEventListener('click', async () => {
+            const newImageUrl = await fetchImageUrl(item.nome, contentType);
+        
+            if (!newImageUrl.includes("via.placeholder.com")) {
+                // Atualiza no DOM
+                document.getElementById('modalImage').src = newImageUrl;
+        
+                // Atualiza no banco de dados
+                await fetch(`/linhas/${item.id}/imagem`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imagem_url: newImageUrl })
+                });
+        
+                alert("Imagem atualizada com sucesso!");
+            } else {
+                alert("Não foi possível encontrar uma imagem melhor.");
+            }
+        });
+        
         // Exibir/ocultar os botões de pesquisa de acordo com o tipo de conteúdo
         if (contentType === "anime") {
             document.querySelectorAll('.animeSearch').forEach(el => el.style.display = 'block');

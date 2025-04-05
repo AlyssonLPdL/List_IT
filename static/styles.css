@@ -28,8 +28,9 @@ body, html {
   display: flex;
   border-radius: 0 10px 10px 0;
   width: 310px;
-  justify-content: start;
+  justify-content: center;
   align-items: center;
+  flex-direction: column;
 }
 
 #hatsune-miku_1 {
@@ -124,7 +125,7 @@ body, html {
 .tagsEspeciais {
   padding: 20px;
   background: white;
-  margin-top: 120%;
+  margin-top: 100%;
   border-radius: 10px;
 }
 
@@ -166,13 +167,6 @@ body, html {
   border-radius: 10px;
   cursor: pointer;
   margin: 15px 0px;
-}
-
-.list-item:hover {
-  background-color: var(--color-white);
-  color: var(--color-primary);
-  border: var(--color-primary) solid 1px;
-  font-weight: 600;
 }
 
 /* Conteúdo Principal */
@@ -226,26 +220,31 @@ body, html {
   max-height: 650px;
   overflow-y: auto;
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
 }
 .item-info {
-  margin: 5px 0;
-  border: var(--color-black) solid 1px;
   width: 200px;
   height: 300px;
   text-align: center;
   font-size: 20px;
-  padding: 5px 0;
   border-radius: 10px;
   cursor: pointer;
   background-color: var(--color-primary);
   color: var(--color-white);
+  display: flex;
+  justify-content: space-around;
+  flex-direction: column;
+  align-items: center;
 }
-.item-info:hover {
-  background-color: var(--color-white);
-  color: var(--color-primary);
-  border: var(--color-primary) solid 1px;
+.item-text {
+  max-width: 150px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* número de linhas */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  margin-bottom: 10px;
 }
 
 /* =======================================
@@ -600,57 +599,37 @@ legend {
 
 .Goat {
   background-size: 400% 400%;
-  background-image: linear-gradient(45deg, #ff0000, #1aff00, #0084ff, #ff00f2);
+  background-image: linear-gradient(90deg, #ff0000, #1aff00, #0084ff, #ff00f2);
   color: var(--color-white);
   font-weight: 600;
-  display: inline-block;
   background-position: 0% 50%;
   -webkit-background-clip: padding-box;
   background-clip: padding-box;
-  animation: gradientAnimation 3s linear infinite;
-}
-.Goat:hover {
-  background-color: var(--color-white);
-  color: transparent;
-  background-clip: text;
-  border: #fff700 solid 1px;
   animation: gradientAnimation 3s linear infinite;
 }
 
 .Love {
   background-size: 400% 400%;
-  background-image: linear-gradient(45deg, #fd00a4, #ad0000, #ad0000, #fd00a4);
+  background-image: linear-gradient(90deg, #fd00a4, #ad0000, #ad0000, #fd00a4);
   color: var(--color-white);
   font-weight: 600;
-  display: inline-block;
   background-position: 0% 50%;
   -webkit-background-clip: padding-box;
   background-clip: padding-box;
   animation: gradientAnimation 3s ease infinite;
 }
-.Love:hover {
-  background-color: var(--color-white);
-  color: transparent;
-  background-clip: text;
-  border: #fd0202 solid 1px;
-  animation: gradientAnimation 3s ease infinite;
-}
 
 .Putaria {
-  background: linear-gradient(356deg, var(--color-white) 50%, var(--color-red) 40%, var(--color-red) 60%, var(--color-white) 50%);
+  background: linear-gradient(303deg, var(--color-white) 50%, var(--color-red) 40%, var(--color-red) 60%, var(--color-white) 50%);
   color: var(--color-black);
   font-weight: 700;
 }
 
 .Cancelado {
   color: transparent;
-  background-image: linear-gradient(91deg, #ff0000, #ffe0e0, #fff);
+  background-image: linear-gradient(90deg, #ff0000, #ffe0e0, #fff);
   background-clip: text;
   -webkit-background-clip: text;
-  display: inline-block;
-}
-.Cancelado:hover {
-  color: red;
 }
 
 .Pika {
@@ -658,13 +637,6 @@ legend {
   font-weight: 600;
   background: url('/static/img/fire-102.gif');
   background-size: cover;
-  background-position: bottom;
-}
-.Pika:hover {
-  background-color: var(--color-white);
-  color: transparent;
-  background-clip: text;
-  -webkit-text-stroke: 0.5px #ffccb2;
 }
 
 .BestLove {
@@ -672,17 +644,9 @@ legend {
   background-image: linear-gradient(90deg, #ff0000, #fbff00, #1aff00, #00ffd7, #0008ff, #ff002b);
   color: var(--color-white);
   font-weight: 600;
-  display: inline-block;
   background-position: 0% 50%;
   -webkit-background-clip: padding-box;
   background-clip: padding-box;
-  animation: infinityAnimation 1s linear infinite;
-}
-.BestLove:hover {
-  background-color: var(--color-white);
-  color: transparent;
-  background-clip: text;
-  border: #fff700 solid 1px;
   animation: infinityAnimation 1s linear infinite;
 }
 

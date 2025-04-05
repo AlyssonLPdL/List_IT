@@ -28,6 +28,7 @@ def init_db():
             status TEXT NOT NULL,
             episodio INTEGER,
             opiniao TEXT NOT NULL,
+            imagem_url TEXT,
             FOREIGN KEY (lista_id) REFERENCES listas(id)
         )
         """)
@@ -72,38 +73,63 @@ def add_lista():
 # <-------------- Rotas da API para Gerenciar Linhas --------------->
 
 # Dicionário de cache para armazenar resultados
-cache = {}
 
-# Função para buscar a imagem do anime no MyAnimeList
+# Função para buscar a imagem do anime no AniList
 def fetch_anime_image_url(query):
-    url = f"https://api.jikan.moe/v4/anime?q={query}&limit=5"
+    url = "https://graphql.anilist.co"
+    query_graphql = """
+    query($search: String) {
+        Page(page: 1, perPage: 3) {
+            media(search: $search, type: ANIME) {
+                title {
+                    romaji
+                    english
+                }
+                coverImage {
+                    large
+                }
+            }
+        }
+    }
+    """
+
+    original_query = query  # salva o nome original
+    # Limpeza básica da query
+    clean_query = re.sub(r'\(TV\)|\(MV\)', '', query).strip()
+    clean_query = clean_query.replace('-', ' ')  # substitui hífens por espaços
+    clean_query = re.sub(r'[^\w\s]', '', clean_query)  # remove pontuação
+
+    variables = {'search': clean_query}
 
     try:
-        response = requests.get(url)
-        data = response.json()
+        print(f"🔎 Buscando imagem do anime para: {clean_query}")
+        response = requests.post(url, json={'query': query_graphql, 'variables': variables})
 
-        if 'data' in data and len(data['data']) > 0:
-            if query.strip().endswith("(TV)") or query.strip().endswith("(MV)"):
-                if len(data['data']) > 1:
-                    image_url = data['data'][1]['images']['jpg']['large_image_url']
-                else:
-                    image_url = data['data'][0]['images']['jpg']['large_image_url']
+        if response.status_code == 200:
+            data = response.json()
+            media = data['data']['Page']['media']
+
+            if media:
+                index = 1 if ('(TV)' in original_query or '(MV)' in original_query) and len(media) > 1 else 0
+                image_url = media[index]['coverImage']['large']
+                print(f"✅ Imagem encontrada: {image_url}")
+                return image_url
             else:
-                image_url = data['data'][0]['images']['jpg']['large_image_url']
-            return image_url
+                print(f"⚠️ Nenhum anime encontrado para: {clean_query}")
         else:
-            return 'https://via.placeholder.com/150'
+            print(f"❌ Erro na API AniList (Anime): {response.status_code} | {response.text}")
 
     except Exception as e:
-        print(f"Erro ao buscar imagem do anime: {e}")
-        return 'https://via.placeholder.com/150'
+        print(f"🚨 Exceção ao buscar imagem: {e}")
+
+    return 'https://via.placeholder.com/300x450.png?text=Sem+Capa'
 
 # Função para buscar a imagem do mangá no AniList
 def fetch_manga_image_url(query):
     url = "https://graphql.anilist.co"
     query_graphql = """
     query($search: String) {
-        Page(page: 1, perPage: 5) {
+        Page(page: 1, perPage: 3) {
             media(search: $search, type: MANGA) {
                 title {
                     romaji
@@ -119,35 +145,34 @@ def fetch_manga_image_url(query):
     
     # Remove "(SKP)" para a busca, mantendo apenas o nome real do mangá
     clean_query = re.sub(r'\(SKP\)', '', query).strip()
+    clean_query = clean_query.replace('-', ' ')
     clean_query = re.sub(r'[^\w\s]', '', clean_query)  # Remove outros caracteres especiais
 
     variables = {'search': clean_query}
 
     try:
-        print(f"Buscando imagem para: {clean_query}")
+        print(f"Buscando imagem para (mangá): {clean_query}")
         response = requests.post(url, json={'query': query_graphql, 'variables': variables})
         
         if response.status_code == 200:
             data = response.json()
             media = data['data']['Page']['media']
-
             if media:
-                # Decide qual imagem usar (primeira ou segunda) baseado na presença de "(SKP)" no nome original
                 index = 1 if "(SKP)" in query and len(media) > 1 else 0
-                image_url = media[index]['coverImage']['large']
-                print(f"Imagem encontrada: {image_url}")
+                image_url = media[index]['coverImage']['large'].strip()
+                print(f"✅ Imagem encontrada: {image_url}")
                 return image_url
             else:
-                print(f"Nenhum resultado encontrado para {clean_query}.")
+                print(f"⚠️ Nenhum anime encontrado para: {clean_query}.")
         else:
-            print(f"Erro na API AniList: Status {response.status_code}")
-
+            print(f"❌ Erro na API AniList (Manga): {response.status_code}")
     except requests.exceptions.RequestException as e:
-        print(f"Erro na requisição: {e}")
+        print(f"Erro na requisição (Manga): {e}")
 
     return 'https://via.placeholder.com/300x450.png?text=Sem+Capa'
 
 # Função para buscar imagens de acordo com o tipo de conteúdo (anime ou manga)
+# Endpoint para buscar imagens (já existente)
 @app.route('/search_image', methods=['GET'])
 def search_image():
     query = request.args.get('q', '').strip()
@@ -156,14 +181,6 @@ def search_image():
     if not query:
         return jsonify({'error': 'Query parameter is required'}), 400
 
-    # Verifica se a imagem já está no cache
-    if query in cache:
-        cached_data = cache[query]
-        # Verifica se o cache ainda é válido (5 minutos de expiração)
-        if time.time() - cached_data['timestamp'] < 300:
-            return jsonify({'image_url': cached_data['image_url']})
-
-    # Se não estiver no cache ou o cache expirou, faz a requisição
     if content_type == 'anime':
         image_url = fetch_anime_image_url(query)
     elif content_type == 'manga':
@@ -171,17 +188,62 @@ def search_image():
     else:
         return jsonify({'error': 'Invalid content type. Use "anime" or "manga".'}), 400
 
-    # Armazena no cache a imagem e o timestamp
-    cache[query] = {'image_url': image_url, 'timestamp': time.time()}
-
+    # Removido: cache[query] = {'image_url': image_url, 'timestamp': time.time()}
     return jsonify({'image_url': image_url})
+
+# Novo endpoint para atualizar apenas a imagem de uma linha
+@app.route("/linhas/<int:linha_id>/imagem", methods=["PUT"])
+def update_linha_imagem(linha_id):
+    data = request.get_json()
+    imagem_url = data.get("imagem_url")
+    if not imagem_url:
+        return jsonify({"error": "imagem_url is required"}), 400
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE linhas SET imagem_url = ? WHERE id = ?", (imagem_url, linha_id))
+        conn.commit()
+        conn.close()
+        return jsonify({"message": "Imagem atualizada com sucesso!", "imagem_url": imagem_url})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/refresh_images', methods=['POST'])
+def refresh_images():
+    conn = sqlite3.connect('list_it.db')
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, nome, conteudo FROM linhas
+        WHERE imagem_url IS NULL OR imagem_url = 'https://via.placeholder.com/300x450.png?text=Sem+Capa'
+    """)
+    linhas_com_erro = cursor.fetchall()
+
+    atualizados = 0
+
+    for linha_id, nome, conteudo in linhas_com_erro:
+        content_type = 'anime' if conteudo.lower() in ['anime', 'filme', 'hentai'] else 'manga'
+        image_url = fetch_anime_image_url(nome) if content_type == 'anime' else fetch_manga_image_url(nome)
+
+        if 'via.placeholder.com' not in image_url:
+            cursor.execute("""
+                UPDATE linhas SET imagem_url = ?
+                WHERE id = ?
+            """, (image_url, linha_id))
+            atualizados += 1
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'mensagem': f'{atualizados} imagens atualizadas com sucesso.'})
+
 
 @app.route("/linhas/<int:lista_id>", methods=["GET"])
 def get_linhas(lista_id):
-    """Retorna todas as linhas de uma lista específica."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM linhas WHERE lista_id = ?", (lista_id,))
+    cursor.execute("SELECT id, lista_id, nome, tags, conteudo, status, episodio, opiniao, imagem_url FROM linhas WHERE lista_id = ?", (lista_id,))
     linhas = [
         {
             "id": row[0],
@@ -192,9 +254,11 @@ def get_linhas(lista_id):
             "status": row[5],
             "episodio": row[6],
             "opiniao": row[7],
+            "imagem_url": row[8]  # Novo campo
         }
         for row in cursor.fetchall()
     ]
+    conn.close()
     return jsonify(linhas)
 
 @app.route("/linhas", methods=["POST"])
