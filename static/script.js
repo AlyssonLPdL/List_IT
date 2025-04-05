@@ -59,16 +59,39 @@
     // ---------------------------- MODAL EVENTS ----------------------------
     function initModalEvents() {
         // Abrir modal de criar lista
-        createListBtn.addEventListener('click', () => modal.classList.remove('hidden'));
-
+        createListBtn.addEventListener('click', () => {
+            modal.classList.remove('hidden');
+            modal.classList.add('show');
+        });
         // Fechar modal de criar lista
-        closeModal.addEventListener('click', () => modal.classList.add('hidden'));
+        closeModal.addEventListener('click', () => {
+            modal.classList.remove('show');
+            modal.classList.add('hidden');
+        });
 
         // Fechar modal de adicionar linha
-        closeLineModal.addEventListener('click', () => {
+        function fecharModalLine() {
+            lineModal.classList.remove('show');
+            lineModal.classList.add('hidden');
+
+            setTimeout(() => {
+                lineModal.classList.remove('show');
+                lineModal.classList.add('hidden');
+              }, 300);
+        }
+
+        document.getElementById('close-line-modal').addEventListener('click', () => {
             selectedTags = [];
             updateSelectedTags();
-            lineModal.classList.add('hidden');
+            fecharModalLine();
+        });
+
+        lineModal.addEventListener('click', (e) => {
+            if (e.target === lineModal) {
+                selectedTags = [];
+                updateSelectedTags();
+                fecharModalLine(); // aqui agora chama a função corretamente
+            }
         });
     }
 
@@ -335,6 +358,7 @@
             selectedTags = [];
             updateSelectedTags();
             lineModal.classList.remove('hidden');
+            lineModal.classList.add('show');
             initResizeObserver();
         });
 
@@ -486,6 +510,10 @@
     // Exibir detalhes de uma linha
     async function showItemDetails(item) {
         modalInfo.classList.remove('hidden');
+        modalInfo.classList.add('show');
+      
+        // Opcional: se quiser resetar a animação se abrir várias vezes seguidas
+        modalInfo.offsetHeight; // força reflow
     
         // Determinar tipo de conteúdo
         let contentType;
@@ -623,8 +651,26 @@
     
         document.getElementById('deleteLineButton').addEventListener('click', () => deleteLine(item.id));
         document.getElementById('editLineButton').addEventListener('click', () => openEditModal(item));
-        document.getElementById('close-modal-btn').addEventListener('click', () => modalInfo.classList.add('hidden'));
+        function fecharModalInfo() {
+            modalInfo.classList.remove('show');
+            modalInfo.classList.add('hidden');
 
+            setTimeout(() => {
+                modalInfo.classList.remove('show');
+                modalInfo.classList.add('hidden');
+              }, 300);
+        }
+        
+        // Botão de fechar
+        document.getElementById('close-modal-btn').addEventListener('click', fecharModalInfo);
+        
+        // Clicar fora do conteúdo do modal
+        modalInfo.addEventListener('click', (e) => {
+            if (e.target === modalInfo) {
+                fecharModalInfo(); // aqui agora chama a função corretamente
+            }
+        });
+        
         document.querySelectorAll('.clickable-title').forEach(title => {
             title.addEventListener('click', () => {
                 // Copiar o conteúdo do nome (innerText) para a área de transferência
