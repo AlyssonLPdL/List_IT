@@ -35,14 +35,12 @@ body, html {
 
 #hatsune-miku_1 {
   position: absolute;
-  right: 0;
   bottom: 0;
   padding: 0;
   margin: 0;
 }
 #hatsune-miku_1 img {
-  height: 425px;
-  width: 225px;
+  height: 800px;
 }
 
 /* =======================================

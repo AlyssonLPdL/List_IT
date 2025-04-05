@@ -150,7 +150,7 @@ def fetch_manga_image_url(query):
         }
     }
     """
-    
+
     # Limpa a query
     clean_query = clean_query.replace('-', ' ')
     clean_query = re.sub(r'[^\w\s]', '', clean_query)
@@ -233,7 +233,7 @@ def refresh_images():
     atualizados = 0
 
     for linha_id, nome, conteudo in linhas_com_erro:
-        content_type = 'anime' if conteudo.lower() in ['anime', 'filme', 'hentai'] else 'manga'
+        content_type = 'anime' if conteudo.lower() in ['anime', 'filme'] else 'manga'
         image_url = fetch_anime_image_url(nome) if content_type == 'anime' else fetch_manga_image_url(nome)
 
         if 'via.placeholder.com' not in image_url:

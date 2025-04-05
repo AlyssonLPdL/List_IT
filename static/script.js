@@ -294,7 +294,6 @@
                 switch (item.conteudo) {
                     case "Anime":
                     case "Filme":
-                    case "Hentai":
                         contentType = "anime";
                         break;
                     case "Manga":
@@ -415,7 +414,6 @@
                 switch (item.conteudo) {
                     case "Anime":
                     case "Filme":
-                    case "Hentai":
                         contentType = "anime";
                         break;
                     case "Manga":
@@ -494,7 +492,6 @@
         switch (item.conteudo) {
             case "Anime":
             case "Filme":
-            case "Hentai":
                 contentType = "anime";
                 break;
             case "Manga":
