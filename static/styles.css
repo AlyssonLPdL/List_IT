@@ -214,10 +214,10 @@ body, html {
 }
 .list-items {
   width: 900px;
-  height: 650px;
+  height: 750px;
   border-radius: 10px;
   gap: 25px;
-  max-height: 650px;
+  max-height: 750px;
   overflow-y: auto;
   display: flex;
   flex-wrap: wrap;
@@ -240,6 +240,7 @@ body, html {
   max-width: 150px;
   display: -webkit-box;
   -webkit-line-clamp: 2; /* número de linhas */
+  line-clamp: 2; /* número de linhas */
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
