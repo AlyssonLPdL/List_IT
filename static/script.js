@@ -238,29 +238,77 @@
 
         `.replace(/\n/g, '&#10;'); // Transforma as quebras de linha para funcionar no HTML
 
-            mainContent.innerHTML = `
-                <h1>${lista.nome}</h1>
-                <div class="pesquisa">
-                    <input type="text" id="filter-input" placeholder="Filtrar por Status, Tags ou Opinião...">
-                    <span class="info-icon" data-message="${mensagem}">i</span>
-                </div>
-            <button id="add-line-btn">+ Adicionar Linha</button>
-            <div class="graf-list">
-                <div class="container-list-items">
-                    <div class="list-items">
-                        ${linhas.map(item => `
-                            <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
-                                ${item.nome}
+        mainContent.innerHTML = `
+        <h1>${lista.nome}</h1>
+        <div class="pesquisa">
+            <input type="text" id="filter-input" placeholder="Filtrar por Status, Tags ou Opinião...">
+            <span class="info-icon" data-message="${mensagem}">i</span>
+        </div>
+        <button id="add-line-btn">+ Adicionar Linha</button>
+        <div class="graf-list">
+            <div class="container-list-items">
+                <div class="list-items">
+                    ${linhas.map(item => `
+                        <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
+                            <div class="item-image">
+                                <img src="${item.imagem_url && !item.imagem_url.includes('via.placeholder.com') ? item.imagem_url : 'https://via.placeholder.com/150'}" alt="${item.nome}" style="height:220px;width:150px;padding-top:15px;border-radius:10px;">
                             </div>
-                        `).join('')}
-                    </div>    
-                </div>
-                <div class="graficos">
-                    <canvas id="statusChart"></canvas>
-                    <canvas id="opinionChart"></canvas>
-                </div>
+                            <div class="item-text">${item.nome}</div>
+                        </div>
+                    `).join('')}
+                </div>    
             </div>
+            <div class="graficos">
+                <canvas id="statusChart"></canvas>
+                <canvas id="opinionChart"></canvas>
+            </div>
+        </div>
         `;
+      
+        // Após renderizar os itens...
+        document.querySelectorAll('.item-info').forEach(async (element) => {
+            const itemId = element.getAttribute('data-item-id');
+            const item = linhas.find(i => i.id == itemId);
+        
+            if (!item.imagem_url || item.imagem_url.includes("via.placeholder.com")) {
+                let contentType;
+                switch (item.conteudo) {
+                    case "Anime":
+                    case "Filme":
+                    case "Hentai":
+                        contentType = "anime";
+                        break;
+                    case "Manga":
+                    case "Manhwa":
+                    case "Webtoon":
+                        contentType = "manga";
+                        break;
+                    default:
+                        contentType = "anime";
+                }
+        
+                try {
+                    const response = await fetch(`/search_image?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
+                    const data = await response.json();
+                    const imageUrl = data.image_url || 'https://via.placeholder.com/150';
+        
+                    // Atualiza DOM
+                    element.querySelector('.item-image img').src = imageUrl;
+        
+                    // Atualiza o banco
+                    await fetch(`/linhas/${item.id}/imagem`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imagem_url: imageUrl })
+                    }).then(res => {
+                        if (!res.ok) throw new Error("Erro ao atualizar imagem no banco");
+                    });
+        
+                } catch (err) {
+                    console.error("Erro ao buscar/atualizar imagem:", err);
+                }
+            }
+        });                   
 
         document.getElementById('add-line-btn').addEventListener('click', () => {
             formMode = 'add';
@@ -328,24 +376,61 @@
         const listItemsContainer = document.querySelector('.list-items');
         listItemsContainer.innerHTML = linhas.map(item => `
             <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
-                ${item.nome}
+                <div class="item-image">
+                    <img src="https://via.placeholder.com/150" alt="${item.nome}" style="height:220px;width:150px;padding-top:15px;border-radius:10px;">
+                </div>
+                <div class="item-text">${item.nome}</div>
             </div>
         `).join('');
+
         addItemClickEvent(linhas);
+
+        // Após renderizar os itens...
+        document.querySelectorAll('.item-info').forEach((element, index) => {
+            setTimeout(async () => {
+                const itemId = element.getAttribute('data-item-id');
+                const item = linhas.find(i => i.id == itemId);
+        
+                let contentType;
+                switch (item.conteudo) {
+                    case "Anime":
+                    case "Filme":
+                    case "Hentai":
+                        contentType = "anime";
+                        break;
+                    case "Manga":
+                    case "Manhwa":
+                    case "Webtoon":
+                        contentType = "manga";
+                        break;
+                    default:
+                        contentType = "anime";
+                }
+        
+                try {
+                    const imageUrl = await fetchImageUrl(item.nome, contentType);
+                    if (imageUrl) {
+                        element.querySelector('.item-image img').src = imageUrl;
+                    }
+                } catch (error) {
+                    console.error(`Erro ao buscar imagem de "${item.nome}":`, error);
+                }
+            }, index * 250); // 250ms entre cada chamada
+        });        
     }
 
     // Adicionar evento de clique às linhas usando delegação de eventos
     function addItemClickEvent(linhas) {
         const listItemsContainer = document.querySelector('.list-items');
         listItemsContainer.addEventListener('click', (event) => {
-            const itemElement = event.target;
-            if (itemElement.classList.contains('item-info')) {
+            const itemElement = event.target.closest('.item-info');
+            if (itemElement) {
                 const itemId = itemElement.getAttribute('data-item-id');
                 const item = linhas.find(i => i.id == itemId);
-                showItemDetails(item);
+                if (item) showItemDetails(item);
             }
         });
-    }
+    }    
 
     const imageCache = {};
 
