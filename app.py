@@ -1,3 +1,4 @@
+import random
 from flask import Flask, render_template, request, jsonify
 import sqlite3
 import requests
@@ -7,6 +8,8 @@ import time
 app = Flask(__name__)
 
 # <-------------- Configuração do Banco de Dados --------------->
+index_tracker = {}
+index_tracker_manga = {}
 
 def init_db():
     """Cria as tabelas do banco de dados SQLite, caso não existam."""
@@ -74,12 +77,13 @@ def add_lista():
 
 # Dicionário de cache para armazenar resultados
 
+
 # Função para buscar a imagem do anime no AniList
 def fetch_anime_image_url(query):
     url = "https://graphql.anilist.co"
     query_graphql = """
     query($search: String) {
-        Page(page: 1, perPage: 3) {
+        Page(page: 1, perPage: 5) {
             media(search: $search, type: ANIME) {
                 title {
                     romaji
@@ -93,9 +97,7 @@ def fetch_anime_image_url(query):
     }
     """
 
-    original_query = query  # salva o nome original
     # Limpeza básica da query
-    clean_query = re.sub(r'\(TV\)|\(MV\)', '', query).strip()
     clean_query = clean_query.replace('-', ' ')  # substitui hífens por espaços
     clean_query = re.sub(r'[^\w\s]', '', clean_query)  # remove pontuação
 
@@ -110,9 +112,15 @@ def fetch_anime_image_url(query):
             media = data['data']['Page']['media']
 
             if media:
-                index = 1 if ('(TV)' in original_query or '(MV)' in original_query) and len(media) > 1 else 0
-                image_url = media[index]['coverImage']['large']
-                print(f"✅ Imagem encontrada: {image_url}")
+                # Recupera o último índice usado para essa query limpa, ou -1 se não existir
+                last_index = index_tracker.get(clean_query, -1)
+                # Calcula o próximo índice ciclicamente
+                chosen_index = (last_index + 1) % len(media)
+                # Atualiza o tracker
+                index_tracker[clean_query] = chosen_index
+
+                image_url = media[chosen_index]['coverImage']['large'].strip()
+                print(f"✅ Imagem encontrada (índice {chosen_index}): {image_url}")
                 return image_url
             else:
                 print(f"⚠️ Nenhum anime encontrado para: {clean_query}")
@@ -129,7 +137,7 @@ def fetch_manga_image_url(query):
     url = "https://graphql.anilist.co"
     query_graphql = """
     query($search: String) {
-        Page(page: 1, perPage: 3) {
+        Page(page: 1, perPage: 5) {
             media(search: $search, type: MANGA) {
                 title {
                     romaji
@@ -143,35 +151,37 @@ def fetch_manga_image_url(query):
     }
     """
     
-    # Remove "(SKP)" para a busca, mantendo apenas o nome real do mangá
-    clean_query = re.sub(r'\(SKP\)', '', query).strip()
+    # Limpa a query
     clean_query = clean_query.replace('-', ' ')
-    clean_query = re.sub(r'[^\w\s]', '', clean_query)  # Remove outros caracteres especiais
+    clean_query = re.sub(r'[^\w\s]', '', clean_query)
 
     variables = {'search': clean_query}
 
     try:
-        print(f"Buscando imagem para (mangá): {clean_query}")
+        print(f"📚 Buscando imagem para (mangá): {clean_query}")
         response = requests.post(url, json={'query': query_graphql, 'variables': variables})
-        
+
         if response.status_code == 200:
             data = response.json()
             media = data['data']['Page']['media']
+
             if media:
-                index = 1 if "(SKP)" in query and len(media) > 1 else 0
-                image_url = media[index]['coverImage']['large'].strip()
-                print(f"✅ Imagem encontrada: {image_url}")
+                last_index = index_tracker_manga.get(clean_query, -1)
+                chosen_index = (last_index + 1) % len(media)
+                index_tracker_manga[clean_query] = chosen_index
+
+                image_url = media[chosen_index]['coverImage']['large'].strip()
+                print(f"✅ Imagem encontrada (índice {chosen_index}): {image_url}")
                 return image_url
             else:
-                print(f"⚠️ Nenhum anime encontrado para: {clean_query}.")
+                print(f"⚠️ Nenhum mangá encontrado para: {clean_query}")
         else:
-            print(f"❌ Erro na API AniList (Manga): {response.status_code}")
+            print(f"❌ Erro na API AniList (Manga): {response.status_code} | {response.text}")
     except requests.exceptions.RequestException as e:
-        print(f"Erro na requisição (Manga): {e}")
+        print(f"🚨 Erro na requisição (Manga): {e}")
 
     return 'https://via.placeholder.com/300x450.png?text=Sem+Capa'
 
-# Função para buscar imagens de acordo com o tipo de conteúdo (anime ou manga)
 # Endpoint para buscar imagens (já existente)
 @app.route('/search_image', methods=['GET'])
 def search_image():

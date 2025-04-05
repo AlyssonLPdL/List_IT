@@ -506,7 +506,7 @@
                 contentType = "anime";
         }
     
-        const imageUrl = await fetchImageUrl(item.nome, contentType);
+        const imageUrl = item.imagem_url || await fetchImageUrl(item.nome, contentType);
         console.log("URL da imagem:", imageUrl);
     
         mainInfoContent.innerHTML = `
@@ -535,7 +535,7 @@
         `;
     
         modalPhoto.innerHTML = `
-            <img id="modalImage" src="${item.imagem_url}" alt="${item.nome}" style="max-width: 100%; height: 400px; border-radius: 10px;">
+            <img id="modalImage" src="${imageUrl}" alt="${item.nome}" style="max-width: 100%; height: 400px; border-radius: 10px;">
             <div style="text-align: center; margin-top: 10px;">
                 <button id="refreshImageBtn" style="padding: 6px 12px; border-radius: 8px; background: green; color: white; border: none; cursor: pointer;">
                     <i class="fas fa-rotate-right"></i>
@@ -546,22 +546,31 @@
         modalPhoto.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
     
         document.getElementById('refreshImageBtn').addEventListener('click', async () => {
-            const newImageUrl = await fetchImageUrl(item.nome, contentType);
+            const currentUrl = document.getElementById('modalImage').src;
+            let newImageUrl = "";
+            let attempts = 0;
+            const maxAttempts = 5;
         
-            if (!newImageUrl.includes("via.placeholder.com")) {
+            // Tenta buscar uma nova imagem enquanto for placeholder ou igual à atual
+            do {
+                newImageUrl = await fetchImageUrl(item.nome, contentType);
+                attempts++;
+            } while ((newImageUrl.includes("via.placeholder.com") || newImageUrl === currentUrl) && attempts < maxAttempts);
+        
+            if (!newImageUrl.includes("via.placeholder.com") && newImageUrl !== currentUrl) {
                 // Atualiza no DOM
                 document.getElementById('modalImage').src = newImageUrl;
-        
+                
                 // Atualiza no banco de dados
                 await fetch(`/linhas/${item.id}/imagem`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ imagem_url: newImageUrl })
                 });
-        
+                
                 alert("Imagem atualizada com sucesso!");
             } else {
-                alert("Não foi possível encontrar uma imagem melhor.");
+                alert("Não foi possível encontrar uma imagem diferente e melhor.");
             }
         });
         
