@@ -72,10 +72,7 @@
         // Fechar modal de adicionar linha
         function fecharModalLine() {
             lineModal.classList.remove('show');
-            lineModal.classList.add('hidden');
-
             setTimeout(() => {
-                lineModal.classList.remove('show');
                 lineModal.classList.add('hidden');
               }, 300);
         }
