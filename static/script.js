@@ -648,6 +648,7 @@
     
         document.getElementById('deleteLineButton').addEventListener('click', () => deleteLine(item.id));
         document.getElementById('editLineButton').addEventListener('click', () => openEditModal(item));
+        
         function fecharModalInfo() {
             modalInfo.classList.remove('show');
             modalInfo.classList.add('hidden');
@@ -663,8 +664,9 @@
         
         // Clicar fora do conteúdo do modal
         modalInfo.addEventListener('click', (e) => {
-            if (e.target === modalInfo) {
-                fecharModalInfo(); // aqui agora chama a função corretamente
+            const isOutside = !e.target.closest('.modal-content');
+            if (isOutside) {
+              fecharModalInfo();
             }
         });
         
@@ -697,6 +699,7 @@
 
         document.querySelector('button[type="submit"]').textContent = 'Salvar Alterações';
         lineModal.classList.remove('hidden');
+        lineModal.classList.add('show');
         initResizeObserver();
     }
 
