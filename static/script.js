@@ -335,7 +335,7 @@
             <div class="container-list-items">
                 <div class="list-items">
                     ${linhas.map(item => `
-                        <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
+                        <div class="item-info ${getClasseExtra(item)}" data-item-id="${item.id}">
                             <div class="status-icon" style="position: absolute;top: 4px;right: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
                                 ${getStatusIcon(item.status)}
                             </div>
