@@ -229,6 +229,54 @@
         return "";
     }
 
+    function getStatusIcon(status) {
+        switch (status.toLowerCase()) {
+            case 'concluido':
+                return '<i class="icon-concluido fas fa-check" title="Concluído"></i>';
+            case 'assistir':
+                return '<i class="icon-assistir fas fa-bookmark" title="Ver"></i>';
+            case 'ler':
+                return '<i class="icon-ler fas fa-bookmark" title="Ler"></i>';
+            case 'vendo':
+                return '<i class="icon-vendo fas fa-eye" title="Vendo"></i>';
+            case 'lendo':
+                return '<i class="icon-lendo fas fa-eye" title="Lendo"></i>';
+            case 'dropado':
+                return '<i class="icon-dropado fas fa-eye-slash" title="Dropado"></i>';
+            case 'cancelado':
+                return '<i class="icon-cancelado fas fa-ghost" title="Cancelado"></i>';
+            case 'conheço':
+                return '<i class="icon-conheco fas fa-question" title="Conheço"></i>';
+            default:
+                return ''; // vazio se não corresponder a nenhum
+        }
+        
+    }    
+    function getOpiniaoIcon(opiniao) {
+        const opiniaoFormatada = opiniao.toLowerCase();
+        switch (opiniaoFormatada) {
+            case 'favorito':
+                return '<i class="opiniao-favorito fas fa-star" title="Favorito" style="color:#ffe200;"></i>';
+            case 'muito bom':
+                return '<i class="opiniao-muito-bom fas fa-face-laugh-beam" title="Muito Bom" style="color:#f1c40f;"></i>';
+            case 'recomendo':
+                return '<i class="opiniao-recomendo fas fa-thumbs-up" title="Recomendo" style="color:#2ecc71;"></i>';
+            case 'bom':
+                return '<i class="opiniao-bom fas fa-smile" title="Bom" style="color:#27ae60;"></i>';
+            case 'mediano':
+                return '<i class="opiniao-mediano fas fa-meh" title="Mediano" style="color:#f39c12;"></i>';
+            case 'ruim':
+                return '<i class="opiniao-ruim fas fa-frown" title="Ruim" style="color:#e67e22;"></i>';
+            case 'horrivel':
+                return '<i class="opiniao-horrivel fas fa-skull-crossbones" title="Horrível" style="color:#c0392b;"></i>';
+            case 'não vi':
+            case 'nao vi':
+                return '<i class="opiniao-nao-vi fas fa-question-circle" title="Não vi" style="color:#95a5a6;"></i>';
+            default:
+                return '';
+        }
+    }    
+
     // Exibir detalhes da lista e suas linhas
     async function showListDetails(lista) {
         currentList = lista;
@@ -288,6 +336,12 @@
                 <div class="list-items">
                     ${linhas.map(item => `
                         <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
+                            <div class="status-icon" style="position: absolute;top: 4px;right: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
+                                ${getStatusIcon(item.status)}
+                            </div>
+                            <div class="opiniao-icon" style="position: absolute;top: 4px;left: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
+                                ${getOpiniaoIcon(item.opiniao)}
+                            </div>
                             <div class="item-image">
                                 <img src="${item.imagem_url && !item.imagem_url.includes('via.placeholder.com') ? item.imagem_url : 'https://via.placeholder.com/150'}" alt="${item.nome}" style="height:220px;width:150px;padding-top:15px;border-radius:10px;">
                             </div>
@@ -416,6 +470,12 @@
         const listItemsContainer = document.querySelector('.list-items');
         listItemsContainer.innerHTML = linhas.map(item => `
             <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
+                <div class="status-icon" style="position: absolute;top: 4px;right: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
+                    ${getStatusIcon(item.status)}
+                </div>
+                <div class="opiniao-icon" style="position: absolute;top: 4px;left: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
+                    ${getOpiniaoIcon(item.opiniao)}
+                </div>
                 <div class="item-image">
                     <img src="${item.imagem_url && !item.imagem_url.includes('via.placeholder.com') ? item.imagem_url : 'https://via.placeholder.com/150'}" alt="${item.nome}" style="height:220px;width:150px;padding-top:15px;border-radius:10px;">
                 </div>
