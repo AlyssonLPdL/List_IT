@@ -607,7 +607,7 @@
                 <div class="pesquisasContainer">
                     <img class="pesquisaBtn" id="google" src="/static/img/Google.png" alt="Google">
                     <img class="pesquisaBtn" id="mangaDex" src="/static/img/MangaDex.png" alt="MangaDex">
-                    <img class="pesquisaBtn" id="slimeread" src="/static/img/SlimeRead.png" alt="SlimeRead">
+                    <img class="pesquisaBtn" id="novelCool" src="/static/img/NovelCool.png" alt="novelCool">
                     <!-- Ícones de pesquisa de Anime -->
                     <img class="pesquisaBtn animeSearch" id="betterAnimes" src="/static/img/BetterAnimes.png" alt="BetterAnimes" style="display:none;">
                     <img class="pesquisaBtn animeSearch" id="animesFire" src="/static/img/AnimesFire.png" alt="AnimesFire" style="display:none;">
@@ -660,11 +660,11 @@
         if (contentType === "anime") {
             document.querySelectorAll('.animeSearch').forEach(el => el.style.display = 'block');
             document.querySelector('#mangaDex').style.display = 'none';
-            document.querySelector('#slimeread').style.display = 'none';
+            document.querySelector('#novelCool').style.display = 'none';
         } else if (contentType === "manga") {
             document.querySelectorAll('.animeSearch').forEach(el => el.style.display = 'none');
             document.querySelector('#mangaDex').style.display = 'block';
-            document.querySelector('#slimeread').style.display = 'block';
+            document.querySelector('#novelCool').style.display = 'block';
         }
     
         // Adicionar event listeners para abrir as buscas
@@ -673,9 +673,9 @@
             window.open(mangaDexSearchUrl, '_blank');
         });
     
-        document.querySelector('#slimeread').addEventListener('click', () => {
-            const slimeReadSearchUrl = `https://slimeread.com/busca?search=${encodeURIComponent(item.nome)}&genre=&status=&nsfw=&publicationYear=&views=&chapter=&sortBy=most_viewed&page=1`;
-            window.open(slimeReadSearchUrl, '_blank');
+        document.querySelector('#novelCool').addEventListener('click', () => {
+            const novelCoolSearchUrl = `https://www.novelcool.com/search/?wd=${encodeURIComponent(item.nome)}`;
+            window.open(novelCoolSearchUrl, '_blank');
         });
     
         document.querySelector('#google').addEventListener('click', () => {
