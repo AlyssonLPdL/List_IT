@@ -1,4 +1,4 @@
-(function(){
+(function () {
     // ---------------------------- CONSTANTES E ELEMENTOS ----------------------------
     // Modais
     const modal = document.getElementById('modal');
@@ -74,7 +74,7 @@
             lineModal.classList.remove('show');
             setTimeout(() => {
                 lineModal.classList.add('hidden');
-              }, 300);
+            }, 300);
         }
 
         document.getElementById('close-line-modal').addEventListener('click', () => {
@@ -140,7 +140,7 @@
     // Função para lidar com o envio do formulário de linha
     document.addEventListener("DOMContentLoaded", () => {
         const refreshButtons = document.querySelectorAll(".refreshImages");
-    
+
         refreshButtons.forEach(button => {
             button.addEventListener("click", async () => {
                 try {
@@ -154,7 +154,7 @@
                 }
             });
         });
-    });    
+    });
 
     function handleFormSubmit(event) {
         event.preventDefault();
@@ -172,8 +172,8 @@
     function getClasseExtra(item) {
         if (item.tags.includes("Goat") &&
             (item.tags.includes("Beijo") &&
-             item.tags.includes("Romance do bom") &&
-             (item.tags.includes("Namoro") || item.tags.includes("Casamento") || item.tags.includes("Noivado"))
+                item.tags.includes("Romance do bom") &&
+                (item.tags.includes("Namoro") || item.tags.includes("Casamento") || item.tags.includes("Noivado"))
             )
         ) {
             return "BestLove";
@@ -204,12 +204,26 @@
                 item.tags.includes("Yuri") ||
                 item.tags.includes("Vida Escolar") ||
                 item.tags.includes("Dormitorios") ||
-                (item.opiniao === "Mediano" || 
-                 item.opiniao === "Ruim" || 
-                 item.opiniao === "Horrivel")
+                (item.opiniao === "Mediano" ||
+                    item.opiniao === "Ruim" ||
+                    item.opiniao === "Horrivel")
             )
         ) {
-            return "Putaria";
+            // Retorna a classe "Putaria"
+            const classe = "Putaria";
+
+            // Verifica se é um Manwha
+            if (item.conteudo === "Manhwa") {
+                // Aguarda o DOM renderizar o elemento antes de aplicar o blur
+                setTimeout(() => {
+                    const imageElement = document.querySelector(`.item-info[data-item-id="${item.id}"] .item-image img`);
+                    if (imageElement) {
+                        imageElement.style.filter = "blur(5px)";
+                    }
+                }, 0); // Executa após o próximo ciclo de renderização
+            }
+
+            return classe;
         }
 
         if (
@@ -225,7 +239,7 @@
         ) {
             return "Pika";
         }
-        
+
         return "";
     }
 
@@ -250,8 +264,8 @@
             default:
                 return ''; // vazio se não corresponder a nenhum
         }
-        
-    }    
+
+    }
     function getOpiniaoIcon(opiniao) {
         const opiniaoFormatada = opiniao.toLowerCase();
         switch (opiniaoFormatada) {
@@ -275,7 +289,7 @@
             default:
                 return '';
         }
-    }    
+    }
 
     // Exibir detalhes da lista e suas linhas
     async function showListDetails(lista) {
@@ -325,43 +339,58 @@
         `.replace(/\n/g, '&#10;'); // Transforma as quebras de linha para funcionar no HTML
 
         mainContent.innerHTML = `
-        <h1>${lista.nome}</h1>
-        <div class="pesquisa">
-            <input type="text" id="filter-input" placeholder="Filtrar por Status, Tags ou Opinião...">
-            <span class="info-icon" data-message="${mensagem}">i</span>
-        </div>
-        <button id="add-line-btn">+ Adicionar Linha</button>
-        <div class="graf-list">
-            <div class="container-list-items">
-                <div class="list-items">
-                    ${linhas.map(item => `
-                        <div class="item-info ${getClasseExtra(item)}" data-item-id="${item.id}">
-                            <div class="status-icon" style="position: absolute;top: 4px;right: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
-                                ${getStatusIcon(item.status)}
-                            </div>
-                            <div class="opiniao-icon" style="position: absolute;top: 4px;left: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
-                                ${getOpiniaoIcon(item.opiniao)}
-                            </div>
-                            <div class="item-image">
-                                <img src="${item.imagem_url && !item.imagem_url.includes('via.placeholder.com') ? item.imagem_url : 'https://via.placeholder.com/150'}" alt="${item.nome}" style="height:220px;width:150px;padding-top:15px;border-radius:10px;">
-                            </div>
-                            <div class="item-text">${item.nome}</div>
-                        </div>
-                    `).join('')}
-                </div>    
+            <h1>${lista.nome}</h1>
+            <div class="pesquisa">
+                <label class="switch">
+                    <input type="checkbox" id="toggle-putaria-manhwa">
+                    <span class="slider"></span>
+                </label>
+                <input type="text" id="filter-input" placeholder="Filtrar por Status, Tags ou Opinião...">
+                <span class="info-icon" data-message="${mensagem}">i</span>
             </div>
-            <div class="graficos">
-                <canvas id="statusChart"></canvas>
-                <canvas id="opinionChart"></canvas>
+            <button id="add-line-btn">+ Adicionar Linha</button>
+            <div class="graf-list">
+                <div class="container-list-items">
+                    <div class="list-items">
+                        ${linhas.map(item => `
+                            <div class="item-info ${getClasseExtra(item)}" data-item-id="${item.id}">
+                                <div class="status-icon" style="position: absolute;top: 4px;right: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
+                                    ${getStatusIcon(item.status)}
+                                </div>
+                                <div class="opiniao-icon" style="position: absolute;top: 4px;left: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
+                                    ${getOpiniaoIcon(item.opiniao)}
+                                </div>
+                                <div class="item-image">
+                                    <img src="${item.imagem_url && !item.imagem_url.includes('via.placeholder.com') ? item.imagem_url : 'https://via.placeholder.com/150'}" alt="${item.nome}" style="height:220px;width:150px;padding-top:15px;border-radius:10px;">
+                                </div>
+                                <div class="item-text">${item.nome}</div>
+                            </div>
+                        `).join('')}
+                    </div>    
+                </div>
+                <div class="graficos">
+                    <canvas id="statusChart"></canvas>
+                    <canvas id="opinionChart"></canvas>
+                </div>
             </div>
-        </div>
         `;
-      
+
+        // Adiciona evento ao switch para ativar/desativar conteúdos "Putaria" e "Manhwa"
+        document.getElementById('toggle-putaria-manhwa').addEventListener('change', (event) => {
+            const showPutariaManhwa = event.target.checked;
+            const filteredLinhas = linhas.filter(item => {
+                const isPutaria = getClasseExtra(item) === "Putaria";
+                const isManhwa = item.conteudo === "Manhwa";
+                return showPutariaManhwa || (!isPutaria && !isManhwa);
+            });
+            showItems(filteredLinhas);
+        });
+
         // Após renderizar os itens...
         document.querySelectorAll('.item-info').forEach(async (element) => {
             const itemId = element.getAttribute('data-item-id');
             const item = linhas.find(i => i.id == itemId);
-        
+
             // Só faz a busca se imagem estiver vazia ou for placeholder
             if (!item.imagem_url || item.imagem_url.includes("via.placeholder.com")) {
                 let contentType;
@@ -378,15 +407,15 @@
                     default:
                         contentType = "anime";
                 }
-        
+
                 try {
                     const response = await fetch(`/search_image?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
                     const data = await response.json();
                     const imageUrl = data.image_url;
-        
+
                     // Atualiza imagem no DOM
                     element.querySelector('.item-image img').src = imageUrl;
-        
+
                     // ❌ Só salva no banco se NÃO for placeholder
                     if (!imageUrl.includes("via.placeholder.com")) {
                         console.log("Salvando imagem no banco:", imageUrl, item.id);
@@ -396,13 +425,13 @@
                             body: JSON.stringify({ imagem_url: imageUrl })
                         });
                     }
-        
+
                 } catch (err) {
                     console.error("Erro ao buscar imagem:", err);
                 }
             }
         });
-        
+
         document.getElementById('add-line-btn').addEventListener('click', () => {
             formMode = 'add';
             lineForm.reset();
@@ -423,15 +452,16 @@
     // Função para filtrar os itens com base no filtro
     function filterItems(linhas) {
         const filterValue = document.getElementById('filter-input').value.toLowerCase().trim();
-        
-        if (!filterValue) {
+        const showPutariaManhwa = document.getElementById('toggle-putaria-manhwa').checked;
+    
+        if (!filterValue && showPutariaManhwa) {
             showItems(linhas);
             return;
         }
     
         const includeFilters = [];
         const excludeFilters = [];
-        
+    
         filterValue.split('+').forEach(part => {
             const subFilters = part.split('-').map(f => f.trim()).filter(f => f);
             if (subFilters.length > 0) {
@@ -444,13 +474,13 @@
         const filteredLinhas = linhas.filter(item => {
             const tags = item.tags ? item.tags.split(',').map(tag => tag.trim().toLowerCase()) : [];
             const extraClass = getClasseExtra(item).toLowerCase(); // Obtém a classe extra gerada
-            
+    
             // Criar um array contendo todas as informações possíveis para pesquisa
             const allFilters = [...tags, item.status.toLowerCase(), item.opiniao.toLowerCase(), item.nome.toLowerCase()];
             if (extraClass) allFilters.push(extraClass); // Adiciona a classe especial se existir
     
             // Verifica se o item contém TODOS os filtros positivos
-            const matchesInclude = includeFilters.every(filter => 
+            const matchesInclude = includeFilters.every(filter =>
                 allFilters.some(data => data.includes(filter))
             );
     
@@ -459,16 +489,29 @@
                 !allFilters.some(data => data.includes(filter))
             );
     
-            return matchesInclude && matchesExclude;
+            // Verifica se o switch está desativado e exclui "Putaria" e "Manhwa"
+            const isPutaria = extraClass === "putaria";
+            const isManhwa = item.conteudo.toLowerCase() === "manhwa";
+            const matchesSwitch = showPutariaManhwa || (!isPutaria && !isManhwa);
+    
+            return matchesInclude && matchesExclude && matchesSwitch;
         });
     
         showItems(filteredLinhas);
-    }    
+    }
 
     // Função para exibir os itens filtrados
     function showItems(linhas) {
+        const showPutariaManhwa = document.getElementById('toggle-putaria-manhwa').checked;
+
+        const filteredLinhas = linhas.filter(item => {
+            const isPutaria = getClasseExtra(item) === "Putaria";
+            const isManhwa = item.conteudo === "Manhwa";
+            return showPutariaManhwa || (!isPutaria && !isManhwa);
+        });
+
         const listItemsContainer = document.querySelector('.list-items');
-        listItemsContainer.innerHTML = linhas.map(item => `
+        listItemsContainer.innerHTML = filteredLinhas.map(item => `
             <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
                 <div class="status-icon" style="position: absolute;top: 4px;right: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
                     ${getStatusIcon(item.status)}
@@ -483,12 +526,12 @@
             </div>
         `).join('');
 
-        addItemClickEvent(linhas);
+        addItemClickEvent(filteredLinhas);
 
         document.querySelectorAll('.item-info').forEach(async (element) => {
             const itemId = element.getAttribute('data-item-id');
             const item = linhas.find(i => i.id == itemId);
-        
+
             // Só faz a busca se imagem estiver vazia ou for placeholder
             if (!item.imagem_url || item.imagem_url.includes("via.placeholder.com")) {
                 let contentType;
@@ -505,15 +548,15 @@
                     default:
                         contentType = "anime";
                 }
-        
+
                 try {
                     const response = await fetch(`/search_image?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
                     const data = await response.json();
                     const imageUrl = data.image_url;
-        
+
                     // Atualiza imagem no DOM
                     element.querySelector('.item-image img').src = imageUrl;
-        
+
                     // ❌ Só salva no banco se NÃO for placeholder
                     if (!imageUrl.includes("via.placeholder.com")) {
                         console.log("Salvando imagem no banco:", imageUrl, item.id);
@@ -523,12 +566,12 @@
                             body: JSON.stringify({ imagem_url: imageUrl })
                         });
                     }
-        
+
                 } catch (err) {
                     console.error("Erro ao buscar imagem:", err);
                 }
             }
-        });        
+        });
     }
 
     // Adicionar evento de clique às linhas usando delegação de eventos
@@ -542,7 +585,7 @@
                 if (item) showItemDetails(item);
             }
         });
-    }    
+    }
 
     // Função para buscar imagem
     async function fetchImageUrl(query, contentType) {
@@ -568,10 +611,10 @@
     async function showItemDetails(item) {
         modalInfo.classList.remove('hidden');
         modalInfo.classList.add('show');
-      
+
         // Opcional: se quiser resetar a animação se abrir várias vezes seguidas
         modalInfo.offsetHeight; // força reflow
-    
+
         // Determinar tipo de conteúdo
         let contentType;
         switch (item.conteudo) {
@@ -587,10 +630,10 @@
             default:
                 contentType = "anime";
         }
-    
+
         const imageUrl = item.imagem_url || await fetchImageUrl(item.nome, contentType);
         console.log("URL da imagem:", imageUrl);
-    
+
         mainInfoContent.innerHTML = `
             <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
             <span id="close-modal-btn">&times;</span>
@@ -615,7 +658,7 @@
             </div>
             <button id="editLineButton"><i class="fas fa-edit"></i></button>
         `;
-    
+
         modalPhoto.innerHTML = `
             <img id="modalImage" src="${imageUrl}" alt="${item.nome}" style="max-width: 100%; height: 400px; border-radius: 10px;">
             <div style="text-align: center; margin-top: 10px;">
@@ -626,36 +669,36 @@
         `;
 
         modalPhoto.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
-    
+
         document.getElementById('refreshImageBtn').addEventListener('click', async () => {
             const currentUrl = document.getElementById('modalImage').src;
             let newImageUrl = "";
             let attempts = 0;
             const maxAttempts = 5;
-        
+
             // Tenta buscar uma nova imagem enquanto for placeholder ou igual à atual
             do {
                 newImageUrl = await fetchImageUrl(item.nome, contentType);
                 attempts++;
             } while ((newImageUrl.includes("via.placeholder.com") || newImageUrl === currentUrl) && attempts < maxAttempts);
-        
+
             if (!newImageUrl.includes("via.placeholder.com") && newImageUrl !== currentUrl) {
                 // Atualiza no DOM
                 document.getElementById('modalImage').src = newImageUrl;
-                
+
                 // Atualiza no banco de dados
                 await fetch(`/linhas/${item.id}/imagem`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ imagem_url: newImageUrl })
                 });
-                
+
                 alert("Imagem atualizada com sucesso!");
             } else {
                 alert("Não foi possível encontrar uma imagem diferente e melhor.");
             }
         });
-        
+
         // Exibir/ocultar os botões de pesquisa de acordo com o tipo de conteúdo
         if (contentType === "anime") {
             document.querySelectorAll('.animeSearch').forEach(el => el.style.display = 'block');
@@ -666,23 +709,23 @@
             document.querySelector('#mangaDex').style.display = 'block';
             document.querySelector('#novelCool').style.display = 'block';
         }
-    
+
         // Adicionar event listeners para abrir as buscas
         document.querySelector('#mangaDex').addEventListener('click', () => {
             const mangaDexSearchUrl = `https://mangadex.org/search?q=${encodeURIComponent(item.nome)}`;
             window.open(mangaDexSearchUrl, '_blank');
         });
-    
+
         document.querySelector('#novelCool').addEventListener('click', () => {
             const novelCoolSearchUrl = `https://www.novelcool.com/search/?wd=${encodeURIComponent(item.nome)}`;
             window.open(novelCoolSearchUrl, '_blank');
         });
-    
+
         document.querySelector('#google').addEventListener('click', () => {
             const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.nome)}`;
             window.open(googleSearchUrl, '_blank');
         });
-    
+
         // Adicionar event listeners para as buscas de anime
         document.querySelector('#betterAnimes').addEventListener('click', () => {
             // Substituir espaços por "+" e remover caracteres especiais
@@ -690,25 +733,25 @@
                 .replace(/[^\w\s-]/g, '')  // Remove caracteres não alfanuméricos (mantém apenas letras, números e espaços)
                 .replace(/\s+/g, '+')      // Substitui espaços por "+"
                 .toLowerCase();           // Converte para minúsculo, se necessário
-            
+
             const betterAnimesSearchUrl = `https://betteranime.net/pesquisa?searchTerm=${formattedQuery}`;
             window.open(betterAnimesSearchUrl, '_blank');
         });
-    
+
         document.querySelector('#animesFire').addEventListener('click', () => {
             // Substituir espaços e outros caracteres especiais por "-"
             const formattedQuery = item.nome
                 .replace(/[^\w\s-]/g, '')  // Remove caracteres não alfanuméricos (mantém apenas letras, números e espaços)
                 .replace(/\s+/g, '-')      // Substitui espaços por "-"
                 .toLowerCase();           // Converte para minúsculo, se necessário
-            
+
             const animesFireSearchUrl = `https://animefire.plus/pesquisar/${formattedQuery}`;
             window.open(animesFireSearchUrl, '_blank');
-        });     
-    
+        });
+
         document.getElementById('deleteLineButton').addEventListener('click', () => deleteLine(item.id));
         document.getElementById('editLineButton').addEventListener('click', () => openEditModal(item));
-        
+
         function fecharModalInfo() {
             modalInfo.classList.remove('show');
             modalInfo.classList.add('hidden');
@@ -716,25 +759,25 @@
             setTimeout(() => {
                 modalInfo.classList.remove('show');
                 modalInfo.classList.add('hidden');
-              }, 300);
+            }, 300);
         }
-        
+
         // Botão de fechar
         document.getElementById('close-modal-btn').addEventListener('click', fecharModalInfo);
-        
+
         // Clicar fora do conteúdo do modal
         modalInfo.addEventListener('click', (e) => {
             const isOutside = !e.target.closest('.modal-content');
             if (isOutside) {
-              fecharModalInfo();
+                fecharModalInfo();
             }
         });
-        
+
         document.querySelectorAll('.clickable-title').forEach(title => {
             title.addEventListener('click', () => {
                 // Copiar o conteúdo do nome (innerText) para a área de transferência
                 const textToCopy = title.innerText;
-        
+
                 // Usando o método moderno do Clipboard API
                 navigator.clipboard.writeText(textToCopy).then(() => {
                 });
@@ -852,7 +895,7 @@
     // ---------------------------- SISTEMA DE TAGS ----------------------------
     // Tags organizadas por categorias
     const romanceTags = [
-        "Romance", "Beijo", "Namoro", "Casamento", "Morar Juntos", "Noivado", 
+        "Romance", "Beijo", "Namoro", "Casamento", "Morar Juntos", "Noivado",
         "Romance do bom", "Fez Filho(s)", "Gravidez"
     ];
     const actionAdventureTags = [
@@ -894,10 +937,10 @@
 
     // Junta todas as tags
     const allTags = [
-        ...romanceTags, ...actionAdventureTags, ...fantasySupernaturalTags, 
-        ...dramaEmotionalTags, ...sciFiTechTags, ...sliceOfLifeTags, 
-        ...comedyTags, ...horrorTags, ...sportsMusicTags, 
-        ...genderTags, ...adultControversialTags, ...isekaiTags, 
+        ...romanceTags, ...actionAdventureTags, ...fantasySupernaturalTags,
+        ...dramaEmotionalTags, ...sciFiTechTags, ...sliceOfLifeTags,
+        ...comedyTags, ...horrorTags, ...sportsMusicTags,
+        ...genderTags, ...adultControversialTags, ...isekaiTags,
         ...characterTags
     ];
 
@@ -978,7 +1021,7 @@
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 const total = counts.reduce((a, b) => a + b, 0);
                                 const value = context.parsed;
                                 const percentage = total ? ((value / total) * 100).toFixed(2) : 0;
@@ -1018,7 +1061,7 @@
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 const total = counts.reduce((a, b) => a + b, 0);
                                 const value = context.parsed;
                                 const percentage = total ? ((value / total) * 100).toFixed(2) : 0;
