@@ -1,28 +1,34 @@
 /* =======================================
-   RESET & BASE STYLES
+RESET & BASE STYLES
 ======================================= */
-body, html {
+body,
+html {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
 }
 
 /* =======================================
-   CSS VARIABLES
-======================================= */
+  CSS VARIABLES
+  ======================================= */
 :root {
   --color-primary: #2c3e50;
   --color-secondary: #34495e;
   --color-white: #ffffff;
   --color-black: #000000;
-  --color-cyan: cyan;
+  --color-cyan: #00ffff;
   --color-red: #ff0000;
-  --color-grey: #ccc;
+  --color-grey: #cccccc;
+  --color-green: #4caf50;
+  --color-blue: #007bff;
+  --color-dark-grey: #333333;
+  --color-primary-dark: #334250;
+  --color-light-grey: #f0f0f0;
 }
 
 /* =======================================
-   MODAL PHOTO & IMAGENS
-======================================= */
+  MODAL PHOTO & IMAGENS
+  ======================================= */
 #modal-photo {
   background-color: var(--color-white);
   display: flex;
@@ -44,8 +50,8 @@ body, html {
 }
 
 /* =======================================
-   TAGS CONTAINER
-======================================= */
+  TAGS CONTAINER
+  ======================================= */
 .tags-container {
   width: 300px;
   border-radius: 0 10px 10px 0;
@@ -76,8 +82,8 @@ body, html {
 }
 
 /* =======================================
-   LAYOUT PRINCIPAL
-======================================= */
+  LAYOUT PRINCIPAL
+  ======================================= */
 .container {
   display: flex;
   height: 100vh;
@@ -117,12 +123,12 @@ body, html {
   border: var(--color-white), solid, 1px;
   padding: 10px;
   border-radius: 10px;
-  background: white;
+  background: var(--color-white);
 }
 
 .tagsEspeciais {
   padding: 20px;
-  background: white;
+  background: var(--color-white);
   margin-top: 150%;
   border-radius: 10px;
 }
@@ -151,19 +157,24 @@ body, html {
   height: 25px;
   width: 25px;
   background: linear-gradient(
-  303deg,
-  var(--color-white) 0%,
-  var(--color-white) 45%,
-  var(--color-red) 45%,
-  var(--color-red) 55%,
-  var(--color-white) 55%,
-  var(--color-white) 100%
+    303deg,
+    var(--color-white) 0%,
+    var(--color-white) 45%,
+    var(--color-red) 45%,
+    var(--color-red) 55%,
+    var(--color-white) 55%,
+    var(--color-white) 100%
   );
 }
 
 .CanceladoExib {
   color: var(--color-primary);
-  background-image: linear-gradient(90deg, var(--color-primary), #fff, #fff);
+  background-image: linear-gradient(
+    90deg,
+    var(--color-primary),
+    var(--color-white),
+    var(--color-white)
+  );
   display: inline-block;
 }
 
@@ -209,7 +220,7 @@ body, html {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
+  background-color: var(--color-grey);
   transition: 0.4s;
   border-radius: 20px;
 }
@@ -221,13 +232,13 @@ body, html {
   width: 14px;
   left: 3px;
   bottom: 3px;
-  background-color: white;
+  background-color: var(--color-white);
   transition: 0.4s;
   border-radius: 50%;
 }
 
 input:checked + .slider {
-  background-color: #4caf50;
+  background-color: var(--color-green);
 }
 
 input:checked + .slider:before {
@@ -235,8 +246,8 @@ input:checked + .slider:before {
 }
 
 /* =======================================
-   GRAF LIST & LIST ITEMS
-======================================= */
+  GRAF LIST & LIST ITEMS
+  ======================================= */
 .graf-list {
   display: flex;
   flex-direction: row;
@@ -300,15 +311,17 @@ input:checked + .slider:before {
   margin-bottom: 10px;
 }
 .icon-concluido {
-  color:green;
+  color: green;
 }
 .icon-cancelado {
   color: grey;
 }
-.icon-assistir, .icon-ler {
+.icon-assistir,
+.icon-ler {
   color: orange;
 }
-.icon-vendo, .icon-lendo {
+.icon-vendo,
+.icon-lendo {
   color: blue;
 }
 .icon-dropado {
@@ -319,8 +332,8 @@ input:checked + .slider:before {
 }
 
 /* =======================================
-   BOTÕES GERAIS
-======================================= */
+  BOTÕES GERAIS
+  ======================================= */
 #add-line-btn {
   width: 150px;
   height: 30px;
@@ -370,8 +383,8 @@ input:checked + .slider:before {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background-color: #007bff;
-  color: white;
+  background-color: var(--color-blue);
+  color: var(--color-white);
   text-align: center;
   font-size: 14px;
   font-weight: bold;
@@ -386,7 +399,7 @@ input:checked + .slider:before {
   top: 130%;
   transform: translateX(-50%);
   background-color: rgba(0, 0, 0, 0.8);
-  color: white;
+  color: var(--color-white);
   padding: 6px;
   border-radius: 4px;
   font-size: 12px;
@@ -404,8 +417,8 @@ input:checked + .slider:before {
 }
 
 /* =======================================
-   MODAIS
-======================================= */
+  MODAIS
+  ======================================= */
 /* Modal de Listas */
 .modal {
   position: fixed;
@@ -430,7 +443,8 @@ input:checked + .slider:before {
 
 /* Efeito nos filhos */
 .modal-content,
-#modal-photo, .tags-container {
+#modal-photo,
+.tags-container {
   transform: scale(0.8);
   opacity: 0;
   transition: transform 0.3s ease, opacity 0.3s ease;
@@ -468,7 +482,7 @@ input:checked + .slider:before {
   right: -175px;
   font-size: 24px;
   cursor: pointer;
-  color: #333;
+  color: var(--color-dark-grey);
 }
 
 /* Modal de Linhas */
@@ -488,7 +502,7 @@ input:checked + .slider:before {
   background: none;
   border: none;
   cursor: pointer;
-  color: #333;
+  color: var(--color-dark-grey);
 }
 
 /* Modal Edit */
@@ -504,8 +518,8 @@ input:checked + .slider:before {
 }
 
 /* =======================================
-   FORMULÁRIOS (INPUTS, SELECTS, BOTÕES)
-======================================= */
+  FORMULÁRIOS (INPUTS, SELECTS, BOTÕES)
+  ======================================= */
 #line-form input,
 #line-form select,
 #edit-form input,
@@ -542,9 +556,11 @@ input:checked + .slider:before {
   font-weight: 400;
 }
 
-.hidden { display: none; }
+.hidden {
+  display: none;
+}
 #filter-panel {
-  border: 1px solid #000000;
+  border: 1px solid var(--color-black);
   border-radius: 20px;
   padding: 8px;
   background: rgba(0, 0, 0, 0.5);
@@ -555,14 +571,30 @@ input:checked + .slider:before {
   width: 450px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
-.filter-section { 
+.filter-section {
   margin-bottom: 12px;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  max-height: 200px;
+  overflow: overlay;
 }
-.filter-section h4 {
-  color: white;
+.filter-section::-webkit-scrollbar {
+  width: 8px;
+}
+
+.filter-section::-webkit-scrollbar-track {
+  background: var(--color-light-grey);
+  border-radius: 10px;
+}
+
+.filter-section::-webkit-scrollbar-thumb {
+  background-color: #91cd76; /* Mantido conforme instrução */
+  border-radius: 10px;
+  border: 2px solid var(--color-light-grey);
+}
+h4 {
+  color: var(--color-white);
 }
 .filter-option {
   display: inline-block;
@@ -570,7 +602,7 @@ input:checked + .slider:before {
   margin: 4px;
   border: 1px solid #888;
   border-radius: 4px;
-  background: white;
+  background: var(--color-white);
   cursor: pointer;
   user-select: none;
 }
@@ -618,7 +650,7 @@ input:checked + .slider:before {
   cursor: pointer;
 }
 .suggestions div:hover {
-  background-color: #f0f0f0;
+  background-color: var(--color-light-grey);
 }
 .selected-tags {
   border: #cbc7c7 solid 1px;
@@ -638,12 +670,12 @@ input:checked + .slider:before {
   cursor: pointer;
 }
 .selected-tags span:hover {
-  background-color: #334250;
+  background-color: var(--color-primary-dark);
 }
 
 /* =======================================
-   INFO DIV BOX (DETALHES MODAL)
-======================================= */
+  INFO DIV BOX (DETALHES MODAL)
+  ======================================= */
 #info-div-box {
   justify-items: start;
   border: var(--color-black) solid 1px;
@@ -667,13 +699,13 @@ legend {
 }
 
 /* =======================================
-   TÍTULOS CLICÁVEIS & BOTÕES ADICIONAIS
-======================================= */
+  TÍTULOS CLICÁVEIS & BOTÕES ADICIONAIS
+  ======================================= */
 .clickable-title {
   cursor: pointer;
 }
 .clickable-title:hover {
-  color: blue;
+  color: var(--color-blue);
 }
 .pesquisaBtn {
   width: 100px;
@@ -702,7 +734,7 @@ legend {
 #editLineButton {
   margin-top: 10px;
   color: var(--color-white);
-  background-color: green;
+  background-color: var(--color-green);
   cursor: pointer;
   border: 0;
   border-radius: 5px;
@@ -711,8 +743,8 @@ legend {
 }
 
 /* =======================================
-   FORMULÁRIO DE LISTAS
-======================================= */
+  FORMULÁRIO DE LISTAS
+  ======================================= */
 #list-form {
   display: flex;
   flex-direction: column;
@@ -751,12 +783,18 @@ legend {
 }
 
 /* =======================================
-   TAG STYLES (ESTILIZAÇÃO DAS CLASSES DE TAGS)
-======================================= */
+  TAG STYLES (ESTILIZAÇÃO DAS CLASSES DE TAGS)
+  ======================================= */
 
 .Goat {
   background-size: 400% 400%;
-  background-image: linear-gradient(90deg, #ff0000, #1aff00, #0084ff, #ff00f2);
+  background-image: linear-gradient(
+    90deg,
+    var(--color-red),
+    #1aff00,
+    #0084ff,
+    #ff00f2
+  );
   color: var(--color-white);
   font-weight: 600;
   background-position: 0% 50%;
@@ -778,13 +816,13 @@ legend {
 
 .Putaria {
   background: linear-gradient(
-  303deg,
-  var(--color-white) 0%,
-  var(--color-white) 45%,
-  var(--color-red) 45%,
-  var(--color-red) 55%,
-  var(--color-white) 55%,
-  var(--color-white) 100%
+    303deg,
+    var(--color-white) 0%,
+    var(--color-white) 45%,
+    var(--color-red) 45%,
+    var(--color-red) 55%,
+    var(--color-white) 55%,
+    var(--color-white) 100%
   );
   color: var(--color-black);
   font-weight: 700;
@@ -793,19 +831,33 @@ legend {
 
 .Cancelado {
   color: var(--color-primary);
-  background-image: linear-gradient(90deg, var(--color-primary), #fff, #fff, #fff);
+  background-image: linear-gradient(
+    90deg,
+    var(--color-primary),
+    var(--color-white),
+    var(--color-white),
+    var(--color-white)
+  );
 }
 
 .Pika {
   color: var(--color-black);
   font-weight: 600;
-  background: url('/static/img/fire-102.gif');
+  background: url("/static/img/fire-102.gif");
   background-size: cover;
 }
 
 .BestLove {
   background-size: 400% 400%;
-  background-image: linear-gradient(90deg, #ff0000, #fbff00, #1aff00, #00ffd7, #0008ff, #ff002b);
+  background-image: linear-gradient(
+    90deg,
+    var(--color-red),
+    #fbff00,
+    #1aff00,
+    #00ffd7,
+    #0008ff,
+    #ff002b
+  );
   color: var(--color-white);
   font-weight: 600;
   background-position: 0% 50%;
@@ -815,17 +867,27 @@ legend {
 }
 
 /* =======================================
-   ANIMAÇÕES
-======================================= */
+  ANIMAÇÕES
+  ======================================= */
 @keyframes gradientAnimation {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes infinityAnimation {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 100% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
 }
 
 @keyframes zoomIn {

@@ -351,15 +351,17 @@
                 </div>
                 <!-- painel de filtros escondido por padrão -->
                 <div id="filter-panel" class="hidden">
-                    <div class="filter-section" data-type="status">
                     <h4>----------------------------------- Status -------------------------------------</h4>
-                    <!-- opções serão injetadas aqui -->
+                    <div class="filter-section" data-type="status">
                     </div>
-                    <div class="filter-section" data-type="conteudo">
                     <h4>--------------------------------- Conteúdo ----------------------------------</h4>
+                    <div class="filter-section" data-type="conteudo">
                     </div>
-                    <div class="filter-section" data-type="tags">
+                    <h4>----------------------------------- Opinião ------------------------------------</h4>
+                    <div class="filter-section" data-type="opiniao">
+                    </div>
                     <h4>------------------------------------- Tags -------------------------------------</h4>
+                    <div class="filter-section" data-type="tags">
                     </div>
                 </div>
                 </div>
@@ -393,6 +395,7 @@
         const panel     = document.getElementById('filter-panel');
         const statuses  = [...new Set(linhas.map(i => i.status))];
         const conteudos = [...new Set(linhas.map(i => i.conteudo))];
+        const opinioes  = [...new Set(linhas.map(i => i.opiniao))];
         const allTags   = linhas.flatMap(i => i.tags ? i.tags.split(',') : []);
         const tags = [...new Set(allTags.map(t => t.trim()))].sort();
 
@@ -408,6 +411,7 @@
 
         buildSection(statuses,  panel.querySelector('[data-type="status"]'));
         buildSection(conteudos, panel.querySelector('[data-type="conteudo"]'));
+        buildSection(opinioes,  panel.querySelector('[data-type="opiniao"]'));
         buildSection(tags,      panel.querySelector('[data-type="tags"]'));
 
         // 3) Toggle do painel
@@ -421,6 +425,7 @@
         const selected = {
             status:   { include: new Set(), exclude: new Set() },
             conteudo: { include: new Set(), exclude: new Set() },
+            opiniao:  { include: new Set(), exclude: new Set() },
             tags:     { include: new Set(), exclude: new Set() }
         };
           
@@ -541,7 +546,7 @@
             return false;
       
           // 2) para cada tipo, aplicamos primeiro EXCLUDES, depois INCLUDES
-          for (let type of ['status','conteudo']) {
+          for (let type of ['status','conteudo','opiniao']) {
             const val = item[type];
             const { include, exclude } = selected[type];
       
