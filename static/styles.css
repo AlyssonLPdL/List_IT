@@ -445,10 +445,10 @@ input:checked + .slider:before {
 
 /* Ícones (mantidos originais) */
 .icon-concluido {
-  color: green;
+  color: #008000;
 }
 .icon-cancelado {
-  color: grey;
+  color: #808080;
 }
 .icon-assistir,
 .icon-ler {
@@ -459,7 +459,7 @@ input:checked + .slider:before {
   color: blue;
 }
 .icon-dropado {
-  color: red;
+  color: #ff0000;
 }
 .icon-conheco {
   color: #ff00f2;

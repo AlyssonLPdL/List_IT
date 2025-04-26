@@ -316,7 +316,6 @@
             case 'horrivel':
                 return '<i class="opiniao-horrivel fas fa-skull-crossbones" title="Horrível" style="color:#c0392b;"></i>';
             case 'não vi':
-            case 'nao vi':
                 return '<i class="opiniao-nao-vi fas fa-question-circle" title="Não vi" style="color:#95a5a6;"></i>';
             default:
                 return '';
@@ -1112,24 +1111,62 @@
         createStatusChart(linhas);
         createOpinionChart(linhas);
     }
-
     // Cria o gráfico de Status
     function createStatusChart(linhas) {
-        const statusCategories = [...new Set(linhas.map(item => item.status))];
-        const counts = statusCategories.map(() => 0);
-        linhas.forEach(item => {
-            const index = statusCategories.indexOf(item.status);
-            if (index !== -1) counts[index]++;
-        });
+        // Determina o tipo de conteúdo baseado no primeiro item
+        const firstItem = linhas[0] || {};
+        let contentType;
+        switch (firstItem.conteudo) {
+            case "Anime":
+            case "Filme":
+                contentType = "anime";
+                break;
+            case "Manga":
+            case "Manhwa":
+            case "Webtoon":
+                contentType = "manga";
+                break;
+            default:
+                contentType = "anime";
+        }
+    
+        // Define os termos conforme o tipo de conteúdo
+        const statusTerms = {
+            anime: ['cancelado', 'dropado', 'conheço', 'assistir', 'vendo', 'concluido'],
+            manga: ['cancelado','dropado', 'conheço', 'ler', 'lendo', 'concluido']
+        }[contentType];
+    
+        // Cores correspondentes (mesma ordem para ambos)
+        const STATUS_COLORS = ["#808080","#FF0000", "#FF00F2", "#FFA500", "#0000FF", "#008000"];
+        const STATUS_COLORS_BG = ["#808080","#FF0000", "#FF00F2", "#FFA500", "#0000FF", "#008000"];
+        
+        // Filtra e conta os status existentes
+        const existingStatuses = statusTerms.filter(term => 
+            linhas.some(item => item.status.toLowerCase() === term.toLowerCase())
+        );
+        
+        const counts = existingStatuses.map(term => 
+            linhas.filter(item => item.status.toLowerCase() === term.toLowerCase()).length
+        );
+    
+        const backgroundColors = existingStatuses.map(term => 
+            STATUS_COLORS[statusTerms.indexOf(term)]
+        );
+
+        const borderColors = existingStatuses.map(term =>
+            STATUS_COLORS_BG[statusTerms.indexOf(term)]
+        );
+    
         const ctx = document.getElementById('statusChart').getContext('2d');
         new Chart(ctx, {
             type: 'pie',
             data: {
-                labels: statusCategories,
+                labels: existingStatuses,
                 datasets: [{
                     data: counts,
-                    backgroundColor: ["#4dc9f6", "#f67019", "#f53794", "#537bc4", "#acc236", "#166a8f", "#00a950", "#58595b"],
-                    borderColor: ["#4dc9f6", "#f67019", "#f53794", "#537bc4", "#acc236", "#166a8f", "#00a950", "#58595b"]
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1
                 }]
             },
             options: {
@@ -1137,22 +1174,18 @@
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Status',
-                        font: {
-                            size: 20
-                        }
+                        text: `Status - ${firstItem.conteudo || 'Anime'}`,
+                        font: { size: 20 }
                     },
                     legend: {
                         labels: {
-                            color: 'gray', // Cor das legendas
-                            font: {
-                                size: 14
-                            }
+                            color: 'gray',
+                            font: { size: 14 }
                         }
                     },
                     tooltip: {
                         callbacks: {
-                            label: function (context) {
+                            label: function(context) {
                                 const total = counts.reduce((a, b) => a + b, 0);
                                 const value = context.parsed;
                                 const percentage = total ? ((value / total) * 100).toFixed(2) : 0;
@@ -1167,21 +1200,39 @@
 
     // Cria o gráfico de Opinião
     function createOpinionChart(linhas) {
-        const opinionCategories = [...new Set(linhas.map(item => item.opiniao))];
-        const counts = opinionCategories.map(() => 0);
-        linhas.forEach(item => {
-            const index = opinionCategories.indexOf(item.opiniao);
-            if (index !== -1) counts[index]++;
-        });
+        // Ordem fixa desejada (da melhor para a pior avaliação)
+        const OPINION_ORDER = ['favorito', 'muito bom', 'bom', 'recomendo', 'mediano', 'ruim', 'horrivel', 'não vi'];
+        // Cores correspondentes (na mesma ordem)
+        const OPINION_COLORS = ["#ffe200", "#2ecc71", "#27ae60", "#f1c40f", "#f39c12", "#e67e22", "#c0392b", "#95a5a6"];
+        const OPINION_COLORS_BG = ["#ffe200", "#2ecc71", "#27ae60", "#f1c40f", "#f39c12", "#e67e22", "#c0392b", "#95a5a6"];
+        // Filtra apenas as opiniões que existem nos dados
+        const existingOpinions = OPINION_ORDER.filter(opiniao => 
+            linhas.some(item => item.opiniao.toLowerCase() === opiniao.toLowerCase())
+        );
+        
+        // Conta os itens para cada opinião (na ordem definida)
+        const counts = existingOpinions.map(opiniao => 
+            linhas.filter(item => item.opiniao.toLowerCase() === opiniao.toLowerCase()).length
+        );
+    
+        // Pega as cores correspondentes apenas para as opiniões existentes
+        const backgroundColors = existingOpinions.map((_, index) => 
+            OPINION_COLORS[OPINION_ORDER.indexOf(existingOpinions[index])]
+        );
+        const borderColors = existingOpinions.map((_, index) =>
+            OPINION_COLORS_BG[OPINION_ORDER.indexOf(existingOpinions[index])]
+        );
+    
         const ctx = document.getElementById('opinionChart').getContext('2d');
         new Chart(ctx, {
             type: 'pie',
             data: {
-                labels: opinionCategories,
+                labels: existingOpinions,
                 datasets: [{
                     data: counts,
-                    backgroundColor: ["#ff6384", "#36a2eb", "#ffcd56", "#4bc0c0", "#9966ff", "#c9cbcf", "#ff9f40", "#66ff66"],
-                    borderColor: ["#ff6384", "#36a2eb", "#ffcd56", "#4bc0c0", "#9966ff", "#c9cbcf", "#ff9f40", "#66ff66"]
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1
                 }]
             },
             options: {
@@ -1190,21 +1241,17 @@
                     title: {
                         display: true,
                         text: 'Opinião',
-                        font: {
-                            size: 20
-                        }
+                        font: { size: 20 }
                     },
                     legend: {
                         labels: {
-                            color: 'gray', // Cor das legendas
-                            font: {
-                                size: 14
-                            }
+                            color: 'gray',
+                            font: { size: 14 }
                         }
                     },
                     tooltip: {
                         callbacks: {
-                            label: function (context) {
+                            label: function(context) {
                                 const total = counts.reduce((a, b) => a + b, 0);
                                 const value = context.parsed;
                                 const percentage = total ? ((value / total) * 100).toFixed(2) : 0;
