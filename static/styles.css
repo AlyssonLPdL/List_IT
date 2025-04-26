@@ -336,12 +336,34 @@ input:checked + .slider:before {
   border: var(--color-primary) solid 1px;
   font-weight: 600;
 }
-#search-input {
-  width: 300px;
-  height: 30px;
-  font-size: 20px;
-  border-radius: 10px;
+.pesquisa {
+  display: flex;
+  align-items: center;
   margin-bottom: 20px;
+}
+.search-filter {
+  display: flex;
+  position: relative;
+}
+#search-name {
+  width: 300px;
+  height: 35px;
+  font-size: 15px;
+  border-radius: 10px 0 0px 10px;
+  border: black solid 1px;
+  padding-left: 5px;
+  margin: 0;
+}
+#search-name:focus {
+  outline: none; /* remove a borda azul padrão do navegador */
+  border: black solid 1px; /* mantém igual à borda original */
+  border-radius: 10px 0 0px 10px; /* mantém o mesmo arredondamento */
+}
+#filter-toggle {
+  height: 39px;
+  border: black solid 1px;
+  border-radius: 0px 10px 10px 0px;
+  cursor: pointer;
 }
 .info-icon {
   display: inline-block;
@@ -518,6 +540,54 @@ input:checked + .slider:before {
   color: var(--color-primary);
   border: var(--color-primary) solid 1px;
   font-weight: 400;
+}
+
+.hidden { display: none; }
+#filter-panel {
+  border: 1px solid #000000;
+  border-radius: 20px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  position: absolute;
+  top: 12%; /* Fica logo abaixo do botão */
+  left: 55%;
+  z-index: 10;
+  width: 450px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.filter-section { 
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.filter-section h4 {
+  color: white;
+}
+.filter-option {
+  display: inline-block;
+  padding: 4px 8px;
+  margin: 4px;
+  border: 1px solid #888;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  user-select: none;
+}
+.filter-option.included {
+  background: rgb(145 205 118 / 70%);
+  color: #0a6700;
+  border-color: #0a6700;
+}
+
+.filter-option.excluded {
+  background: rgb(217 83 79 / 70%);
+  color: #570010;
+  border-color: #570010;
+  border-style: dashed;
+}
+.active {
+  background-color: darkseagreen;
 }
 
 /* Tag Input & Sugestões */

@@ -342,12 +342,27 @@
             <h1>${lista.nome}</h1>
             <div class="pesquisa">
                 <label class="switch">
-                    <input type="checkbox" id="toggle-censure">
-                    <span class="slider"></span>
-                </label>
-                <input type="text" id="filter-input" placeholder="Filtrar por Status, Tags ou Opinião...">
-                <span class="info-icon" data-message="${mensagem}">i</span>
-            </div>
+                        <input type="checkbox" id="toggle-censure">
+                        <span class="slider"></span>
+                    </label>
+                <div class="search-filter">
+                    <input type="text" id="search-name" placeholder="Buscar por nome...">
+                    <button type="button" id="filter-toggle">Filtros ▼</button>
+                </div>
+                <!-- painel de filtros escondido por padrão -->
+                <div id="filter-panel" class="hidden">
+                    <div class="filter-section" data-type="status">
+                    <h4>----------------------------------- Status -------------------------------------</h4>
+                    <!-- opções serão injetadas aqui -->
+                    </div>
+                    <div class="filter-section" data-type="conteudo">
+                    <h4>--------------------------------- Conteúdo ----------------------------------</h4>
+                    </div>
+                    <div class="filter-section" data-type="tags">
+                    <h4>------------------------------------- Tags -------------------------------------</h4>
+                    </div>
+                </div>
+                </div>
             <button id="add-line-btn">+ Adicionar Linha</button>
             <div class="graf-list">
                 <div class="container-list-items">
@@ -375,6 +390,67 @@
             </div>
         `;
 
+        const panel     = document.getElementById('filter-panel');
+        const statuses  = [...new Set(linhas.map(i => i.status))];
+        const conteudos = [...new Set(linhas.map(i => i.conteudo))];
+        const allTags   = linhas.flatMap(i => i.tags ? i.tags.split(',') : []);
+        const tags = [...new Set(allTags.map(t => t.trim()))].sort();
+
+        const buildSection = (items, sectionEl) => {
+            items.forEach(item => {
+            const span = document.createElement('span');
+            span.textContent       = item;
+            span.classList.add('filter-option');
+            span.dataset.value     = item;
+            sectionEl.appendChild(span);
+            });
+        };
+
+        buildSection(statuses,  panel.querySelector('[data-type="status"]'));
+        buildSection(conteudos, panel.querySelector('[data-type="conteudo"]'));
+        buildSection(tags,      panel.querySelector('[data-type="tags"]'));
+
+        // 3) Toggle do painel
+        document.getElementById('filter-toggle').addEventListener('click', () => {
+            panel.classList.toggle('hidden')
+            const filterButton = document.getElementById('filter-toggle');
+            filterButton.classList.toggle('active');
+        });
+
+        // 4) Seleções e filtro
+        const selected = {
+            status:   { include: new Set(), exclude: new Set() },
+            conteudo: { include: new Set(), exclude: new Set() },
+            tags:     { include: new Set(), exclude: new Set() }
+        };
+          
+        panel.addEventListener('click', e => {
+            if (!e.target.classList.contains('filter-option')) return;
+            const type  = e.target.closest('.filter-section').dataset.type;
+            const value = e.target.dataset.value;
+            const sel   = selected[type];
+          
+            if (!sel.include.has(value) && !sel.exclude.has(value)) {
+              // 1º clique: marca como INCLUDE
+              sel.include.add(value);
+              e.target.classList.add('included');
+            }
+            else if (sel.include.has(value)) {
+              // 2º clique: remove INCLUDE, marca EXCLUDE
+              sel.include.delete(value);
+              e.target.classList.remove('included');
+              sel.exclude.add(value);
+              e.target.classList.add('excluded');
+            }
+            else {
+              // 3º clique: remove EXCLUDE
+              sel.exclude.delete(value);
+              e.target.classList.remove('excluded');
+            }
+          
+            filterItems(linhas, selected);
+          });          
+        
         // Adiciona evento ao switch para ativar/desativar conteúdos "Putaria" e "Manhwa"
         document.getElementById('toggle-censure').addEventListener('change', (event) => {
             const showPutariaManhwa = event.target.checked;
@@ -446,77 +522,70 @@
             initResizeObserver();
         });
 
-        const filterInput = document.getElementById('filter-input');
-        filterInput.addEventListener('input', () => filterItems(linhas));
+        document.getElementById('search-name')
+            .addEventListener('input', () => filterItems(linhas, selected));
+
 
         addItemClickEvent(linhas);
         initCharts(linhas);
     }
 
     // Função para filtrar os itens com base no filtro
-    function filterItems(linhas) {
-        const filterValue = document.getElementById('filter-input').value.toLowerCase().trim();
-        const showPutariaManhwa = document.getElementById('toggle-censure').checked;
-    
-        if (!filterValue && showPutariaManhwa) {
-            showItems(linhas);
-            return;
-        }
-    
-        const includeFilters = [];
-        const excludeFilters = [];
-    
-        filterValue.split('+').forEach(part => {
-            const subFilters = part.split('-').map(f => f.trim()).filter(f => f);
-            if (subFilters.length > 0) {
-                includeFilters.push(...subFilters.slice(0, 1)); // Primeiro é obrigatório
-                excludeFilters.push(...subFilters.slice(1)); // O restante são negativos
-            }
+    function filterItems(linhas, selected) {
+        const nameFilter = document.getElementById('search-name').value
+                                 .toLowerCase().trim();
+      
+        const filtered = linhas.filter(item => {
+          // 1) filtro por nome
+          if (nameFilter && !item.nome.toLowerCase().includes(nameFilter))
+            return false;
+      
+          // 2) para cada tipo, aplicamos primeiro EXCLUDES, depois INCLUDES
+          for (let type of ['status','conteudo']) {
+            const val = item[type];
+            const { include, exclude } = selected[type];
+      
+            if (exclude.size > 0 && exclude.has(val))
+              return false;
+            if (include.size > 0 && !include.has(val))
+              return false;
+          }
+      
+          // 3) tags: um pouco diferente, porque são múltiplas por item
+          const itemTags = item.tags
+            ? item.tags.split(',').map(t => t.trim())
+            : [];
+      
+          // a) não querer certas tags?
+          for (let bad of selected.tags.exclude) {
+            if (itemTags.includes(bad))
+              return false;
+          }
+          // b) querer pelo menos uma das tags escolhidas?
+          if (selected.tags.include.size > 0) {
+            const allIncluded = [...selected.tags.include].every(tag => itemTags.includes(tag));
+            if (!allIncluded) return false;
+          }          
+      
+          return true;
         });
-    
-        // Filtrar os itens corretamente
-        const filteredLinhas = linhas.filter(item => {
-            const tags = item.tags ? item.tags.split(',').map(tag => tag.trim().toLowerCase()) : [];
-            const extraClass = getClasseExtra(item).toLowerCase(); // Obtém a classe extra gerada
-    
-            // Criar um array contendo todas as informações possíveis para pesquisa
-            const allFilters = [...tags, item.status.toLowerCase(), item.opiniao.toLowerCase(), item.nome.toLowerCase()];
-            if (extraClass) allFilters.push(extraClass); // Adiciona a classe especial se existir
-    
-            // Verifica se o item contém TODOS os filtros positivos
-            const matchesInclude = includeFilters.every(filter =>
-                allFilters.some(data => data.includes(filter))
-            );
-    
-            // Verifica se NÃO contém nenhum dos filtros negativos
-            const matchesExclude = excludeFilters.every(filter =>
-                !allFilters.some(data => data.includes(filter))
-            );
-    
-            // Verifica se o switch está desativado e exclui apenas itens que são "Putaria" e "Manhwa"
-            const isPutaria = extraClass === "putaria";
-            const isManhwa = item.conteudo.toLowerCase() === "manhwa";
-            const matchesSwitch = showPutariaManhwa || !(isPutaria && isManhwa);
-    
-            return matchesInclude && matchesExclude && matchesSwitch;
-        });
-    
-        showItems(filteredLinhas);
-    }
+      
+        showItems(filtered);
+      }      
 
     // Função para exibir os itens filtrados
     function showItems(linhas) {
-        const showPutariaManhwa = document.getElementById('toggle-censure').checked;
-    
+        const showPutariaManhwa = document.getElementById('toggle-censure');
+
         // Filtra as linhas com base no estado do switch
         const filteredLinhas = linhas.filter(item => {
             const isPutaria = getClasseExtra(item) === "Putaria";
             const isManhwa = item.conteudo === "Manhwa";
-    
+
             // Oculta apenas itens que são "Putaria" e "Manhwa" ao mesmo tempo
             return showPutariaManhwa || !(isPutaria && isManhwa);
         });
-    
+
         const listItemsContainer = document.querySelector('.list-items');
         listItemsContainer.innerHTML = filteredLinhas.map(item => `
             <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
@@ -532,14 +601,13 @@
                 <div class="item-text">${item.nome}</div>
             </div>
         `).join('');
-    
+
         addItemClickEvent(filteredLinhas);
-    
-        // Atualiza imagens se necessário
+
         document.querySelectorAll('.item-info').forEach(async (element) => {
             const itemId = element.getAttribute('data-item-id');
             const item = linhas.find(i => i.id == itemId);
-    
+
             // Só faz a busca se imagem estiver vazia ou for placeholder
             if (!item.imagem_url || item.imagem_url.includes("via.placeholder.com")) {
                 let contentType;
@@ -556,23 +624,25 @@
                     default:
                         contentType = "anime";
                 }
-    
+
                 try {
                     const response = await fetch(`/search_image?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
                     const data = await response.json();
                     const imageUrl = data.image_url;
-    
+
                     // Atualiza imagem no DOM
                     element.querySelector('.item-image img').src = imageUrl;
-    
-                    // Salva no banco se não for placeholder
+
+                    // ❌ Só salva no banco se NÃO for placeholder
                     if (!imageUrl.includes("via.placeholder.com")) {
+                        console.log("Salvando imagem no banco:", imageUrl, item.id);
                         await fetch(`/linhas/${item.id}/imagem`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ imagem_url: imageUrl })
                         });
                     }
+
                 } catch (err) {
                     console.error("Erro ao buscar imagem:", err);
                 }
