@@ -342,7 +342,7 @@
             <h1>${lista.nome}</h1>
             <div class="pesquisa">
                 <label class="switch">
-                    <input type="checkbox" id="toggle-putaria-manhwa">
+                    <input type="checkbox" id="toggle-censure">
                     <span class="slider"></span>
                 </label>
                 <input type="text" id="filter-input" placeholder="Filtrar por Status, Tags ou Opinião...">
@@ -376,13 +376,17 @@
         `;
 
         // Adiciona evento ao switch para ativar/desativar conteúdos "Putaria" e "Manhwa"
-        document.getElementById('toggle-putaria-manhwa').addEventListener('change', (event) => {
+        document.getElementById('toggle-censure').addEventListener('change', (event) => {
             const showPutariaManhwa = event.target.checked;
+        
             const filteredLinhas = linhas.filter(item => {
                 const isPutaria = getClasseExtra(item) === "Putaria";
                 const isManhwa = item.conteudo === "Manhwa";
-                return showPutariaManhwa || (!isPutaria && !isManhwa);
+        
+                // Oculta apenas itens que são "Putaria" e "Manhwa" ao mesmo tempo
+                return showPutariaManhwa || !(isPutaria && isManhwa);
             });
+        
             showItems(filteredLinhas);
         });
 
@@ -452,7 +456,7 @@
     // Função para filtrar os itens com base no filtro
     function filterItems(linhas) {
         const filterValue = document.getElementById('filter-input').value.toLowerCase().trim();
-        const showPutariaManhwa = document.getElementById('toggle-putaria-manhwa').checked;
+        const showPutariaManhwa = document.getElementById('toggle-censure').checked;
     
         if (!filterValue && showPutariaManhwa) {
             showItems(linhas);
@@ -489,10 +493,10 @@
                 !allFilters.some(data => data.includes(filter))
             );
     
-            // Verifica se o switch está desativado e exclui "Putaria" e "Manhwa"
+            // Verifica se o switch está desativado e exclui apenas itens que são "Putaria" e "Manhwa"
             const isPutaria = extraClass === "putaria";
             const isManhwa = item.conteudo.toLowerCase() === "manhwa";
-            const matchesSwitch = showPutariaManhwa || (!isPutaria && !isManhwa);
+            const matchesSwitch = showPutariaManhwa || !(isPutaria && isManhwa);
     
             return matchesInclude && matchesExclude && matchesSwitch;
         });
@@ -502,14 +506,17 @@
 
     // Função para exibir os itens filtrados
     function showItems(linhas) {
-        const showPutariaManhwa = document.getElementById('toggle-putaria-manhwa').checked;
-
+        const showPutariaManhwa = document.getElementById('toggle-censure').checked;
+    
+        // Filtra as linhas com base no estado do switch
         const filteredLinhas = linhas.filter(item => {
             const isPutaria = getClasseExtra(item) === "Putaria";
             const isManhwa = item.conteudo === "Manhwa";
-            return showPutariaManhwa || (!isPutaria && !isManhwa);
+    
+            // Oculta apenas itens que são "Putaria" e "Manhwa" ao mesmo tempo
+            return showPutariaManhwa || !(isPutaria && isManhwa);
         });
-
+    
         const listItemsContainer = document.querySelector('.list-items');
         listItemsContainer.innerHTML = filteredLinhas.map(item => `
             <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
@@ -525,13 +532,14 @@
                 <div class="item-text">${item.nome}</div>
             </div>
         `).join('');
-
+    
         addItemClickEvent(filteredLinhas);
-
+    
+        // Atualiza imagens se necessário
         document.querySelectorAll('.item-info').forEach(async (element) => {
             const itemId = element.getAttribute('data-item-id');
             const item = linhas.find(i => i.id == itemId);
-
+    
             // Só faz a busca se imagem estiver vazia ou for placeholder
             if (!item.imagem_url || item.imagem_url.includes("via.placeholder.com")) {
                 let contentType;
@@ -548,25 +556,23 @@
                     default:
                         contentType = "anime";
                 }
-
+    
                 try {
                     const response = await fetch(`/search_image?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
                     const data = await response.json();
                     const imageUrl = data.image_url;
-
+    
                     // Atualiza imagem no DOM
                     element.querySelector('.item-image img').src = imageUrl;
-
-                    // ❌ Só salva no banco se NÃO for placeholder
+    
+                    // Salva no banco se não for placeholder
                     if (!imageUrl.includes("via.placeholder.com")) {
-                        console.log("Salvando imagem no banco:", imageUrl, item.id);
                         await fetch(`/linhas/${item.id}/imagem`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ imagem_url: imageUrl })
                         });
                     }
-
                 } catch (err) {
                     console.error("Erro ao buscar imagem:", err);
                 }
