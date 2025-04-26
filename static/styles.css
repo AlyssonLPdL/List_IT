@@ -6,31 +6,73 @@ html {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
+  background-color: var(--color-body-bg);
+  color: var(--color-text-primary);
 }
 
 /* =======================================
   CSS VARIABLES
-  ======================================= */
+======================================= */
 :root {
-  --color-primary: #2c3e50;
-  --color-secondary: #34495e;
-  --color-white: #ffffff;
-  --color-black: #000000;
-  --color-cyan: #00ffff;
-  --color-red: #ff0000;
-  --color-grey: #cccccc;
-  --color-green: #4caf50;
-  --color-blue: #007bff;
-  --color-dark-grey: #333333;
-  --color-primary-dark: #334250;
-  --color-light-grey: #f0f0f0;
+  /* Cores Base */
+  --color-body-bg: #ffffff;
+  --color-text-primary: #000000;
+  --color-text-inverse: #ffffff;
+
+  /* Componentes Principais */
+  --color-sidebar-bg: #2c3e50;
+  --color-sidebar-text: #ffffff;
+  --color-sidebar-btn-bg: #34495e;
+  --color-item-bg: #2c3e50;
+  --color-text-secondary: #000000;
+
+  /* Cores de Interface */
+  --color-card-bg: #ffffff;
+  --color-border-primary: #000000;
+  --color-border-secondary: #cccccc;
+
+  /* Cores Específicas */
+  --color-status-red: #ff0000;
+  --color-status-green: #4caf50;
+  --color-status-blue: #007bff;
+  --color-status-cyan: #00ffff;
+  --color-status-grey: #cccccc;
+
+  /* Tons Adicionais */
+  --color-neutral-dark: #333333;
+  --color-neutral-light: #f0f0f0;
+}
+
+.dark-theme {
+  --color-body-bg: #0f172a;
+  --color-text-primary: #e2e8f0;
+  --color-text-inverse: #1e293b;
+  --color-text-secondary: #ffffff;
+
+  --color-sidebar-bg: #1e293b;
+  --color-sidebar-text: #e2e8f0;
+  --color-sidebar-btn-bg: #334155;
+
+  --color-card-bg: #212232;
+  --color-border-primary: #94a3b8;
+  --color-border-secondary: #64748b;
+  --color-item-bg: #10002c;
+
+  --color-status-red: #ff4757;
+  --color-status-green: #2ed573;
+  --color-status-blue: #70a1ff;
+  --color-status-cyan: #7bed9f;
+  --color-status-grey: #747d8c;
+
+  --color-neutral-dark: #a4b0be;
+  --color-neutral-light: #2d3542;
 }
 
 /* =======================================
   MODAL PHOTO & IMAGENS
-  ======================================= */
+======================================= */
 #modal-photo {
-  background-color: var(--color-white);
+  background-color: var(--color-card-bg);
   display: flex;
   border-radius: 0 10px 10px 0;
   width: 310px;
@@ -51,17 +93,19 @@ html {
 
 /* =======================================
   TAGS CONTAINER
-  ======================================= */
+======================================= */
 .tags-container {
   width: 300px;
   border-radius: 0 10px 10px 0;
   padding: 20px;
-  background: var(--color-white);
+  background: var(--color-card-bg);
   margin-right: 20px;
+  border: 1px solid var(--color-border-secondary);
 }
 .tags-container h2 {
   text-align: center;
   padding-right: 15px;
+  color: var(--color-text-primary);
 }
 .tags-container-div {
   display: flex;
@@ -72,8 +116,8 @@ html {
   overflow-y: auto;
 }
 .tags-container-div .tag {
-  background-color: var(--color-secondary);
-  color: var(--color-white);
+  background-color: var(--color-sidebar-btn-bg);
+  color: var(--color-sidebar-text);
   width: 200px;
   border-radius: 10px;
   font-size: 20px;
@@ -83,7 +127,7 @@ html {
 
 /* =======================================
   LAYOUT PRINCIPAL
-  ======================================= */
+======================================= */
 .container {
   display: flex;
   height: 100vh;
@@ -92,8 +136,8 @@ html {
 /* Sidebar */
 .sidebar {
   width: 250px;
-  background-color: var(--color-primary);
-  color: var(--color-white);
+  background-color: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
   padding: 20px;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }
@@ -105,38 +149,102 @@ html {
   width: 100%;
   padding: 10px 15px;
   margin: 10px 0;
-  background-color: var(--color-secondary);
+  background-color: var(--color-sidebar-btn-bg);
   border: none;
   border-radius: 5px;
-  color: var(--color-white);
+  color: var(--color-sidebar-text);
   cursor: pointer;
   text-align: left;
 }
 .sidebar .btn:hover {
-  background-color: var(--color-white);
-  color: var(--color-primary);
-  border: var(--color-primary) solid 1px;
+  background-color: var(--color-sidebar-text);
+  color: var(--color-sidebar-bg);
+  border: 1px solid var(--color-sidebar-bg);
   font-weight: 500;
 }
 
 .sidebar-lists {
-  border: var(--color-white), solid, 1px;
+  border: 1px solid var(--color-border-secondary);
   padding: 10px;
   border-radius: 10px;
-  background: var(--color-white);
+  background: var(--color-card-bg);
+}
+
+/* ===== Switch de Tema ===== */
+.theme-switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  margin-left: 15px;
+}
+
+.theme-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.theme-switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-status-grey);
+  transition: 0.4s;
+  border-radius: 34px;
+  height: 30px;
+}
+
+.theme-switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 0;
+  width: 0;
+  left: 4px;
+  bottom: 4px;
+  background-color: var(--color-card-bg);
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+.theme-switch input:checked + .slider {
+  background-color: var(--color-status-blue);
+}
+
+.theme-switch input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+/* Ícones opcionais no switch */
+.theme-switch .slider:after {
+  content: "☀️";
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  font-size: 18px;
+  transition: 0.2s;
+}
+
+.theme-switch input:checked + .slider:after {
+  content: "🌙";
+  left: 30px;
+  opacity: 1;
 }
 
 .tagsEspeciais {
   padding: 20px;
-  background: var(--color-white);
-  margin-top: 150%;
+  background: var(--color-card-bg);
+  margin-top: 140%;
   border-radius: 10px;
 }
 
 .tagsEspeciais p {
   margin: 0;
   font-size: 20px;
-  color: var(--color-primary);
+  color: var(--color-text-primary);
 }
 
 .tableExib {
@@ -152,34 +260,39 @@ html {
   border-radius: 50%;
 }
 
+.PikaExib {
+  background: url(/static/img/fire-102.gif);
+  background-size: cover;
+}
+
 .PutariaExib {
-  box-shadow: inset 0 0 0 3px var(--color-red);
+  box-shadow: inset 0 0 0 3px var(--color-status-red);
   height: 25px;
   width: 25px;
   background: linear-gradient(
     303deg,
-    var(--color-white) 0%,
-    var(--color-white) 45%,
-    var(--color-red) 45%,
-    var(--color-red) 55%,
-    var(--color-white) 55%,
-    var(--color-white) 100%
+    var(--color-card-bg) 0%,
+    var(--color-card-bg) 45%,
+    var(--color-status-red) 45%,
+    var(--color-status-red) 55%,
+    var(--color-card-bg) 55%,
+    var(--color-card-bg) 100%
   );
 }
 
 .CanceladoExib {
-  color: var(--color-primary);
+  color: var(--color-sidebar-bg);
   background-image: linear-gradient(
     90deg,
-    var(--color-primary),
-    var(--color-white),
-    var(--color-white)
+    var(--color-item-bg),
+    var(--color-card-bg),
+    var(--color-card-bg)
   );
   display: inline-block;
 }
 
 .list-item {
-  background: var(--color-primary);
+  background: var(--color-sidebar-bg);
   padding: 10px;
   border-radius: 10px;
   cursor: pointer;
@@ -191,13 +304,14 @@ html {
   display: flex;
   flex: 1;
   padding: 20px;
-  background-color: var(--color-white);
+  background-color: var(--color-body-bg);
   overflow-y: auto;
   flex-direction: column;
   align-items: center;
 }
 .main-content h1 {
   margin-top: 0;
+  color: var(--color-text-primary);
 }
 .switch {
   position: relative;
@@ -220,7 +334,7 @@ html {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: var(--color-grey);
+  background-color: var(--color-status-grey);
   transition: 0.4s;
   border-radius: 20px;
 }
@@ -232,13 +346,13 @@ html {
   width: 14px;
   left: 3px;
   bottom: 3px;
-  background-color: var(--color-white);
+  background-color: var(--color-card-bg);
   transition: 0.4s;
   border-radius: 50%;
 }
 
 input:checked + .slider {
-  background-color: var(--color-green);
+  background-color: var(--color-status-green);
 }
 
 input:checked + .slider:before {
@@ -247,14 +361,14 @@ input:checked + .slider:before {
 
 /* =======================================
   GRAF LIST & LIST ITEMS
-  ======================================= */
+======================================= */
 .graf-list {
   display: flex;
   flex-direction: row;
   align-items: center;
 }
 .graficos {
-  border: var(--color-black) solid 1px;
+  border: 1px solid var(--color-border-primary);
   border-radius: 10px;
   padding: 20px;
   margin-left: 100px;
@@ -263,9 +377,10 @@ input:checked + .slider:before {
   display: flex;
   flex-direction: column;
   justify-content: space-around;
+  background-color: var(--color-card-bg);
 }
 .container-list-items {
-  border: var(--color-black) solid 1px;
+  border: 1px solid var(--color-border-primary);
   width: 900px;
   height: 700px;
   border-radius: 10px;
@@ -273,6 +388,7 @@ input:checked + .slider:before {
   display: flex;
   flex-direction: column;
   align-items: center;
+  background-color: var(--color-card-bg);
 }
 .list-items {
   width: 900px;
@@ -284,6 +400,21 @@ input:checked + .slider:before {
   display: flex;
   flex-wrap: wrap;
 }
+
+.list-items::-webkit-scrollbar {
+  width: 8px;
+}
+
+.list-items::-webkit-scrollbar-track {
+  background: var(--color-neutral-light);
+  border-radius: 10px;
+}
+
+.list-items::-webkit-scrollbar-thumb {
+  background-color: var(--color-neutral-dark);
+  border-radius: 10px;
+  border: 2px solid var(--color-neutral-light);
+}
 .item-info {
   width: 200px;
   height: 300px;
@@ -291,8 +422,8 @@ input:checked + .slider:before {
   font-size: 20px;
   border-radius: 10px;
   cursor: pointer;
-  background-color: var(--color-primary);
-  color: var(--color-white);
+  background-color: var(--color-item-bg);
+  color: var(--color-text-primary);
   display: flex;
   justify-content: space-around;
   flex-direction: column;
@@ -302,14 +433,17 @@ input:checked + .slider:before {
 .item-text {
   max-width: 150px;
   display: -webkit-box;
-  -webkit-line-clamp: 2; /* número de linhas */
-  line-clamp: 2; /* número de linhas */
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
   word-break: break-word;
   margin-bottom: 10px;
+  color: var(--color-sidebar-text);
 }
+
+/* Ícones (mantidos originais) */
 .icon-concluido {
   color: green;
 }
@@ -333,22 +467,24 @@ input:checked + .slider:before {
 
 /* =======================================
   BOTÕES GERAIS
-  ======================================= */
+======================================= */
 #add-line-btn {
   width: 150px;
   height: 30px;
   margin-bottom: 20px;
   border-radius: 10px;
-  background-color: var(--color-primary);
-  color: var(--color-white);
+  background-color: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
   cursor: pointer;
+  border: 1px solid var(--color-border-secondary);
 }
 #add-line-btn:hover {
-  background-color: var(--color-white);
-  color: var(--color-primary);
-  border: var(--color-primary) solid 1px;
+  background-color: var(--color-sidebar-text);
+  color: var(--color-sidebar-bg);
+  border: 1px solid var(--color-sidebar-bg);
   font-weight: 600;
 }
+
 .pesquisa {
   display: flex;
   align-items: center;
@@ -362,29 +498,32 @@ input:checked + .slider:before {
   width: 300px;
   height: 35px;
   font-size: 15px;
-  border-radius: 10px 0 0px 10px;
-  border: black solid 1px;
+  border-radius: 10px 0 0 10px;
+  border: 1px solid var(--color-border-primary);
   padding-left: 5px;
   margin: 0;
+  background-color: var(--color-card-bg);
+  color: var(--color-text-primary);
 }
 #search-name:focus {
-  outline: none; /* remove a borda azul padrão do navegador */
-  border: black solid 1px; /* mantém igual à borda original */
-  border-radius: 10px 0 0px 10px; /* mantém o mesmo arredondamento */
+  outline: none;
+  border: 1px solid var(--color-border-primary);
 }
 #filter-toggle {
   height: 39px;
-  border: black solid 1px;
-  border-radius: 0px 10px 10px 0px;
+  border: 1px solid var(--color-border-primary);
+  color: var(--color-text-primary);
+  border-radius: 0 10px 10px 0;
   cursor: pointer;
+  background-color: var(--color-card-bg);
 }
 .info-icon {
   display: inline-block;
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background-color: var(--color-blue);
-  color: var(--color-white);
+  background-color: var(--color-status-blue);
+  color: var(--color-sidebar-text);
   text-align: center;
   font-size: 14px;
   font-weight: bold;
@@ -399,7 +538,7 @@ input:checked + .slider:before {
   top: 130%;
   transform: translateX(-50%);
   background-color: rgba(0, 0, 0, 0.8);
-  color: var(--color-white);
+  color: var(--color-sidebar-text);
   padding: 6px;
   border-radius: 4px;
   font-size: 12px;
@@ -418,7 +557,7 @@ input:checked + .slider:before {
 
 /* =======================================
   MODAIS
-  ======================================= */
+======================================= */
 /* Modal de Listas */
 .modal {
   position: fixed;
@@ -426,7 +565,7 @@ input:checked + .slider:before {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* fundo escuro */
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -441,7 +580,6 @@ input:checked + .slider:before {
   pointer-events: auto;
 }
 
-/* Efeito nos filhos */
 .modal-content,
 #modal-photo,
 .tags-container {
@@ -457,7 +595,6 @@ input:checked + .slider:before {
   opacity: 1;
 }
 
-/* Transição de fechamento */
 .modal.hidden {
   opacity: 0;
   pointer-events: none;
@@ -470,7 +607,7 @@ input:checked + .slider:before {
   opacity: 0;
 }
 .modal-content {
-  background-color: var(--color-white);
+  background-color: var(--color-card-bg);
   padding: 20px;
   border-radius: 10px 0 0 10px;
   width: 400px;
@@ -482,7 +619,7 @@ input:checked + .slider:before {
   right: -175px;
   font-size: 24px;
   cursor: pointer;
-  color: var(--color-dark-grey);
+  color: var(--color-neutral-dark);
 }
 
 /* Modal de Linhas */
@@ -492,7 +629,7 @@ input:checked + .slider:before {
   gap: 15px;
   width: 360px;
   padding: 20px;
-  background-color: var(--color-white);
+  background-color: var(--color-card-bg);
   border-radius: 8px;
 }
 #close-line-modal {
@@ -502,7 +639,7 @@ input:checked + .slider:before {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-dark-grey);
+  color: var(--color-neutral-dark);
 }
 
 /* Modal Edit */
@@ -512,14 +649,14 @@ input:checked + .slider:before {
   gap: 15px;
   width: 360px;
   padding: 20px;
-  background-color: var(--color-white);
+  background-color: var(--color-card-bg);
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* =======================================
   FORMULÁRIOS (INPUTS, SELECTS, BOTÕES)
-  ======================================= */
+======================================= */
 #line-form input,
 #line-form select,
 #edit-form input,
@@ -527,7 +664,9 @@ input:checked + .slider:before {
   padding: 8px;
   font-size: 14px;
   border-radius: 4px;
-  border: 1px solid var(--color-grey);
+  border: 1px solid var(--color-border-secondary);
+  background-color: var(--color-card-bg);
+  color: var(--color-text-primary);
 }
 #line-form input[type="checkbox"],
 #edit-form input[type="checkbox"] {
@@ -537,22 +676,22 @@ input:checked + .slider:before {
 #line-form select,
 #edit-form input::placeholder,
 #edit-form select {
-  color: #666;
+  color: var(--color-neutral-dark);
 }
 #line-form button[type="submit"],
 #edit-form button[type="submit"] {
   padding: 10px 15px;
-  background-color: var(--color-primary);
-  color: var(--color-white);
+  background-color: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
   border: none;
   border-radius: 4px;
   cursor: pointer;
 }
 #line-form button[type="submit"]:hover,
 #edit-form button[type="submit"]:hover {
-  background-color: var(--color-white);
-  color: var(--color-primary);
-  border: var(--color-primary) solid 1px;
+  background-color: var(--color-sidebar-text);
+  color: var(--color-sidebar-bg);
+  border: 1px solid var(--color-sidebar-bg);
   font-weight: 400;
 }
 
@@ -560,12 +699,12 @@ input:checked + .slider:before {
   display: none;
 }
 #filter-panel {
-  border: 1px solid var(--color-black);
+  border: 1px solid var(--color-border-primary);
   border-radius: 20px;
   padding: 8px;
   background: rgba(0, 0, 0, 0.5);
   position: absolute;
-  top: 12%; /* Fica logo abaixo do botão */
+  top: 12%;
   left: 55%;
   z-index: 10;
   width: 450px;
@@ -584,25 +723,25 @@ input:checked + .slider:before {
 }
 
 .filter-section::-webkit-scrollbar-track {
-  background: var(--color-light-grey);
+  background: var(--color-neutral-light);
   border-radius: 10px;
 }
 
 .filter-section::-webkit-scrollbar-thumb {
-  background-color: #91cd76; /* Mantido conforme instrução */
+  background-color: #91cd76;
   border-radius: 10px;
-  border: 2px solid var(--color-light-grey);
+  border: 2px solid var(--color-neutral-light);
 }
 h4 {
-  color: var(--color-white);
+  color: var(--color-sidebar-text);
 }
 .filter-option {
   display: inline-block;
   padding: 4px 8px;
   margin: 4px;
-  border: 1px solid #888;
+  border: 1px solid var(--color-border-secondary);
   border-radius: 4px;
-  background: var(--color-white);
+  background: var(--color-card-bg);
   cursor: pointer;
   user-select: none;
 }
@@ -619,7 +758,7 @@ h4 {
   border-style: dashed;
 }
 .active {
-  background-color: darkseagreen;
+  background-color: var(--color-status-green);
 }
 
 /* Tag Input & Sugestões */
@@ -632,15 +771,17 @@ h4 {
   padding: 8px;
   font-size: 14px;
   border-radius: 4px;
-  border: 1px solid var(--color-grey);
+  border: 1px solid var(--color-border-secondary);
+  background-color: var(--color-card-bg);
+  color: var(--color-text-primary);
 }
 .suggestions {
   position: absolute;
   top: 100%;
   left: 0;
   width: 100%;
-  background-color: var(--color-white);
-  border: 1px solid var(--color-grey);
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-border-secondary);
   max-height: 150px;
   overflow-y: auto;
   display: none;
@@ -648,12 +789,13 @@ h4 {
 .suggestions div {
   padding: 8px;
   cursor: pointer;
+  color: var(--color-text-primary);
 }
 .suggestions div:hover {
-  background-color: var(--color-light-grey);
+  background-color: var(--color-neutral-light);
 }
 .selected-tags {
-  border: #cbc7c7 solid 1px;
+  border: 1px solid var(--color-border-secondary);
   border-radius: 4px;
   padding: 5px;
   display: none;
@@ -662,58 +804,68 @@ h4 {
   margin: 5px 0;
 }
 .selected-tags span {
-  background-color: var(--color-primary);
-  color: var(--color-white);
+  background-color: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
   padding: 5px 10px;
   border-radius: 20px;
   font-size: 14px;
   cursor: pointer;
 }
 .selected-tags span:hover {
-  background-color: var(--color-primary-dark);
+  background-color: var(--color-sidebar-btn-bg);
 }
 
 /* =======================================
   INFO DIV BOX (DETALHES MODAL)
-  ======================================= */
+======================================= */
 #info-div-box {
   justify-items: start;
-  border: var(--color-black) solid 1px;
+  border: 1px solid var(--color-border-primary);
   border-radius: 10px;
   padding: 5px;
-  background-color: var(--color-primary);
+  background-color: var(--color-sidebar-bg);
 }
 #info-div-box p {
-  background-color: var(--color-white);
+  background-color: var(--color-card-bg);
   padding: 5px;
   border-radius: 10px;
-  border: grey solid 1px;
+  border: 1px solid var(--color-border-secondary);
+  color: var(--color-text-primary);
 }
 fieldset {
-  background-color: var(--color-white);
+  background-color: var(--color-card-bg);
   border-radius: 10px;
+  border: 1px solid var(--color-border-secondary);
 }
 legend {
-  background-color: var(--color-white);
+  background-color: var(--color-card-bg);
   border-radius: 5px;
+  color: var(--color-text-primary);
 }
 
 /* =======================================
   TÍTULOS CLICÁVEIS & BOTÕES ADICIONAIS
-  ======================================= */
+======================================= */
 .clickable-title {
   cursor: pointer;
+  color: var(--color-status-blue);
 }
 .clickable-title:hover {
-  color: var(--color-blue);
+  color: var(--color-status-blue);
+  opacity: 0.8;
 }
 .pesquisaBtn {
   width: 100px;
   height: 30px;
   border-radius: 10px;
+  background-color: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
+  border: 1px solid var(--color-border-secondary);
 }
 .pesquisaBtn:hover {
   cursor: pointer;
+  background-color: var(--color-sidebar-text);
+  color: var(--color-sidebar-bg);
 }
 .pesquisasContainer {
   gap: 44px;
@@ -725,16 +877,16 @@ legend {
   right: 170px;
   font-size: 20px;
   cursor: pointer;
-  color: var(--color-white);
-  background: var(--color-red);
-  border: var(--color-white) solid 1px;
+  color: var(--color-sidebar-text);
+  background: var(--color-status-red);
+  border: 1px solid var(--color-border-secondary);
   border-radius: 5px;
   padding: 5px 10px;
 }
 #editLineButton {
   margin-top: 10px;
-  color: var(--color-white);
-  background-color: var(--color-green);
+  color: var(--color-sidebar-text);
+  background-color: var(--color-status-green);
   cursor: pointer;
   border: 0;
   border-radius: 5px;
@@ -744,7 +896,7 @@ legend {
 
 /* =======================================
   FORMULÁRIO DE LISTAS
-  ======================================= */
+======================================= */
 #list-form {
   display: flex;
   flex-direction: column;
@@ -753,49 +905,56 @@ legend {
 }
 #list-form h2 {
   margin: 10px;
+  color: var(--color-text-primary);
 }
 #list-name {
   width: 300px;
   height: 30px;
   border-radius: 10px;
   font-size: 20px;
+  border: 1px solid var(--color-border-secondary);
+  background-color: var(--color-card-bg);
+  color: var(--color-text-primary);
 }
 #list-description {
   width: 300px;
   height: 135px;
   border-radius: 10px;
   font-size: 15px;
+  border: 1px solid var(--color-border-secondary);
+  background-color: var(--color-card-bg);
+  color: var(--color-text-primary);
 }
 #list-form .btn {
   width: 100px;
   height: 30px;
   border-radius: 10px;
-  background: var(--color-primary);
+  background: var(--color-sidebar-bg);
   border: none;
-  color: var(--color-white);
+  color: var(--color-sidebar-text);
   cursor: pointer;
 }
 #list-form .btn:hover {
-  background-color: var(--color-white);
-  color: var(--color-primary);
-  border: var(--color-primary) solid 1px;
+  background-color: var(--color-sidebar-text);
+  color: var(--color-sidebar-bg);
+  border: 1px solid var(--color-sidebar-bg);
   font-weight: 600;
 }
 
 /* =======================================
   TAG STYLES (ESTILIZAÇÃO DAS CLASSES DE TAGS)
-  ======================================= */
+======================================= */
 
 .Goat {
   background-size: 400% 400%;
   background-image: linear-gradient(
     90deg,
-    var(--color-red),
+    var(--color-status-red),
     #1aff00,
     #0084ff,
     #ff00f2
   );
-  color: var(--color-white);
+  color: var(--color-sidebar-text);
   font-weight: 600;
   background-position: 0% 50%;
   -webkit-background-clip: padding-box;
@@ -806,7 +965,7 @@ legend {
 .Love {
   background-size: 400% 400%;
   background-image: linear-gradient(90deg, #fd00a4, #ad0000, #ad0000, #fd00a4);
-  color: var(--color-white);
+  color: var(--color-sidebar-text);
   font-weight: 600;
   background-position: 0% 50%;
   -webkit-background-clip: padding-box;
@@ -814,51 +973,68 @@ legend {
   animation: gradientAnimation 3s ease infinite;
 }
 
-.Putaria {
+.item-info.Putaria {
   background: linear-gradient(
     303deg,
-    var(--color-white) 0%,
-    var(--color-white) 45%,
-    var(--color-red) 45%,
-    var(--color-red) 55%,
-    var(--color-white) 55%,
-    var(--color-white) 100%
+    #ffffff 0%,
+    #ffffff 45%,
+    var(--color-status-red) 45%,
+    var(--color-status-red) 55%,
+    #ffffff 55%,
+    #ffffff 100%
   );
-  color: var(--color-black);
   font-weight: 700;
-  box-shadow: inset 0 0 0 5px var(--color-red);
+  box-shadow: inset 0 0 0 5px var(--color-status-red);
 }
 
-.Cancelado {
-  color: var(--color-primary);
+.item-info.Putaria > .item-text {
+  color: black !important; 
+  text-shadow: none; /* Opcional: remove sombra se existir */
+}
+
+.item-info.Cancelado {
   background-image: linear-gradient(
     90deg,
-    var(--color-primary),
-    var(--color-white),
-    var(--color-white),
-    var(--color-white)
+    var(--color-item-bg),
+    var(--color-card-bg),
+    var(--color-card-bg),
+    var(--color-card-bg)
   );
 }
 
-.Pika {
-  color: var(--color-black);
+.item-info.Cancelado > .item-text {
+  color: var(
+    --color-text-secondary
+  ) !important; /* Necessário para vencer a especificidade do .item-text */
+  text-shadow: none; /* Opcional: remove sombra se existir */
+}
+
+/* Estilo original do Pika (mantém o background no item-info) */
+.item-info.Pika {
+  color: var(--color-text-primary);
   font-weight: 600;
-  background: url("/static/img/fire-102.gif");
+  background: url(/static/img/fire-102.gif);
   background-size: cover;
+}
+
+/* Sobrescreve APENAS a cor do texto - sem afetar outros elementos */
+.item-info.Pika > .item-text {
+  color: black !important; /* Necessário para vencer a especificidade do .item-text */
+  text-shadow: none; /* Opcional: remove sombra se existir */
 }
 
 .BestLove {
   background-size: 400% 400%;
   background-image: linear-gradient(
     90deg,
-    var(--color-red),
+    var(--color-status-red),
     #fbff00,
     #1aff00,
     #00ffd7,
     #0008ff,
     #ff002b
   );
-  color: var(--color-white);
+  color: var(--color-sidebar-text);
   font-weight: 600;
   background-position: 0% 50%;
   -webkit-background-clip: padding-box;
@@ -868,7 +1044,7 @@ legend {
 
 /* =======================================
   ANIMAÇÕES
-  ======================================= */
+======================================= */
 @keyframes gradientAnimation {
   0% {
     background-position: 0% 50%;

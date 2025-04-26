@@ -56,6 +56,38 @@
         resizeObserver.observe(mainInfoContentId);
     }
 
+    const themeToggle = document.getElementById('theme-toggle');
+
+    // Verificar preferência salva ao carregar a página
+    if (localStorage.getItem('darkTheme') === 'true') {
+    document.body.classList.add('dark-theme');
+    themeToggle.checked = true;
+    }
+
+    themeToggle.addEventListener('change', () => {
+    document.body.classList.toggle('dark-theme');
+    
+    // Salvar preferência no localStorage
+    const isDark = document.body.classList.contains('dark-theme');
+    localStorage.setItem('darkTheme', isDark);
+    });
+
+    function applyFilter(linhas) {
+        const showPutariaManhwa = document.getElementById('toggle-censure').checked;
+    
+        // Filtra as linhas com base no estado do switch
+        const filteredLinhas = linhas.filter(item => {
+            const isPutaria = getClasseExtra(item) === "Putaria";
+            const isManhwa = item.conteudo === "Manhwa";
+    
+            // Oculta apenas itens que são "Putaria" e "Manhwa" ao mesmo tempo
+            return showPutariaManhwa || !(isPutaria && isManhwa);
+        });
+    
+        // Atualiza os itens exibidos
+        showItems(filteredLinhas);
+    }
+
     // ---------------------------- MODAL EVENTS ----------------------------
     function initModalEvents() {
         // Abrir modal de criar lista
@@ -392,6 +424,12 @@
             </div>
         `;
 
+        const toggleCensure = document.getElementById('toggle-censure');
+        toggleCensure.addEventListener('change', () => applyFilter(linhas));
+
+        // Aplica o filtro inicial com base no estado do switch
+        applyFilter(linhas);
+
         const panel     = document.getElementById('filter-panel');
         const statuses  = [...new Set(linhas.map(i => i.status))];
         const conteudos = [...new Set(linhas.map(i => i.conteudo))];
@@ -580,7 +618,7 @@
 
     // Função para exibir os itens filtrados
     function showItems(linhas) {
-        const showPutariaManhwa = document.getElementById('toggle-censure');
+        const showPutariaManhwa = document.getElementById('toggle-censure').checked;
 
         // Filtra as linhas com base no estado do switch
         const filteredLinhas = linhas.filter(item => {
@@ -1090,7 +1128,8 @@
                 labels: statusCategories,
                 datasets: [{
                     data: counts,
-                    backgroundColor: ["#4dc9f6", "#f67019", "#f53794", "#537bc4", "#acc236", "#166a8f", "#00a950", "#58595b"]
+                    backgroundColor: ["#4dc9f6", "#f67019", "#f53794", "#537bc4", "#acc236", "#166a8f", "#00a950", "#58595b"],
+                    borderColor: ["#4dc9f6", "#f67019", "#f53794", "#537bc4", "#acc236", "#166a8f", "#00a950", "#58595b"]
                 }]
             },
             options: {
@@ -1098,7 +1137,18 @@
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Status'
+                        text: 'Status',
+                        font: {
+                            size: 20
+                        }
+                    },
+                    legend: {
+                        labels: {
+                            color: 'gray', // Cor das legendas
+                            font: {
+                                size: 14
+                            }
+                        }
                     },
                     tooltip: {
                         callbacks: {
@@ -1130,7 +1180,8 @@
                 labels: opinionCategories,
                 datasets: [{
                     data: counts,
-                    backgroundColor: ["#ff6384", "#36a2eb", "#ffcd56", "#4bc0c0", "#9966ff", "#c9cbcf", "#ff9f40", "#66ff66"]
+                    backgroundColor: ["#ff6384", "#36a2eb", "#ffcd56", "#4bc0c0", "#9966ff", "#c9cbcf", "#ff9f40", "#66ff66"],
+                    borderColor: ["#ff6384", "#36a2eb", "#ffcd56", "#4bc0c0", "#9966ff", "#c9cbcf", "#ff9f40", "#66ff66"]
                 }]
             },
             options: {
@@ -1138,7 +1189,18 @@
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Opinião'
+                        text: 'Opinião',
+                        font: {
+                            size: 20
+                        }
+                    },
+                    legend: {
+                        labels: {
+                            color: 'gray', // Cor das legendas
+                            font: {
+                                size: 14
+                            }
+                        }
                     },
                     tooltip: {
                         callbacks: {
