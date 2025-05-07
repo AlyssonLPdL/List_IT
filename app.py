@@ -205,6 +205,24 @@ def refresh_images():
     print(f"[REFRESH_IMAGES] {atualizados} imagens atualizadas.")
     return jsonify({'mensagem': f'{atualizados} imagens atualizadas com sucesso.'})
 
+@app.route('/update_image_url', methods=['POST'])
+def update_image_url():
+    data = request.get_json()
+    linha_id = data.get('id')
+    new_url = data.get('new_url')
+
+    if not linha_id or not new_url:
+        return jsonify({'mensagem': 'Dados incompletos.'}), 400
+
+    conn = sqlite3.connect('list_it.db')
+    cursor = conn.cursor()
+    cursor.execute("UPDATE linhas SET imagem_url = ? WHERE id = ?", (new_url, linha_id))
+    conn.commit()
+    conn.close()
+
+    print(f"[UPDATE_IMAGE_URL] Linha {linha_id} atualizada com URL: {new_url}")
+    return jsonify({'mensagem': 'Imagem atualizada com sucesso.'})
+
 @app.route("/linhas/<int:lista_id>", methods=["GET"])
 def get_linhas(lista_id):
     conn = get_db_connection()
