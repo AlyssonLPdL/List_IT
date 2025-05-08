@@ -237,8 +237,9 @@ html {
 .tagsEspeciais {
   padding: 20px;
   background: var(--color-card-bg);
-  margin-top: 140%;
   border-radius: 10px;
+  position: relative;
+  top: 395px;
 }
 
 .tagsEspeciais p {
