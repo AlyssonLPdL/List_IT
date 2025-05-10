@@ -32,6 +32,7 @@ def init_db():
                 episodio INTEGER,
                 opiniao TEXT NOT NULL,
                 imagem_url TEXT,
+                last_highlight TEXT,
                 FOREIGN KEY (lista_id) REFERENCES listas(id)
             )
         """)
@@ -305,7 +306,7 @@ def to_highlight(lista_id):
     # UTC agora menos 1 hora
     cutoff = (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
     cursor.execute("""
-        SELECT id, nome, imagem_url, tags, conteudo, status 
+        SELECT id, nome, imagem_url, tags, conteudo, status, episodio, opiniao
         FROM linhas
         WHERE lista_id = ?
         AND (

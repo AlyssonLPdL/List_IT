@@ -1136,9 +1136,10 @@
     
             // Atualiza o container
             const container = document.querySelector('.destaque');
-    
+            container.innerHTML = ''; // <- limpa sempre, antes de adicionar os novos itens
+
             if (itens.length === 0) {
-                container.innerHTML += '<p>Nenhum item pendente.</p>';
+                container.innerHTML = '<p>Nenhum item pendente.</p>';
                 return;
             }
     
