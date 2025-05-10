@@ -223,11 +223,11 @@ def refresh_images():
     conn.close()
     
     # Auto commit
-    # if atualizados > 0:
-    #     subprocess.run(['git', 'add', 'list_it.db'])
-    #     commit_message = f"Refresh de imagens: {atualizados} imagens atualizadas"
-    #     subprocess.run(['git', 'commit', '-m', commit_message])
-    #     print(f"[COMMIT] {commit_message}")
+    if atualizados > 0:
+        subprocess.run(['git', 'add', 'list_it.db'])
+        commit_message = f"Refresh de imagens: {atualizados} imagens atualizadas"
+        subprocess.run(['git', 'commit', '-m', commit_message])
+        print(f"[COMMIT] {commit_message}")
     
     print(f"[REFRESH_IMAGES] {atualizados} imagens atualizadas.")
     return jsonify({'mensagem': f'{atualizados} imagens atualizadas com sucesso.'})
