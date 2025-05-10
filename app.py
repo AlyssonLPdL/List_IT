@@ -3,7 +3,7 @@ import sqlite3
 import requests
 import re
 from datetime import datetime, timedelta, timezone
-import pytz
+import subprocess
 
 app = Flask(__name__)
 
@@ -72,6 +72,13 @@ def add_lista():
     conn.commit()
     lista_id = cursor.lastrowid
     conn.close()
+    
+    # Auto commit
+    subprocess.run(['git', 'add', 'list_it.db'])
+    commit_message = f"Criando Lista: {data['nome']} id: {lista_id}"
+    subprocess.run(['git', 'commit', '-m', commit_message])
+    print(f"[COMMIT] {commit_message}")
+    
     print(f"[ADD_LISTA] Lista criada: {data['nome']} (ID: {lista_id})")
     return jsonify({"id": lista_id, "nome": data["nome"]})
 
@@ -180,6 +187,15 @@ def update_linha_imagem(linha_id):
         cursor = conn.cursor()
         cursor.execute("UPDATE linhas SET imagem_url = ? WHERE id = ?", (imagem_url, linha_id))
         conn.commit()
+        
+        # Auto commit
+        cursor.execute("SELECT nome FROM linhas WHERE id = ?", (linha_id,))
+        nome = cursor.fetchone()[0]
+        subprocess.run(['git', 'add', 'list_it.db'])
+        commit_message = f"Atualizando Imagem da Linha: {nome} id: {linha_id}"
+        subprocess.run(['git', 'commit', '-m', commit_message])
+        print(f"[COMMIT] {commit_message}")
+        
         conn.close()
         print(f"[UPDATE_IMAGE] Linha {linha_id} atualizada com: {imagem_url}")
         return jsonify({"message": "Imagem atualizada com sucesso!", "imagem_url": imagem_url})
@@ -205,6 +221,14 @@ def refresh_images():
             atualizados += 1
     conn.commit()
     conn.close()
+    
+    # Auto commit
+    if atualizados > 0:
+        subprocess.run(['git', 'add', 'list_it.db'])
+        commit_message = f"Refresh de imagens: {atualizados} imagens atualizadas"
+        subprocess.run(['git', 'commit', '-m', commit_message])
+        print(f"[COMMIT] {commit_message}")
+    
     print(f"[REFRESH_IMAGES] {atualizados} imagens atualizadas.")
     return jsonify({'mensagem': f'{atualizados} imagens atualizadas com sucesso.'})
 
@@ -220,8 +244,16 @@ def update_image_url():
     conn = sqlite3.connect('list_it.db')
     cursor = conn.cursor()
     cursor.execute("UPDATE linhas SET imagem_url = ? WHERE id = ?", (new_url, linha_id))
+    cursor.execute("SELECT nome FROM linhas WHERE id = ?", (linha_id,))
+    nome = cursor.fetchone()[0]
     conn.commit()
     conn.close()
+
+    # Auto commit
+    subprocess.run(['git', 'add', 'list_it.db'])
+    commit_message = f"Atualizando URL da Imagem: {nome} id: {linha_id}"
+    subprocess.run(['git', 'commit', '-m', commit_message])
+    print(f"[COMMIT] {commit_message}")
 
     print(f"[UPDATE_IMAGE_URL] Linha {linha_id} atualizada com URL: {new_url}")
     return jsonify({'mensagem': 'Imagem atualizada com sucesso.'})
@@ -260,6 +292,14 @@ def add_linha():
     """, (data["lista_id"], data["nome"], data["tags"], data["conteudo"], data["status"], data["episodio"], data["opiniao"]))
     conn.commit()
     linha_id = cursor.lastrowid
+    conn.close()
+    
+    # Auto commit
+    subprocess.run(['git', 'add', 'list_it.db'])
+    commit_message = f"Adicionando Linha: {data['nome']} id: {linha_id}"
+    subprocess.run(['git', 'commit', '-m', commit_message])
+    print(f"[COMMIT] {commit_message}")
+
     print(f"[ADD_LINHA] Linha adicionada: {data['nome']} (ID: {linha_id})")
     return jsonify({"id": linha_id, "lista_id": data["lista_id"], "nome": data["nome"]})
 
@@ -283,6 +323,13 @@ def update_linha(linha_id):
             WHERE id = ?
         """, (nome, conteudo, status, episodio, opiniao, tags, linha_id))
         conn.commit()
+        
+        # Auto commit
+        subprocess.run(['git', 'add', 'list_it.db'])
+        commit_message = f"Atualizando Linha: {nome} id: {linha_id}"
+        subprocess.run(['git', 'commit', '-m', commit_message])
+        print(f"[COMMIT] {commit_message}")
+        
         conn.close()
         print(f"[UPDATE_LINHA] Linha {linha_id} atualizada.")
         return jsonify({"message": "Linha atualizada com sucesso!"})
@@ -294,8 +341,21 @@ def update_linha(linha_id):
 def delete_linha(linha_id):
     conn = get_db_connection()
     cursor = conn.cursor()
+    # Obter nome antes de deletar
+    cursor.execute("SELECT nome FROM linhas WHERE id = ?", (linha_id,))
+    row = cursor.fetchone()
+    nome = row['nome'] if row else 'Desconhecido'
+    
     cursor.execute("DELETE FROM linhas WHERE id = ?", (linha_id,))
     conn.commit()
+    conn.close()
+    
+    # Auto commit
+    subprocess.run(['git', 'add', 'list_it.db'])
+    commit_message = f"Removendo Linha: {nome} id: {linha_id}"
+    subprocess.run(['git', 'commit', '-m', commit_message])
+    print(f"[COMMIT] {commit_message}")
+
     print(f"[DELETE_LINHA] Linha {linha_id} excluída.")
     return jsonify({"message": "Linha excluída com sucesso!"})
 
@@ -325,8 +385,18 @@ def mark_highlighted(linha_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE linhas SET last_highlight = ? WHERE id = ?", (now, linha_id))
+    # Obter nome para commit
+    cursor.execute("SELECT nome FROM linhas WHERE id = ?", (linha_id,))
+    nome = cursor.fetchone()[0]
     conn.commit()
     conn.close()
+    
+    # Auto commit
+    subprocess.run(['git', 'add', 'list_it.db'])
+    commit_message = f"Marcando highlight na Linha: {nome} id: {linha_id}"
+    subprocess.run(['git', 'commit', '-m', commit_message])
+    print(f"[COMMIT] {commit_message}")
+
     return jsonify({'mensagem': 'Highlight atualizado.'})
 
 
