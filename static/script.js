@@ -389,7 +389,7 @@
                     </div>    
                 </div>
                 <div class="graficos">
-                    <h3>🕑 Itens para Verificar</h3>
+                    <h3>${lista.nome} para Verificar</h3>
                     <div class="destaque">
                     </div>
                 </div>
