@@ -389,8 +389,9 @@
                     </div>    
                 </div>
                 <div class="graficos">
-                    <canvas id="statusChart"></canvas>
-                    <canvas id="opinionChart"></canvas>
+                    <h3>🕑 Itens para Verificar</h3>
+                    <div class="destaque">
+                    </div>
                 </div>
             </div>
         `;
@@ -541,7 +542,7 @@
 
 
         addItemClickEvent(linhas);
-        initCharts(linhas);
+        showHighlights(lista);
     }
 
     // Função para filtrar os itens com base no filtro
@@ -1112,164 +1113,91 @@
         });
     }
 
-    // ---------------------------- GRÁFICOS ----------------------------
-    // Inicializa os gráficos de Status e Opinião com os dados das linhas
-    function initCharts(linhas) {
-        createStatusChart(linhas);
-        createOpinionChart(linhas);
-    }
-    // Cria o gráfico de Status
-    function createStatusChart(linhas) {
-        // Determina o tipo de conteúdo baseado no primeiro item
-        const firstItem = linhas[0] || {};
-        let contentType;
-        switch (firstItem.conteudo) {
-            case "Anime":
-            case "Filme":
-                contentType = "anime";
-                break;
-            case "Manga":
-            case "Manhwa":
-            case "Webtoon":
-                contentType = "manga";
-                break;
-            default:
-                contentType = "anime";
+    // ---------------------------- DESTAQUE ----------------------------
+    async function showHighlights(lista) {
+        try {
+            // Buscar itens da lista
+            const res = await fetch(`/to_highlight/${lista.id}`);
+            if (!res.ok) throw new Error('Erro ao buscar destaques');
+            let itens = await res.json();
+    
+            // Censura (Putaria + Manhwa)
+            const toggle = document.getElementById('toggle-censure');
+            const showPutariaManhwa = toggle && toggle.checked;
+    
+            itens = itens.filter(item => {
+                const classeExtra = getClasseExtra(item);
+                const isPutaria = classeExtra === "Putaria";
+                const conteudo = (item.conteudo || "").trim().toLowerCase();
+                const isManhwa = conteudo === "manhwa";
+    
+                return showPutariaManhwa || !(isPutaria && isManhwa);
+            });
+    
+            // Atualiza o container
+            const container = document.querySelector('.destaque');
+    
+            if (itens.length === 0) {
+                container.innerHTML += '<p>Nenhum item pendente.</p>';
+                return;
+            }
+    
+            // Monta os cards
+            itens.sort((a, b) => 
+                a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
+            );
+            
+            // Agora sim, gerar os cards
+            itens.forEach(item => {
+                const extraClass = getClasseExtra(item); // Ex: "Putaria"
+                const div = document.createElement('div');
+                div.classList.add('highlight-item');
+                if (extraClass) div.classList.add(extraClass);
+            
+                div.innerHTML = `
+                    <img src="${item.imagem_url}" style="width:80px;height:120px;border-radius:6px;">
+                    <p class="destaque-text">${item.nome}</p>
+                    <button data-id="${item.id}">Verificado ✔️</button>
+                `;
+            
+                div.querySelector('button').addEventListener('click', async e => {
+                    await fetch(`/highlighted/${e.target.dataset.id}`, { method: 'POST' });
+                    div.remove();
+                });
+            
+                container.appendChild(div);
+            });
+
+            destaqueItemClickEvent(itens);
+    
+            // Se ainda não adicionou o listener, adiciona
+            if (!toggle.dataset.bound) {
+                toggle.addEventListener('change', () => {
+                    showHighlights(lista); // Recarrega os destaques com novo estado do toggle
+                });
+                toggle.dataset.bound = "true"; // Marca como já vinculado
+            }
+    
+        } catch (error) {
+            console.error('Erro ao carregar destaques:', error);
         }
+    }       
 
-        // Define os termos conforme o tipo de conteúdo
-        const statusTerms = {
-            anime: ['cancelado', 'dropado', 'conheço', 'assistir', 'vendo', 'concluido'],
-            manga: ['cancelado', 'dropado', 'conheço', 'ler', 'lendo', 'concluido']
-        }[contentType];
-
-        // Cores correspondentes (mesma ordem para ambos)
-        const STATUS_COLORS = ["#808080", "#FF0000", "#FF00F2", "#FFA500", "#0000FF", "#008000"];
-        const STATUS_COLORS_BG = ["#808080", "#FF0000", "#FF00F2", "#FFA500", "#0000FF", "#008000"];
-
-        // Filtra e conta os status existentes
-        const existingStatuses = statusTerms.filter(term =>
-            linhas.some(item => item.status.toLowerCase() === term.toLowerCase())
-        );
-
-        const counts = existingStatuses.map(term =>
-            linhas.filter(item => item.status.toLowerCase() === term.toLowerCase()).length
-        );
-
-        const backgroundColors = existingStatuses.map(term =>
-            STATUS_COLORS[statusTerms.indexOf(term)]
-        );
-
-        const borderColors = existingStatuses.map(term =>
-            STATUS_COLORS_BG[statusTerms.indexOf(term)]
-        );
-
-        const ctx = document.getElementById('statusChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: existingStatuses,
-                datasets: [{
-                    data: counts,
-                    backgroundColor: backgroundColors,
-                    borderColor: borderColors,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: `Status - ${firstItem.conteudo || 'Anime'}`,
-                        font: { size: 20 }
-                    },
-                    legend: {
-                        labels: {
-                            color: 'gray',
-                            font: { size: 14 }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                const total = counts.reduce((a, b) => a + b, 0);
-                                const value = context.parsed;
-                                const percentage = total ? ((value / total) * 100).toFixed(2) : 0;
-                                return `${context.label}: ${value} (${percentage}%)`;
-                            }
-                        }
-                    }
-                }
-            }
+    function destaqueItemClickEvent(itens) {
+        const destaqueContainer = document.querySelector('.destaque');
+        destaqueContainer.addEventListener('click', (event) => {
+            const itemElement = event.target.closest('.highlight-item');
+            const isBotao = event.target.tagName === 'BUTTON';
+            
+            // Ignora clique no botão de "Verificado ✔️"
+            if (!itemElement || isBotao) return;
+    
+            const index = Array.from(destaqueContainer.children).indexOf(itemElement);
+            const item = itens[index];
+            if (item) showItemDetails(item);
         });
     }
-
-    // Cria o gráfico de Opinião
-    function createOpinionChart(linhas) {
-        // Ordem fixa desejada (da melhor para a pior avaliação)
-        const OPINION_ORDER = ['favorito', 'muito bom', 'bom', 'recomendo', 'mediano', 'ruim', 'horrivel', 'não vi'];
-        // Cores correspondentes (na mesma ordem)
-        const OPINION_COLORS = ["#ffe200", "#2ecc71", "#27ae60", "#f1c40f", "#f39c12", "#e67e22", "#c0392b", "#95a5a6"];
-        const OPINION_COLORS_BG = ["#ffe200", "#2ecc71", "#27ae60", "#f1c40f", "#f39c12", "#e67e22", "#c0392b", "#95a5a6"];
-        // Filtra apenas as opiniões que existem nos dados
-        const existingOpinions = OPINION_ORDER.filter(opiniao =>
-            linhas.some(item => item.opiniao.toLowerCase() === opiniao.toLowerCase())
-        );
-
-        // Conta os itens para cada opinião (na ordem definida)
-        const counts = existingOpinions.map(opiniao =>
-            linhas.filter(item => item.opiniao.toLowerCase() === opiniao.toLowerCase()).length
-        );
-
-        // Pega as cores correspondentes apenas para as opiniões existentes
-        const backgroundColors = existingOpinions.map((_, index) =>
-            OPINION_COLORS[OPINION_ORDER.indexOf(existingOpinions[index])]
-        );
-        const borderColors = existingOpinions.map((_, index) =>
-            OPINION_COLORS_BG[OPINION_ORDER.indexOf(existingOpinions[index])]
-        );
-
-        const ctx = document.getElementById('opinionChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: existingOpinions,
-                datasets: [{
-                    data: counts,
-                    backgroundColor: backgroundColors,
-                    borderColor: borderColors,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Opinião',
-                        font: { size: 20 }
-                    },
-                    legend: {
-                        labels: {
-                            color: 'gray',
-                            font: { size: 14 }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                const total = counts.reduce((a, b) => a + b, 0);
-                                const value = context.parsed;
-                                const percentage = total ? ((value / total) * 100).toFixed(2) : 0;
-                                return `${context.label}: ${value} (${percentage}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
+    
 
     // ---------------------------- INICIALIZAÇÃO ----------------------------
     document.addEventListener('DOMContentLoaded', () => {

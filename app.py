@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, jsonify
 import sqlite3
 import requests
 import re
+from datetime import datetime, timedelta, timezone
+import pytz
 
 app = Flask(__name__)
 
@@ -295,6 +297,37 @@ def delete_linha(linha_id):
     conn.commit()
     print(f"[DELETE_LINHA] Linha {linha_id} excluída.")
     return jsonify({"message": "Linha excluída com sucesso!"})
+
+@app.route('/to_highlight/<int:lista_id>')
+def to_highlight(lista_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # UTC agora menos 1 hora
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
+    cursor.execute("""
+        SELECT id, nome, imagem_url, tags, conteudo, status 
+        FROM linhas
+        WHERE lista_id = ?
+        AND (
+            (conteudo = 'Anime' AND status LIKE '%vendo%') OR
+            (conteudo IN ('Manga', 'Webtoon', 'Manhwa') AND status LIKE '%lendo%')
+        )
+        AND (last_highlight IS NULL OR last_highlight <= ?)
+    """, (lista_id, cutoff))
+    rows = cursor.fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in rows])
+
+@app.route('/highlighted/<int:linha_id>', methods=['POST'])
+def mark_highlighted(linha_id):
+    now = datetime.now(timezone.utc).isoformat()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE linhas SET last_highlight = ? WHERE id = ?", (now, linha_id))
+    conn.commit()
+    conn.close()
+    return jsonify({'mensagem': 'Highlight atualizado.'})
+
 
 if __name__ == "__main__":
     app.run(debug=True)
