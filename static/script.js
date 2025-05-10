@@ -772,32 +772,74 @@
 
         document.getElementById('refreshImageBtn').addEventListener('click', async () => {
             const currentUrl = document.getElementById('modalImage').src;
-            let newImageUrl = "";
-            let attempts = 0;
+            const nomes = item.nome;        // seu título
+            const tipo = contentType;       // "anime" ou "manga"
             const maxAttempts = 5;
-
-            // Tenta buscar uma nova imagem enquanto for placeholder ou igual à atual
-            do {
-                newImageUrl = await fetchImageUrl(item.nome, contentType);
-                attempts++;
-            } while ((newImageUrl.includes("via.placeholder.com") || newImageUrl === currentUrl) && attempts < maxAttempts);
-
-            if (!newImageUrl.includes("via.placeholder.com") && newImageUrl !== currentUrl) {
-                // Atualiza no DOM
-                document.getElementById('modalImage').src = newImageUrl;
-
-                // Atualiza no banco de dados
-                await fetch(`/linhas/${item.id}/imagem`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ imagem_url: newImageUrl })
+            const urls = [];
+            const loader = document.getElementById('imageLoader');
+            
+            loader.style.display = 'flex'; // Mostrar loader
+            
+            try {
+                // Tenta buscar até 5 URLs diferentes
+                for (let i = 0; i < maxAttempts; i++) {
+                    const url = await fetchImageUrl(nomes, tipo);
+                    if (!url.includes("via.placeholder.com") && url !== currentUrl && !urls.includes(url)) {
+                        urls.push(url);
+                    }
+                }
+        
+                loader.style.display = 'none'; // Esconde loader após fim da busca
+        
+                if (urls.length === 0) {
+                    return alert("Não foi possível encontrar alternativas melhores.");
+                }
+        
+                // Cria o modal de seleção
+                const selector = document.createElement('div');
+                selector.className = 'image-selector-modal';
+                selector.innerHTML = `
+                  <div class="image-selector-content">
+                    <span class="image-selector-close">&times;</span>
+                    <h3>Escolha uma nova capa:</h3>
+                    <div class="image-list"></div>
+                  </div>
+                `;
+                document.body.appendChild(selector);
+        
+                const listDiv = selector.querySelector('.image-list');
+                urls.forEach(url => {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.addEventListener('click', async () => {
+                        document.getElementById('modalImage').src = url;
+                        await fetch(`/linhas/${item.id}/imagem`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ imagem_url: url })
+                        });
+                        document.body.removeChild(selector);
+                        alert("Imagem atualizada!");
+                    });
+                    listDiv.appendChild(img);
                 });
-
-                alert("Imagem atualizada com sucesso!");
-            } else {
-                alert("Não foi possível encontrar uma imagem diferente e melhor.");
+        
+                // Fechar o modal se clicar no "×" ou fora do conteúdo
+                selector.querySelector('.image-selector-close').addEventListener('click', () => {
+                    document.body.removeChild(selector);
+                });
+                selector.addEventListener('click', e => {
+                    if (e.target === selector) {
+                        document.body.removeChild(selector);
+                    }
+                });
+        
+            } catch (error) {
+                loader.style.display = 'none'; // Esconde loader em caso de erro
+                alert('Erro ao buscar imagens. Tente novamente.');
+                console.error(error);
             }
-        });
+        });        
 
         // Mostrar campo ao clicar no botão de link
         document.getElementById('customImageBtn').addEventListener('click', () => {
@@ -1120,20 +1162,20 @@
             const res = await fetch(`/to_highlight/${lista.id}`);
             if (!res.ok) throw new Error('Erro ao buscar destaques');
             let itens = await res.json();
-    
+
             // Censura (Putaria + Manhwa)
             const toggle = document.getElementById('toggle-censure');
             const showPutariaManhwa = toggle && toggle.checked;
-    
+
             itens = itens.filter(item => {
                 const classeExtra = getClasseExtra(item);
                 const isPutaria = classeExtra === "Putaria";
                 const conteudo = (item.conteudo || "").trim().toLowerCase();
                 const isManhwa = conteudo === "manhwa";
-    
+
                 return showPutariaManhwa || !(isPutaria && isManhwa);
             });
-    
+
             // Atualiza o container
             const container = document.querySelector('.destaque');
             container.innerHTML = ''; // <- limpa sempre, antes de adicionar os novos itens
@@ -1142,35 +1184,35 @@
                 container.innerHTML = '<p>Nenhum item pendente.</p>';
                 return;
             }
-    
+
             // Monta os cards
-            itens.sort((a, b) => 
+            itens.sort((a, b) =>
                 a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
             );
-            
+
             // Agora sim, gerar os cards
             itens.forEach(item => {
                 const extraClass = getClasseExtra(item); // Ex: "Putaria"
                 const div = document.createElement('div');
                 div.classList.add('highlight-item');
                 if (extraClass) div.classList.add(extraClass);
-            
+
                 div.innerHTML = `
                     <img src="${item.imagem_url}" style="width:80px;height:120px;border-radius:6px;">
                     <p class="destaque-text">${item.nome}</p>
                     <button data-id="${item.id}">Verificado ✔️</button>
                 `;
-            
+
                 div.querySelector('button').addEventListener('click', async e => {
                     await fetch(`/highlighted/${e.target.dataset.id}`, { method: 'POST' });
                     div.remove();
                 });
-            
+
                 container.appendChild(div);
             });
 
             destaqueItemClickEvent(itens);
-    
+
             // Se ainda não adicionou o listener, adiciona
             if (!toggle.dataset.bound) {
                 toggle.addEventListener('change', () => {
@@ -1178,27 +1220,27 @@
                 });
                 toggle.dataset.bound = "true"; // Marca como já vinculado
             }
-    
+
         } catch (error) {
             console.error('Erro ao carregar destaques:', error);
         }
-    }       
+    }
 
     function destaqueItemClickEvent(itens) {
         const destaqueContainer = document.querySelector('.destaque');
         destaqueContainer.addEventListener('click', (event) => {
             const itemElement = event.target.closest('.highlight-item');
             const isBotao = event.target.tagName === 'BUTTON';
-            
+
             // Ignora clique no botão de "Verificado ✔️"
             if (!itemElement || isBotao) return;
-    
+
             const index = Array.from(destaqueContainer.children).indexOf(itemElement);
             const item = itens[index];
             if (item) showItemDetails(item);
         });
     }
-    
+
 
     // ---------------------------- INICIALIZAÇÃO ----------------------------
     document.addEventListener('DOMContentLoaded', () => {

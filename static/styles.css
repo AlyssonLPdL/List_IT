@@ -1012,6 +1012,74 @@ legend {
   font-weight: 600;
 }
 
+/* modal de seleção de imagens */
+.image-selector-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2000;
+}
+.image-selector-content {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow-y: auto;
+  text-align: center;
+}
+.image-selector-content h3 {
+  color: black;
+}
+.image-selector-content img {
+  width: 100px; height: 150px; object-fit: cover;
+  margin: 4px; cursor: pointer; border-radius: 4px;
+  transition: transform .1s;
+}
+.image-selector-content img:hover {
+  transform: scale(1.1);
+}
+.image-selector-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  font-size: 24px; cursor: pointer; color: #333;
+}
+.loader-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* fundo escuro semi-transparente */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* acima de tudo */
+}
+
+.loader-content {
+  background: white;
+  padding: 20px 40px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+}
+
+.loader-content p {
+  color: black;
+}
+
+/* Exemplo de animação de loader simples */
+.loader {
+  width: 40px;
+  height: 40px;
+  border: 6px solid #ccc;
+  border-top-color: #91CD76;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
 /* =======================================
   TAG STYLES (ESTILIZAÇÃO DAS CLASSES DE TAGS)
 ======================================= */
@@ -1145,5 +1213,11 @@ legend {
   100% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
