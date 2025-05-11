@@ -1097,7 +1097,7 @@
         "Ecchi", "Nudez", "Sexo", "Incesto", "NTR", "Harem", "Nudez Nippleless"
     ];
     const isekaiTags = [
-        "Isekai", "MC vilão"
+        "Isekai", "MC Vilão"
     ];
     const characterTags = [
         "Kemonomimi", "Goat"
