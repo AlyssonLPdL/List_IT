@@ -74,7 +74,6 @@ html {
 #modal-photo {
   background-color: var(--color-card-bg);
   display: flex;
-  border-radius: 0 10px 10px 0;
   width: 310px;
   justify-content: center;
   align-items: center;
@@ -511,11 +510,11 @@ input:checked + .slider:before {
   box-shadow: inset 0 0 0 5px var(--color-status-red);
 }
 .highlight-item.Putaria > .destaque-text {
-  color: black !important; 
+  color: black !important;
   text-shadow: none; /* Opcional: remove sombra se existir */
 }
 .highlight-item.Putaria > button {
-  color: black !important; 
+  color: black !important;
   text-shadow: none; /* Opcional: remove sombra se existir */
 }
 
@@ -544,7 +543,7 @@ input:checked + .slider:before {
 /* =======================================
   BOTÕES GERAIS
 ======================================= */
-.btn {
+.btns .btn {
   width: 150px;
   height: 30px;
   margin-bottom: 20px;
@@ -554,7 +553,7 @@ input:checked + .slider:before {
   cursor: pointer;
   border: 1px solid var(--color-border-secondary);
 }
-.btn:hover {
+.btns .btn:hover {
   background-color: var(--color-sidebar-text);
   color: var(--color-sidebar-bg);
   border: 1px solid var(--color-sidebar-bg);
@@ -730,6 +729,163 @@ input:checked + .slider:before {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+#modal-sequence {
+  display: flex;
+  justify-content: center;
+}
+
+.sequence-controls {
+  position: absolute;
+  margin-top: 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+#mainSequenceBtn {
+  padding: 5px;
+  border-radius: 5px;
+  border: black solid 1px;
+}
+
+.sequence-actions {
+  display: none;
+  position: absolute;
+  top: 40px;
+  left: 0;
+  background: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  padding: 10px;
+  z-index: 1000;
+}
+
+.sequence-actions button {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin: 4px 0;
+  text-align: left;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.sequence-display {
+  display: flex;
+  overflow-x: auto;
+  gap: 10px;
+  background: var(--color-body-bg);
+  width: 300px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 10px 10px 0;
+}
+
+.sequence-list {
+  max-height: 400px;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.sequence-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px;
+  position: relative;
+  height: 180px;
+  width: 200px;
+  cursor: pointer;
+}
+
+.sequence-card img {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.sequence-card .order {
+  position: absolute;
+  background: var(--color-item-bg);
+  color: white;
+  height: 25px;
+  width: 25px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  border-radius: 50%;
+}
+
+.sequence-text {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.remove-sequence-item {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: red;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  display: none;
+}
+
+.sequence-card:hover .remove-sequence-item {
+  display: block;
+}
+
+.sequence-search-modal {
+  z-index: 2000;
+  position: fixed;
+  background: rgba(0, 0, 0, 0.6);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sequence-search-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  background: var(--color-body-bg);
+  width: 400px;
+  border-radius: 10px;
+}
+
+.search-results {
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 10px;
+  gap: 10px;
+}
+
+.search-result-item {
+  border: black solid 1px;
+  padding: 5px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
 /* =======================================
   FORMULÁRIOS (INPUTS, SELECTS, BOTÕES)
 ======================================= */
@@ -1015,9 +1171,14 @@ legend {
 /* modal de seleção de imagens */
 .image-selector-modal {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex; align-items: center; justify-content: center;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 2000;
 }
 .image-selector-content {
@@ -1033,17 +1194,24 @@ legend {
   color: black;
 }
 .image-selector-content img {
-  width: 100px; height: 150px; object-fit: cover;
-  margin: 4px; cursor: pointer; border-radius: 4px;
-  transition: transform .1s;
+  width: 100px;
+  height: 150px;
+  object-fit: cover;
+  margin: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: transform 0.1s;
 }
 .image-selector-content img:hover {
   transform: scale(1.1);
 }
 .image-selector-close {
   position: absolute;
-  top: 16px; right: 16px;
-  font-size: 24px; cursor: pointer; color: #333;
+  top: 16px;
+  right: 16px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #333;
 }
 .loader-modal {
   position: fixed;
@@ -1075,7 +1243,7 @@ legend {
   width: 40px;
   height: 40px;
   border: 6px solid #ccc;
-  border-top-color: #91CD76;
+  border-top-color: #91cd76;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   display: inline-block;
@@ -1127,7 +1295,7 @@ legend {
 }
 
 .item-info.Putaria > .item-text {
-  color: black !important; 
+  color: black !important;
   text-shadow: none; /* Opcional: remove sombra se existir */
 }
 

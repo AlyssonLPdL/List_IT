@@ -12,6 +12,7 @@
     const mainInfoContent = modalInfo.querySelector('.modal-content');
     const mainInfoContentId = document.getElementById('mainInfoContent');
     const tagsContainerId = document.getElementById('tags-container');
+    const sequenceModal = document.getElementById('modal-sequence');
 
     // Listas
     const sidebarLists = document.querySelector('.sidebar-lists');
@@ -877,7 +878,245 @@
             </div>
         `;
 
+        sequenceModal.innerHTML = `
+            <div class="sequence-display" id="sequenceDisplay">
+                <div class="sequence-list" id="sequenceList"></div>
+            </div>
+            <div class="sequence-controls">
+                <button id="mainSequenceBtn">
+                    <i class="fas fa-project-diagram"></i> Sequência
+                </button>
+                <div class="sequence-actions" style="display: none;">
+                    ${await getSequenceButtons(item.id)}
+                </div>
+            </div>
+        `;
+
         modalPhoto.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
+        sequenceModal.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
+
+        // Funções auxiliares
+        async function getSequenceButtons(itemId) {
+            const response = await fetch(`/linhas/${itemId}/sequencias`);
+            const data = await response.json();
+
+            if (data.total_sequencias > 0) {
+                return `
+                    <button class="sequence-action" id="addToSequence">Adicionar à Sequência</button>
+                    <button class="sequence-action" id="deleteSequence">Apagar Sequência</button>
+                `;
+            }
+            return `
+                <button class="sequence-action" id="createSequence">Criar Sequência</button>
+            `;
+        }
+
+        // Event Listener melhorado para alternar o estado
+        document.getElementById('mainSequenceBtn').addEventListener('click', async function () {
+            const actionsPanel = this.nextElementSibling;
+            const isActive = actionsPanel.style.display === 'block';
+
+            // Alterna a visibilidade
+            actionsPanel.style.display = isActive ? 'none' : 'block';
+
+            // Atualiza a classe active
+            if (isActive) {
+                this.classList.remove('active');
+            } else {
+                this.classList.add('active');
+
+                // Atualiza os botões sempre que abre (caso tenha mudado)
+                const newButtons = await getSequenceButtons(item.id);
+                actionsPanel.innerHTML = newButtons;
+
+                // Reatacha os event listeners aos novos botões
+                setupSequenceActionButtons();
+            }
+        });
+
+        // Criar sequência
+        document.querySelector('.sequence-actions').addEventListener('click', async (e) => {
+            if (e.target.id === 'createSequence') {
+                const response = await fetch('/sequencias', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nome: `${item.nome} Sequence`,
+                        descricao: `Sequência criada automaticamente para ${item.nome}`
+                    })
+                });
+
+                const sequence = await response.json();
+                await fetch(`/sequencias/${sequence.id}/itens`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ linha_id: item.id, ordem: 1 })
+                });
+
+                refreshSequenceDisplay(sequence.id);
+            }
+
+            if (e.target.id === 'addToSequence') {
+                showAddToSequenceModal(item);
+            }
+
+            if (e.target.id === 'removeFromSequence') {
+                showRemoveSequenceModal(item);
+            }
+
+            if (e.target.id === 'deleteSequence') {
+                if (confirm('Tem certeza que deseja apagar esta sequência?')) {
+                    const sequences = await (await fetch(`/linhas/${item.id}/sequencias`)).json();
+                    await fetch(`/sequencias/${sequences.sequencias[0].id}`, { method: 'DELETE' });
+                    refreshSequenceDisplay();
+                }
+            }
+        });
+
+        // Mostrar modal de adição à sequência
+        async function showAddToSequenceModal(currentItem) {
+            const modal = document.createElement('div');
+            modal.className = 'sequence-search-modal';
+            modal.innerHTML = `
+        <div class="sequence-search-content">
+            <h3>Adicionar à Sequência</h3>
+            <input type="text" placeholder="Pesquisar itens..." id="sequenceSearchInput">
+            <div class="search-results" id="sequenceSearchResults"></div>
+        </div>
+    `;
+            document.body.appendChild(modal);
+
+            // Buscar itens da lista atual
+            const response = await fetch(`/linhas/${currentItem.lista_id}`);
+            const allItems = await response.json();
+
+            const input = document.getElementById('sequenceSearchInput');
+            const resultsContainer = document.getElementById('sequenceSearchResults');
+
+            // Inicialmente, sem resultados
+            resultsContainer.innerHTML = '';
+
+            // Filtro de pesquisa
+            input.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+
+                if (!term) {
+                    // se não digitou nada, limpa
+                    resultsContainer.innerHTML = '';
+                    return;
+                }
+
+                // filtra e exibe
+                const filtered = allItems.filter(i =>
+                    i.id !== currentItem.id &&
+                    i.nome.toLowerCase().includes(term)
+                );
+                displaySearchResults(filtered, currentItem);
+            });
+
+            // fechar se clicar fora do conteúdo
+            modal.addEventListener('click', e => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            });
+        }
+
+        function displaySearchResults(items, currentItem) {
+            const resultsContainer = document.getElementById('sequenceSearchResults');
+            resultsContainer.innerHTML = items.map(item => `
+        <div class="search-result-item add-to-sequence-btn" data-id="${item.id}">
+            <img src="${item.imagem_url}" alt="${item.nome}" style="width:50px;height:75px;">
+            <span>${item.nome}</span>
+        </div>
+    `).join('');
+
+            document.querySelectorAll('.add-to-sequence-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    try {
+                        const itemId = parseInt(e.currentTarget.dataset.id, 10);
+                        const seqRes = await fetch(`/linhas/${currentItem.id}/sequencias`);
+                        if (!seqRes.ok) throw new Error('Falha ao buscar sequências');
+                        const { sequencias } = await seqRes.json();
+                        if (!sequencias || sequencias.length === 0) {
+                            alert('Por favor, crie uma sequência primeiro');
+                            return;
+                        }
+                        const sequence = sequencias[0]; // usar a primeira por enquanto
+                        // descobrir próxima ordem
+                        const addRes = await fetch(`/sequencias/${sequence.id}/itens`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ linha_id: itemId })
+                        });
+                        if (!addRes.ok) {
+                            const err = await addRes.json();
+                            throw new Error(err.erro || 'Falha ao adicionar à sequência');
+                        }
+                        // fecha modal e atualiza
+                        document.body.removeChild(document.querySelector('.sequence-search-modal'));
+                        refreshSequenceDisplay(sequence.id);
+                    } catch (error) {
+                        console.error(error);
+                        alert(`Erro: ${error.message}`);
+                    }
+                });
+            });
+        }
+
+        // Atualizar exibição da sequência
+        async function refreshSequenceDisplay(sequenceId = null) {
+            if (!sequenceId) {
+                const sequences = await (await fetch(`/linhas/${item.id}/sequencias`)).json();
+                sequenceId = sequences.sequencias[0]?.id;
+            }
+
+            const sequenceDisplay = document.getElementById('sequenceList');
+            if (!sequenceId) {
+                sequenceDisplay.innerHTML = '<p>Nenhuma sequência encontrada</p>';
+                return;
+            }
+
+            const response = await fetch(`/sequencias/${sequenceId}`);
+            const sequence = await response.json();
+
+            sequenceDisplay.innerHTML = sequence.itens.map(item => `
+                <div class="sequence-card">
+                    <div class="order">${item.ordem}</div>
+                    <button class="remove-sequence-item" data-id="${item.id}">&times;</button>
+                    <img src="${item.imagem_url}" alt="${item.nome}">
+                    <p class="sequence-text">${item.nome}</p>
+                </div>
+            `).join('');
+            sequenceItemClickEvent(sequence.itens);
+
+            document.querySelectorAll('.remove-sequence-item').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    await fetch(`/sequencias/${sequenceId}/itens/${e.target.dataset.id}`, {
+                        method: 'DELETE'
+                    });
+                    refreshSequenceDisplay(sequenceId);
+                });
+            });
+
+            function sequenceItemClickEvent(itens) {
+                const sequenceContainer = document.querySelector('.sequence-list');
+                sequenceContainer.addEventListener('click', (event) => {
+                    const itemElement = event.target.closest('.sequence-card');
+                    const isBotao = event.target.tagName === 'BUTTON';
+
+                    // Ignora clique no botão
+                    if (!itemElement || isBotao) return;
+
+                    const index = Array.from(sequenceContainer.children).indexOf(itemElement);
+                    const item = itens[index];
+                    if (item) showItemDetails(item);
+                });
+            }
+        }
+
+        // Chamada inicial para carregar a sequência
+        refreshSequenceDisplay();
 
         document.getElementById('refreshImageBtn').addEventListener('click', async () => {
             const currentUrl = document.getElementById('modalImage').src;
@@ -1044,7 +1283,11 @@
 
         // Clicar fora do conteúdo do modal
         modalInfo.addEventListener('click', (e) => {
-            const isOutside = !e.target.closest('.modal-content') && !e.target.closest('#modal-photo');
+            const isOutside =
+                !e.target.closest('.modal-content') &&
+                !e.target.closest('#modal-photo') &&
+                !e.target.closest('#modal-sequence') &&
+                !e.target.closest('.sequence-search-modal');
             if (isOutside) {
                 fecharModalInfo();
             }

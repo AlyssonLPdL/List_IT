@@ -15,12 +15,16 @@ def init_db():
     """Cria as tabelas do banco de dados SQLite, caso não existam."""
     with sqlite3.connect("list_it.db") as conn:
         cursor = conn.cursor()
+        
+        # Tabela de listas original
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS listas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nome TEXT NOT NULL
             )
         """)
+        
+        # Tabela de linhas original
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS linhas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,8 +40,30 @@ def init_db():
                 FOREIGN KEY (lista_id) REFERENCES listas(id)
             )
         """)
+        
+        # Nova tabela para armazenar sequências
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sequencias (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT NOT NULL,
+                descricao TEXT
+            )
+        """)
+        
+        # Nova tabela para relacionar itens às sequências com ordem
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sequencia_itens (
+                sequencia_id INTEGER NOT NULL,
+                linha_id INTEGER NOT NULL,
+                ordem INTEGER NOT NULL,
+                PRIMARY KEY (sequencia_id, linha_id),
+                FOREIGN KEY (sequencia_id) REFERENCES sequencias(id) ON DELETE CASCADE,
+                FOREIGN KEY (linha_id) REFERENCES linhas(id) ON DELETE CASCADE
+            )
+        """)
+        
         conn.commit()
-    print("[INIT] Banco de dados inicializado.")
+    print("[INIT] Banco de dados inicializado com suporte a sequências.")
 
 init_db()
 
@@ -399,6 +425,328 @@ def mark_highlighted(linha_id):
 
     return jsonify({'mensagem': 'Highlight atualizado.'})
 
+# Operação 1: Criar uma nova sequência (com autocommit)
+@app.route('/sequencias', methods=['POST'])
+def criar_sequencia():
+    data = request.get_json()
+    nome = data.get('nome')
+    descricao = data.get('descricao', '')
 
+    if not nome:
+        return jsonify({"erro": "Nome da sequência é obrigatório"}), 400
+
+    with sqlite3.connect("list_it.db") as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO sequencias (nome, descricao) VALUES (?, ?)",
+                (nome, descricao)
+            )
+            sequencia_id = cursor.lastrowid
+            conn.commit()
+            
+            # Auto commit
+            subprocess.run(['git', 'add', 'list_it.db'])
+            commit_message = f"Criando Sequência: {nome} id: {sequencia_id}"
+            subprocess.run(['git', 'commit', '-m', commit_message])
+            print(f"[COMMIT] {commit_message}")
+            
+        except sqlite3.Error as e:
+            return jsonify({"erro": f"Erro ao criar sequência: {str(e)}"}), 500
+    
+    return jsonify({
+        "id": sequencia_id,
+        "nome": nome,
+        "descricao": descricao,
+        "mensagem": f"Sequência '{nome}' criada com sucesso"
+    }), 201
+
+# Operação 2: Adicionar item a uma sequência (com verificações)
+@app.route('/sequencias/<int:sequencia_id>/itens', methods=['POST'])
+def adicionar_item_sequencia(sequencia_id):
+    data = request.get_json()
+    linha_id = data.get('linha_id')
+
+    if not linha_id:
+        return jsonify({"erro": "linha_id é obrigatório"}), 400
+
+    with sqlite3.connect("list_it.db") as conn:
+        cursor = conn.cursor()
+        # 1) Verificar se sequência existe
+        cursor.execute("SELECT nome FROM sequencias WHERE id = ?", (sequencia_id,))
+        seq = cursor.fetchone()
+        if not seq:
+            return jsonify({"erro": "Sequência não encontrada"}), 404
+        seq_nome = seq[0]
+
+        # 2) Verificar se o item existe
+        cursor.execute("SELECT nome FROM linhas WHERE id = ?", (linha_id,))
+        linha = cursor.fetchone()
+        if not linha:
+            return jsonify({"erro": "Item não encontrado"}), 404
+        item_nome = linha[0]
+
+        # 3) Verificar se já está na sequência
+        cursor.execute("""
+            SELECT 1 FROM sequencia_itens 
+            WHERE sequencia_id = ? AND linha_id = ?
+        """, (sequencia_id, linha_id))
+        if cursor.fetchone():
+            return jsonify({"erro": "Item já está nesta sequência"}), 400
+
+        # 4) Calcular a próxima ordem no backend
+        cursor.execute("""
+            SELECT COALESCE(MAX(ordem), 0) FROM sequencia_itens 
+            WHERE sequencia_id = ?
+        """, (sequencia_id,))
+        max_ordem = cursor.fetchone()[0]
+        nova_ordem = max_ordem + 1
+
+        # 5) Inserir usando a nova_ordem
+        cursor.execute("""
+            INSERT INTO sequencia_itens (sequencia_id, linha_id, ordem) 
+            VALUES (?, ?, ?)
+        """, (sequencia_id, linha_id, nova_ordem))
+        conn.commit()
+
+        # 6) Auto commit no Git
+        subprocess.run(['git', 'add', 'list_it.db'])
+        commit_message = f"Adicionando {item_nome} à sequência {seq_nome} na ordem {nova_ordem}"
+        subprocess.run(['git', 'commit', '-m', commit_message])
+        print(f"[COMMIT] {commit_message}")
+
+    return jsonify({
+        "mensagem": "Item adicionado à sequência com sucesso",
+        "sequencia_id": sequencia_id,
+        "linha_id": linha_id,
+        "ordem": nova_ordem
+    }), 201
+
+# Operação 3: Listar todas as sequências (com contagem de itens)
+@app.route('/sequencias', methods=['GET'])
+def listar_sequencias():
+    try:
+        with sqlite3.connect("list_it.db") as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Lista sequências com contagem de itens
+            cursor.execute("""
+                SELECT s.id, s.nome, s.descricao, COUNT(si.linha_id) as total_itens
+                FROM sequencias s
+                LEFT JOIN sequencia_itens si ON s.id = si.sequencia_id
+                GROUP BY s.id, s.nome, s.descricao
+                ORDER BY s.nome
+            """)
+            
+            sequencias = [dict(row) for row in cursor.fetchall()]
+        
+        return jsonify(sequencias)
+    except sqlite3.Error as e:
+        return jsonify({"erro": f"Erro ao listar sequências: {str(e)}"}), 500
+
+# Operação 4: Obter detalhes de uma sequência (com mais informações)
+@app.route('/sequencias/<int:sequencia_id>', methods=['GET'])
+def obter_sequencia(sequencia_id):
+    try:
+        with sqlite3.connect("list_it.db") as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Obter metadados da sequência
+            cursor.execute("""
+                SELECT id, nome, descricao FROM sequencias 
+                WHERE id = ?
+            """, (sequencia_id,))
+            
+            sequencia = cursor.fetchone()
+            if not sequencia:
+                return jsonify({"erro": "Sequência não encontrada"}), 404
+            
+            # Obter itens da sequência em ordem com mais detalhes
+            cursor.execute("""
+                SELECT l.id, l.nome, l.imagem_url, l.conteudo, l.status, 
+                       l.episodio, si.ordem 
+                FROM linhas l
+                JOIN sequencia_itens si ON l.id = si.linha_id
+                WHERE si.sequencia_id = ?
+                ORDER BY si.ordem
+            """, (sequencia_id,))
+            
+            itens = [dict(row) for row in cursor.fetchall()]
+        
+        return jsonify({
+            "sequencia": dict(sequencia),
+            "itens": itens,
+            "total_itens": len(itens)
+        })
+    except sqlite3.Error as e:
+        return jsonify({"erro": f"Erro ao obter sequência: {str(e)}"}), 500
+
+# Operação 5: Remover item de uma sequência (com verificações)
+@app.route('/sequencias/<int:sequencia_id>/itens/<int:linha_id>', methods=['DELETE'])
+def remover_item_sequencia(sequencia_id, linha_id):
+    try:
+        with sqlite3.connect("list_it.db") as conn:
+            cursor = conn.cursor()
+            
+            # Verificar existência antes de deletar
+            cursor.execute("""
+                SELECT 1 FROM sequencia_itens 
+                WHERE sequencia_id = ? AND linha_id = ?
+            """, (sequencia_id, linha_id))
+            
+            if not cursor.fetchone():
+                return jsonify({"erro": "Item não encontrado na sequência"}), 404
+            
+            # Obter nomes para commit
+            cursor.execute("SELECT nome FROM linhas WHERE id = ?", (linha_id,))
+            item_nome = cursor.fetchone()[0]
+            cursor.execute("SELECT nome FROM sequencias WHERE id = ?", (sequencia_id,))
+            seq_nome = cursor.fetchone()[0]
+            
+            cursor.execute("""
+                DELETE FROM sequencia_itens 
+                WHERE sequencia_id = ? AND linha_id = ?
+            """, (sequencia_id, linha_id))
+            
+            conn.commit()
+            
+            # Auto commit
+            subprocess.run(['git', 'add', 'list_it.db'])
+            commit_message = f"Removendo {item_nome} da sequência {seq_nome}"
+            subprocess.run(['git', 'commit', '-m', commit_message])
+            print(f"[COMMIT] {commit_message}")
+            
+        return jsonify({
+            "mensagem": "Item removido da sequência com sucesso",
+            "sequencia_id": sequencia_id,
+            "linha_id": linha_id
+        })
+    except sqlite3.Error as e:
+        return jsonify({"erro": f"Erro ao remover item: {str(e)}"}), 500
+
+# Operação 6: Atualizar ordem dos itens em uma sequência (com validação)
+@app.route('/sequencias/<int:sequencia_id>/ordem', methods=['PUT'])
+def atualizar_ordem_sequencia(sequencia_id):
+    data = request.get_json()
+    
+    if not isinstance(data, list):
+        return jsonify({"erro": "Dados devem ser uma lista de itens"}), 400
+    
+    try:
+        with sqlite3.connect("list_it.db") as conn:
+            cursor = conn.cursor()
+            
+            # Verificar se a sequência existe
+            cursor.execute("SELECT 1 FROM sequencias WHERE id = ?", (sequencia_id,))
+            if not cursor.fetchone():
+                return jsonify({"erro": "Sequência não encontrada"}), 404
+            
+            # Validar e atualizar cada item
+            for item in data:
+                if 'linha_id' not in item or 'nova_ordem' not in item:
+                    conn.rollback()
+                    return jsonify({"erro": "Cada item deve conter linha_id e nova_ordem"}), 400
+                
+                cursor.execute("""
+                    UPDATE sequencia_itens 
+                    SET ordem = ? 
+                    WHERE sequencia_id = ? AND linha_id = ?
+                """, (item['nova_ordem'], sequencia_id, item['linha_id']))
+                
+                if cursor.rowcount == 0:
+                    conn.rollback()
+                    return jsonify({
+                        "erro": f"Item {item['linha_id']} não encontrado na sequência",
+                        "linha_id": item['linha_id']
+                    }), 404
+            
+            conn.commit()
+            
+            # Auto commit
+            cursor.execute("SELECT nome FROM sequencias WHERE id = ?", (sequencia_id,))
+            seq_nome = cursor.fetchone()[0]
+            subprocess.run(['git', 'add', 'list_it.db'])
+            commit_message = f"Atualizando ordem na sequência {seq_nome}"
+            subprocess.run(['git', 'commit', '-m', commit_message])
+            print(f"[COMMIT] {commit_message}")
+            
+        return jsonify({
+            "mensagem": "Ordem da sequência atualizada com sucesso",
+            "total_itens_atualizados": len(data)
+        })
+    except sqlite3.Error as e:
+        return jsonify({"erro": f"Erro ao atualizar ordem: {str(e)}"}), 500
+
+# Operação 7: Deletar uma sequência (com confirmação)
+@app.route('/sequencias/<int:sequencia_id>', methods=['DELETE'])
+def deletar_sequencia(sequencia_id):
+    try:
+        with sqlite3.connect("list_it.db") as conn:
+            cursor = conn.cursor()
+            
+            # Obter nome antes de deletar para commit
+            cursor.execute("SELECT nome FROM sequencias WHERE id = ?", (sequencia_id,))
+            seq_nome = cursor.fetchone()
+            if not seq_nome:
+                return jsonify({"erro": "Sequência não encontrada"}), 404
+            seq_nome = seq_nome[0]
+            
+            # Deletar (o CASCADE vai cuidar dos itens da sequência)
+            cursor.execute("DELETE FROM sequencias WHERE id = ?", (sequencia_id,))
+            conn.commit()
+            
+            # Auto commit
+            subprocess.run(['git', 'add', 'list_it.db'])
+            commit_message = f"Removendo sequência {seq_nome}"
+            subprocess.run(['git', 'commit', '-m', commit_message])
+            print(f"[COMMIT] {commit_message}")
+            
+        return jsonify({
+            "mensagem": "Sequência deletada com sucesso",
+            "sequencia_id": sequencia_id,
+            "sequencia_nome": seq_nome
+        })
+    except sqlite3.Error as e:
+        return jsonify({"erro": f"Erro ao deletar sequência: {str(e)}"}), 500
+
+# Operação 8: Verificar em quais sequências um item está
+@app.route('/linhas/<int:linha_id>/sequencias', methods=['GET'])
+def obter_sequencias_do_item(linha_id):
+    try:
+        with sqlite3.connect("list_it.db") as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Verificar se o item existe
+            cursor.execute("SELECT nome FROM linhas WHERE id = ?", (linha_id,))
+            item = cursor.fetchone()
+            if not item:
+                return jsonify({"erro": "Item não encontrado"}), 404
+            
+            # Obter todas as sequências que contêm este item
+            cursor.execute("""
+                SELECT s.id, s.nome, s.descricao, si.ordem
+                FROM sequencias s
+                JOIN sequencia_itens si ON s.id = si.sequencia_id
+                WHERE si.linha_id = ?
+                ORDER BY s.nome
+            """, (linha_id,))
+            
+            sequencias = [dict(row) for row in cursor.fetchall()]
+            
+            # Obter nome do item
+            item_nome = item['nome']
+        
+        return jsonify({
+            "linha_id": linha_id,
+            "item_nome": item_nome,
+            "sequencias": sequencias,
+            "total_sequencias": len(sequencias)
+        })
+    except sqlite3.Error as e:
+        return jsonify({"erro": f"Erro ao buscar sequências: {str(e)}"}), 500
+    
 if __name__ == "__main__":
     app.run(debug=True)
