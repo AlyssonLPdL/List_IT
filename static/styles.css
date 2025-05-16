@@ -544,7 +544,7 @@ input:checked + .slider:before {
 /* =======================================
   BOTÕES GERAIS
 ======================================= */
-#add-line-btn {
+.btn {
   width: 150px;
   height: 30px;
   margin-bottom: 20px;
@@ -554,7 +554,7 @@ input:checked + .slider:before {
   cursor: pointer;
   border: 1px solid var(--color-border-secondary);
 }
-#add-line-btn:hover {
+.btn:hover {
   background-color: var(--color-sidebar-text);
   color: var(--color-sidebar-bg);
   border: 1px solid var(--color-sidebar-bg);

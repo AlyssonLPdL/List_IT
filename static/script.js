@@ -368,7 +368,10 @@
                     </div>
                 </div>
                 </div>
-            <button id="add-line-btn">+ Adicionar Linha</button>
+            <div class="btns">
+                <button class="btn" id="add-line-btn">+ Adicionar Linha</button>
+                <button class="btn" id="export-btn">Exportar XLSX</button>
+            </div>
             <div class="graf-list">
                 <div class="container-list-items">
                     <div class="list-items">
@@ -537,6 +540,111 @@
             initResizeObserver();
         });
 
+        // ...existing code...
+        document.getElementById('export-btn').addEventListener('click', async () => {
+            // Gera os dados filtrados como antes
+            const allItens = window.__ultimaChamadaLinhas || [];
+            const selected = window.__ultimoFiltroSelecionado || {
+                status: { include: new Set(), exclude: new Set() },
+                conteudo: { include: new Set(), exclude: new Set() },
+                opiniao: { include: new Set(), exclude: new Set() },
+                tags: { include: new Set(), exclude: new Set() }
+            };
+
+            const showPutariaManhwa = document.getElementById('toggle-censure').checked;
+            const filtered = allItens.filter(item => {
+                const isPutaria = getClasseExtra(item) === "Putaria";
+                const isManhwa = (item.conteudo || "").trim().toLowerCase() === "manhwa";
+                if (!showPutariaManhwa && isPutaria && isManhwa) return false;
+
+                const nameFilter = document.getElementById('search-name').value.toLowerCase().trim();
+                if (nameFilter && !item.nome.toLowerCase().includes(nameFilter)) return false;
+
+                for (let type of ['status', 'conteudo', 'opiniao']) {
+                    const val = item[type];
+                    const { include, exclude } = selected[type];
+                    if (exclude.size && exclude.has(val)) return false;
+                    if (include.size && !include.has(val)) return false;
+                }
+
+                const itemTags = item.tags ? item.tags.split(',').map(t => t.trim()) : [];
+                for (let bad of selected.tags.exclude) if (itemTags.includes(bad)) return false;
+                if (selected.tags.include.size) {
+                    const allIncluded = [...selected.tags.include].every(tag => itemTags.includes(tag));
+                    if (!allIncluded) return false;
+                }
+
+                return true;
+            });
+
+            // Desmembra em linhas por tag
+            const rows = [];
+            filtered.forEach(item => {
+                const itemTags = item.tags ? item.tags.split(',').map(t => t.trim()) : [''];
+                itemTags.forEach(tag => {
+                    rows.push({
+                        Nome: item.nome,
+                        Tag: tag,
+                        Opinião: item.opiniao,
+                        Episódio: item.episodio,
+                        Status: item.status,
+                        Conteudo: item.conteudo
+                    });
+                });
+            });
+
+            // --- ExcelJS ---
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Export');
+
+            // Cabeçalho
+            worksheet.columns = [
+                { header: 'Nome', key: 'Nome', width: 30 },
+                { header: 'Tag', key: 'Tag', width: 20 },
+                { header: 'Opinião', key: 'Opinião', width: 15 },
+                { header: 'Ep/Cap', key: 'Episódio', width: 10 },
+                { header: 'Status', key: 'Status', width: 15 },
+                { header: 'Conteúdo', key: 'Conteudo', width: 15 }
+            ];
+
+            // Gera cores pastel por nome
+            const nameList = [...new Set(rows.map(r => r.Nome))];
+            const nameColors = {};
+            nameList.forEach(name => {
+                const r = Math.floor(150 + Math.random() * 105);
+                const g = Math.floor(150 + Math.random() * 105);
+                const b = Math.floor(150 + Math.random() * 105);
+                nameColors[name] = `FF${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+            });
+
+            // Adiciona as linhas e aplica cor de fundo
+            rows.forEach(row => {
+                const excelRow = worksheet.addRow(row);
+                const fillColor = nameColors[row.Nome];
+                excelRow.eachCell((cell, colNumber) => {
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: fillColor }
+                    };
+                });
+            });
+
+            // Gera o arquivo e baixa
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "Lista.xlsx";
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+        });
+        // ...existing code...
         document.getElementById('search-name')
             .addEventListener('input', () => filterItems(linhas, selected));
 
@@ -585,6 +693,7 @@
             return true;
         });
 
+        window.__ultimaChamadaLinhas = filtered;
         showItems(filtered);
     }
 
@@ -777,9 +886,9 @@
             const maxAttempts = 5;
             const urls = [];
             const loader = document.getElementById('imageLoader');
-            
+
             loader.style.display = 'flex'; // Mostrar loader
-            
+
             try {
                 // Tenta buscar até 5 URLs diferentes
                 for (let i = 0; i < maxAttempts; i++) {
@@ -788,13 +897,13 @@
                         urls.push(url);
                     }
                 }
-        
+
                 loader.style.display = 'none'; // Esconde loader após fim da busca
-        
+
                 if (urls.length === 0) {
                     return alert("Não foi possível encontrar alternativas melhores.");
                 }
-        
+
                 // Cria o modal de seleção
                 const selector = document.createElement('div');
                 selector.className = 'image-selector-modal';
@@ -806,7 +915,7 @@
                   </div>
                 `;
                 document.body.appendChild(selector);
-        
+
                 const listDiv = selector.querySelector('.image-list');
                 urls.forEach(url => {
                     const img = document.createElement('img');
@@ -823,7 +932,7 @@
                     });
                     listDiv.appendChild(img);
                 });
-        
+
                 // Fechar o modal se clicar no "×" ou fora do conteúdo
                 selector.querySelector('.image-selector-close').addEventListener('click', () => {
                     document.body.removeChild(selector);
@@ -833,13 +942,13 @@
                         document.body.removeChild(selector);
                     }
                 });
-        
+
             } catch (error) {
                 loader.style.display = 'none'; // Esconde loader em caso de erro
                 alert('Erro ao buscar imagens. Tente novamente.');
                 console.error(error);
             }
-        });        
+        });
 
         // Mostrar campo ao clicar no botão de link
         document.getElementById('customImageBtn').addEventListener('click', () => {
