@@ -810,11 +810,8 @@
 
     // Exibir detalhes de uma linha
     async function showItemDetails(item) {
+        modalInfo.classList.remove('show');
         modalInfo.classList.remove('hidden');
-        modalInfo.classList.add('show');
-
-        // Opcional: se quiser resetar a animação se abrir várias vezes seguidas
-        modalInfo.offsetHeight; // força reflow
 
         // Determinar tipo de conteúdo
         let contentType;
@@ -978,12 +975,12 @@
             const modal = document.createElement('div');
             modal.className = 'sequence-search-modal';
             modal.innerHTML = `
-        <div class="sequence-search-content">
-            <h3>Adicionar à Sequência</h3>
-            <input type="text" placeholder="Pesquisar itens..." id="sequenceSearchInput">
-            <div class="search-results" id="sequenceSearchResults"></div>
-        </div>
-    `;
+                <div class="sequence-search-content">
+                    <h3>Adicionar à Sequência</h3>
+                    <input type="text" placeholder="Pesquisar itens..." id="sequenceSearchInput">
+                    <div class="search-results" id="sequenceSearchResults"></div>
+                </div>
+            `;
             document.body.appendChild(modal);
 
             // Buscar itens da lista atual
@@ -1025,11 +1022,11 @@
         function displaySearchResults(items, currentItem) {
             const resultsContainer = document.getElementById('sequenceSearchResults');
             resultsContainer.innerHTML = items.map(item => `
-        <div class="search-result-item add-to-sequence-btn" data-id="${item.id}">
-            <img src="${item.imagem_url}" alt="${item.nome}" style="width:50px;height:75px;">
-            <span>${item.nome}</span>
-        </div>
-    `).join('');
+                <div class="search-result-item add-to-sequence-btn" data-id="${item.id}">
+                    <img src="${item.imagem_url}" alt="${item.nome}" style="width:50px;height:75px;">
+                    <span>${item.nome}</span>
+                </div>
+            `).join('');
 
             document.querySelectorAll('.add-to-sequence-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
@@ -1144,17 +1141,20 @@
                 }
 
                 // Cria o modal de seleção
-                const selector = document.createElement('div');
+                let selector = document.querySelector('.image-selector-modal');
+
+                if (!selector) {
+                selector = document.createElement('div');
                 selector.className = 'image-selector-modal';
                 selector.innerHTML = `
-                  <div class="image-selector-content">
+                    <div class="image-selector-content">
                     <span class="image-selector-close">&times;</span>
                     <h3>Escolha uma nova capa:</h3>
                     <div class="image-list"></div>
-                  </div>
+                    </div>
                 `;
                 document.body.appendChild(selector);
-
+                }
                 const listDiv = selector.querySelector('.image-list');
                 urls.forEach(url => {
                     const img = document.createElement('img');
@@ -1303,6 +1303,8 @@
                 });
             });
         });
+        void modalInfo.offsetWidth;
+        modalInfo.classList.add('show');
     }
 
     // Abrir modal de edição
