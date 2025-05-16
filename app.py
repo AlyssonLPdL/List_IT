@@ -566,7 +566,7 @@ def obter_sequencia(sequencia_id):
             # Obter itens da sequência em ordem com mais detalhes
             cursor.execute("""
                 SELECT l.id, l.nome, l.imagem_url, l.conteudo, l.status, 
-                       l.episodio, si.ordem 
+                    l.episodio, l.tags, l.opiniao, si.ordem 
                 FROM linhas l
                 JOIN sequencia_itens si ON l.id = si.linha_id
                 WHERE si.sequencia_id = ?
