@@ -351,7 +351,6 @@
                     <input type="checkbox" id="toggle-censure">
                     <span class="slider"></span>
                 </label>
-                <span>Mostrar Conteúdo Sensível</span>
                 </div>
             </div>
             </div>
@@ -733,18 +732,20 @@
 
         const listItemsContainer = document.querySelector('.items-grid');
         listItemsContainer.innerHTML = filteredLinhas.map(item => `
-            <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
-                <div class="status-icon" style="position: absolute;top: 4px;right: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
+            <div class="item-card ${getClasseExtra(item)}" data-item-id="${item.id}">
+                    <div class="status-indicator">
                     ${getStatusIcon(item.status)}
-                </div>
-                <div class="opiniao-icon" style="position: absolute;top: 4px;left: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
+                    </div>
+                    <div class="opinion-indicator">
                     ${getOpiniaoIcon(item.opiniao)}
+                    </div>
+                    <div class="item-card-image">
+                    <img src="${item.imagem_url && !item.imagem_url.includes('via.placeholder.com') ? item.imagem_url : 'https://via.placeholder.com/150'}" alt="${item.nome}">
+                    </div>
+                    <div class="item-card-content">
+                    <h3 class="item-card-title">${item.nome}</h3>
+                    </div>
                 </div>
-                <div class="item-image">
-                    <img src="${item.imagem_url && !item.imagem_url.includes('via.placeholder.com') ? item.imagem_url : 'https://via.placeholder.com/150'}" alt="${item.nome}" style="height:220px;width:150px;padding-top:15px;border-radius:10px;">
-                </div>
-                <div class="item-text">${item.nome}</div>
-            </div>
         `).join('');
 
         addItemClickEvent(filteredLinhas);
@@ -799,7 +800,7 @@
     function addItemClickEvent(linhas) {
         const listItemsContainer = document.querySelector('.items-grid');
         listItemsContainer.addEventListener('click', (event) => {
-            const itemElement = event.target.closest('.item-info');
+            const itemElement = event.target.closest('.item-card');
             if (itemElement) {
                 const itemId = itemElement.getAttribute('data-item-id');
                 const item = linhas.find(i => i.id == itemId);
