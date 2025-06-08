@@ -566,33 +566,6 @@ input:checked + .slider:before {
   margin: 0;
   font-size: 16px;
 }
-.item-info {
-  width: 200px;
-  height: 300px;
-  text-align: center;
-  font-size: 20px;
-  border-radius: 10px;
-  cursor: pointer;
-  background-color: var(--color-item-bg);
-  color: var(--color-text-primary);
-  display: flex;
-  justify-content: space-around;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-}
-.item-text {
-  max-width: 150px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  word-break: break-word;
-  margin-bottom: 10px;
-  color: var(--color-sidebar-text);
-}
 .item-card {
   position: relative;
   height: 320px;
@@ -1570,7 +1543,7 @@ legend {
   animation: gradientAnimation 3s ease infinite;
 }
 
-.item-info.Putaria {
+.item-card.Putaria {
   background: linear-gradient(
     303deg,
     #ffffff 0%,
@@ -1584,12 +1557,12 @@ legend {
   box-shadow: inset 0 0 0 5px var(--color-status-red);
 }
 
-.item-info.Putaria > .item-text {
+.item-card.Putaria > .item-card-title {
   color: black !important;
   text-shadow: none; /* Opcional: remove sombra se existir */
 }
 
-.item-info.Cancelado {
+.item-card.Cancelado {
   background-image: linear-gradient(
     90deg,
     var(--color-item-bg),
@@ -1599,7 +1572,7 @@ legend {
   );
 }
 
-.item-info.Cancelado > .item-text {
+.item-card.Cancelado > .item-card-title {
   color: var(
     --color-text-secondary
   ) !important; /* Necessário para vencer a especificidade do .item-text */
@@ -1607,7 +1580,7 @@ legend {
 }
 
 /* Estilo original do Pika (mantém o background no item-info) */
-.item-info.Pika {
+.item-card.Pika {
   color: var(--color-text-primary);
   font-weight: 600;
   background: url(/static/img/fire-102.gif);
@@ -1615,7 +1588,7 @@ legend {
 }
 
 /* Sobrescreve APENAS a cor do texto - sem afetar outros elementos */
-.item-info.Pika > .item-text {
+.item-card.Pika > .item-card-title {
   color: black !important; /* Necessário para vencer a especificidade do .item-text */
   text-shadow: none; /* Opcional: remove sombra se existir */
 }
