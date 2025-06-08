@@ -343,60 +343,80 @@
         });
 
         mainContent.innerHTML = `
-            <h1>${lista.nome}</h1>
-            <div class="pesquisa">
+            <div class="list-header">
+            <h1 class="list-title">${lista.nome}</h1>
+            <div class="controls-container">
+                <div class="censure-toggle">
                 <label class="switch">
-                        <input type="checkbox" id="toggle-censure">
-                        <span class="slider"></span>
-                    </label>
-                <div class="search-filter">
-                    <input type="text" id="search-name" placeholder="Buscar por nome...">
-                    <button type="button" id="filter-toggle">Filtros ▼</button>
+                    <input type="checkbox" id="toggle-censure">
+                    <span class="slider"></span>
+                </label>
+                <span>Mostrar Conteúdo Sensível</span>
                 </div>
-                <!-- painel de filtros escondido por padrão -->
-                <div id="filter-panel" class="hidden">
-                    <h4>----------------------------------- Status -------------------------------------</h4>
-                    <div class="filter-section" data-type="status">
-                    </div>
-                    <h4>--------------------------------- Conteúdo ----------------------------------</h4>
-                    <div class="filter-section" data-type="conteudo">
-                    </div>
-                    <h4>----------------------------------- Opinião ------------------------------------</h4>
-                    <div class="filter-section" data-type="opiniao">
-                    </div>
-                    <h4>------------------------------------- Tags -------------------------------------</h4>
-                    <div class="filter-section" data-type="tags">
-                    </div>
-                </div>
-                </div>
-            <div class="btns">
-                <button class="btn" id="add-line-btn">+ Adicionar Linha</button>
-                <button class="btn" id="export-btn">Exportar XLSX</button>
             </div>
-            <div class="graf-list">
-                <div class="container-list-items">
-                    <div class="list-items">
-                        ${linhas.map(item => `
-                            <div class="item-info ${getClasseExtra(item)}" data-item-id="${item.id}">
-                                <div class="status-icon" style="position: absolute;top: 4px;right: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
-                                    ${getStatusIcon(item.status)}
-                                </div>
-                                <div class="opiniao-icon" style="position: absolute;top: 4px;left: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
-                                    ${getOpiniaoIcon(item.opiniao)}
-                                </div>
-                                <div class="item-image">
-                                    <img src="${item.imagem_url && !item.imagem_url.includes('via.placeholder.com') ? item.imagem_url : 'https://via.placeholder.com/150'}" alt="${item.nome}" style="height:220px;width:150px;padding-top:15px;border-radius:10px;">
-                                </div>
-                                <div class="item-text">${item.nome}</div>
-                            </div>
-                        `).join('')}
-                    </div>    
+            </div>
+
+            <div class="search-section">
+            <div class="search-filter-container">
+                <div class="search-filter">
+                <input type="text" id="search-name" placeholder="Buscar por nome...">
+                <button type="button" id="filter-toggle">Filtros</button>
                 </div>
-                <div class="graficos">
-                    <h3>${lista.nome} para Verificar</h3>
-                    <div class="destaque">
+                <div class="action-buttons">
+                <button class="btn" id="add-line-btn">
+                    <i>+</i> Adicionar Linha
+                </button>
+                <button class="btn" id="export-btn">
+                    <i>↓</i> Exportar
+                </button>
+                </div>
+            </div>
+            
+            <!-- Painel de filtros -->
+            <div id="filter-panel" class="hidden">
+                <h4>----------------------------------- Status -------------------------------------</h4>
+                <div class="filter-section" data-type="status"></div>
+                <h4>--------------------------------- Conteúdo ----------------------------------</h4>
+                <div class="filter-section" data-type="conteudo"></div>
+                <h4>----------------------------------- Opinião ------------------------------------</h4>
+                <div class="filter-section" data-type="opiniao"></div>
+                <h4>------------------------------------- Tags -------------------------------------</h4>
+                <div class="filter-section" data-type="tags"></div>
+            </div>
+            </div>
+
+            <div class="items-container">
+            <div class="items-grid">
+                ${linhas.length > 0 ? linhas.map(item => `
+                <div class="item-card ${getClasseExtra(item)}" data-item-id="${item.id}">
+                    <div class="status-indicator">
+                    ${getStatusIcon(item.status)}
+                    </div>
+                    <div class="opinion-indicator">
+                    ${getOpiniaoIcon(item.opiniao)}
+                    </div>
+                    <div class="item-card-image">
+                    <img src="${item.imagem_url && !item.imagem_url.includes('via.placeholder.com') ? item.imagem_url : 'https://via.placeholder.com/150'}" alt="${item.nome}">
+                    </div>
+                    <div class="item-card-content">
+                    <h3 class="item-card-title">${item.nome}</h3>
                     </div>
                 </div>
+                `).join('') : `
+                <div class="empty-state">
+                    <i>📭</i>
+                    <h3>Nenhum item encontrado</h3>
+                    <p>Adicione novos itens ou ajuste seus filtros</p>
+                </div>
+                `}
+            </div>
+            
+            <div class="highlights-section">
+                <h3>${lista.nome} para Verificar</h3>
+                <div class="highlights-list">
+                <!-- Destaques serão adicionados via JS -->
+                </div>
+            </div>
             </div>
         `;
 
@@ -711,7 +731,7 @@
             return showPutariaManhwa || !(isPutaria && isManhwa);
         });
 
-        const listItemsContainer = document.querySelector('.list-items');
+        const listItemsContainer = document.querySelector('.items-grid');
         listItemsContainer.innerHTML = filteredLinhas.map(item => `
             <div class="item-info ${item.opiniao} ${getClasseExtra(item)}" data-item-id="${item.id}">
                 <div class="status-icon" style="position: absolute;top: 4px;right: 8px;font-size: 30px;height: 30px;text-shadow:-1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;">
@@ -777,7 +797,7 @@
 
     // Adicionar evento de clique às linhas usando delegação de eventos
     function addItemClickEvent(linhas) {
-        const listItemsContainer = document.querySelector('.list-items');
+        const listItemsContainer = document.querySelector('.items-grid');
         listItemsContainer.addEventListener('click', (event) => {
             const itemElement = event.target.closest('.item-info');
             if (itemElement) {
@@ -1144,16 +1164,16 @@
                 let selector = document.querySelector('.image-selector-modal');
 
                 if (!selector) {
-                selector = document.createElement('div');
-                selector.className = 'image-selector-modal';
-                selector.innerHTML = `
+                    selector = document.createElement('div');
+                    selector.className = 'image-selector-modal';
+                    selector.innerHTML = `
                     <div class="image-selector-content">
                     <span class="image-selector-close">&times;</span>
                     <h3>Escolha uma nova capa:</h3>
                     <div class="image-list"></div>
                     </div>
                 `;
-                document.body.appendChild(selector);
+                    document.body.appendChild(selector);
                 }
                 const listDiv = selector.querySelector('.image-list');
                 urls.forEach(url => {
@@ -1531,7 +1551,7 @@
             });
 
             // Atualiza o container
-            const container = document.querySelector('.destaque');
+            const container = document.querySelector('.highlights-list');
             container.innerHTML = ''; // <- limpa sempre, antes de adicionar os novos itens
 
             if (itens.length === 0) {
@@ -1553,7 +1573,7 @@
 
                 div.innerHTML = `
                     <img src="${item.imagem_url}" style="width:80px;height:120px;border-radius:6px;">
-                    <p class="destaque-text">${item.nome}</p>
+                    <p class="highlight-text">${item.nome}</p>
                     <button data-id="${item.id}">Verificado ✔️</button>
                 `;
 
@@ -1581,7 +1601,7 @@
     }
 
     function destaqueItemClickEvent(itens) {
-        const destaqueContainer = document.querySelector('.destaque');
+        const destaqueContainer = document.querySelector('.highlights-list');
         destaqueContainer.addEventListener('click', (event) => {
             const itemElement = event.target.closest('.highlight-item');
             const isBotao = event.target.tagName === 'BUTTON';
