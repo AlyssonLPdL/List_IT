@@ -81,10 +81,12 @@ html {
 }
 #modal-photo img {
   transition: transform 0.3s cubic-bezier(.4,2,.6,1);
+  box-shadow: 0 6px 12px 5px rgba(0, 0, 0, 0.2);
 }
 
 #modal-photo img:hover {
   transform: scale(1.05);
+  box-shadow: 0 10px 12px 5px rgba(0, 0, 0, 0.2);
 }
 
 #hatsune-miku_1 {
@@ -1097,6 +1099,7 @@ input:checked + .slider:before {
   line-clamp: 1;
   -webkit-box-orient: vertical;
   margin: 10px;
+  color: white;
 }
 
 .remove-sequence-item {

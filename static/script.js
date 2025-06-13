@@ -879,7 +879,7 @@
                     <legend style="font-weight:600;">Episódio:</legend>
                     <p style="margin: 0; border: 0;">${item.episodio}</p>
                 </fieldset>
-                <fieldset style="width: 75%;">
+                <fieldset style="width: 80%;">
                     <legend style="font-weight:600;">Tags:</legend>
                     <p style="margin: 0; border: 0;">${item.tags}</p>
                 </fieldset>
