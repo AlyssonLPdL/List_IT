@@ -79,6 +79,13 @@ html {
   align-items: center;
   flex-direction: column;
 }
+#modal-photo img {
+  transition: transform 0.3s cubic-bezier(.4,2,.6,1);
+}
+
+#modal-photo img:hover {
+  transform: scale(1.05);
+}
 
 #hatsune-miku_1 {
   position: absolute;
@@ -752,7 +759,8 @@ input:checked + .slider:before {
   font-weight: 500;
   transition: all 0.3s ease;
 }
-#filter-toggle:hover, #filter-toggle.active {
+#filter-toggle:hover,
+#filter-toggle.active {
   background-color: var(--color-sidebar-btn-bg);
   color: var(--color-sidebar-text);
 }
@@ -854,7 +862,7 @@ input:checked + .slider:before {
 }
 .modal-content {
   background-color: var(--color-card-bg);
-  padding: 20px;
+  padding: 1px 20px 40px 20px;
   border-radius: 10px 0 0 10px;
   width: 400px;
   text-align: center;
@@ -907,8 +915,6 @@ input:checked + .slider:before {
 }
 
 .sequence-controls {
-  position: absolute;
-  margin-top: 20px;
   background: #f5f5f5;
   border-radius: 8px;
 }
@@ -921,13 +927,13 @@ input:checked + .slider:before {
   padding: 5px;
   border-radius: 5px;
   border: black solid 1px;
+  height: 33px;
+  cursor: pointer;
 }
 
 .sequence-actions {
-  display: none;
   position: absolute;
-  top: 40px;
-  left: 0;
+  right: 135px;
   background: white;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   border-radius: 6px;
@@ -938,6 +944,11 @@ input:checked + .slider:before {
   display: flex;
   gap: 12px;
   margin-top: 5px;
+}
+.item-actions {
+  display:flex;
+  align-items: center;
+  gap: 15px;
 }
 
 .action-buttons .btn {
@@ -994,6 +1005,7 @@ input:checked + .slider:before {
   max-height: 400px;
   padding: 10px;
   overflow-y: auto;
+  overflow-x: hidden;
   /* Você pode ajustar a largura, cor, etc. do scrollbar abaixo */
 }
 
@@ -1015,22 +1027,50 @@ input:checked + .slider:before {
 /* Firefox */
 .sequence-list {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-border-primary) var(--color-body-bg);
+  scrollbar-color: var(--color-border-primary) var(--color-card-bg);
 }
 
 .sequence-card {
-  border: 1px solid #ddd;
+  background: var(--color-item-bg);
   border-radius: 8px;
-  padding: 8px;
+  padding: 10px;
   position: relative;
-  height: 180px;
-  width: 200px;
+  height: 170px;
+  width: 190px;
   cursor: pointer;
   margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Card cresce levemente */
+.sequence-card {
+  transition: transform 0.18s cubic-bezier(.4,2,.6,1), z-index 0s;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+
+.sequence-card:hover {
+  transform: scale(1.035);
+  z-index: 2;
+}
+
+/* Imagem cresce um pouco mais, mas só visualmente */
+.sequence-card img {
+  transition: transform 0.18s cubic-bezier(.4,2,.6,1);
+  will-change: transform;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+
+.sequence-card:hover img {
+  transform: scale(1.07);
 }
 
 .sequence-card img {
-  width: 100%;
+  width: auto;
   height: 130px;
   object-fit: cover;
   border-radius: 4px;
@@ -1047,6 +1087,7 @@ input:checked + .slider:before {
   align-items: center;
   font-weight: bold;
   border-radius: 50%;
+  left: 10px
 }
 
 .sequence-text {
@@ -1055,6 +1096,7 @@ input:checked + .slider:before {
   -webkit-line-clamp: 1;
   line-clamp: 1;
   -webkit-box-orient: vertical;
+  margin: 10px;
 }
 
 .remove-sequence-item {
@@ -1282,11 +1324,17 @@ h4 {
   INFO DIV BOX (DETALHES MODAL)
 ======================================= */
 #info-div-box {
+  display: flex;
   justify-items: start;
+  gap: 20px;
   border: 1px solid var(--color-border-primary);
   border-radius: 10px;
-  padding: 5px;
+  padding: 15px;
   background-color: var(--color-sidebar-bg);
+  flex-direction: row;
+  align-content: center;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 #info-div-box p {
   background-color: var(--color-card-bg);
@@ -1299,6 +1347,7 @@ fieldset {
   background-color: var(--color-card-bg);
   border-radius: 10px;
   border: 1px solid var(--color-border-secondary);
+  width: 120px;
 }
 legend {
   background-color: var(--color-card-bg);
@@ -1332,23 +1381,22 @@ legend {
 }
 #deleteLineButton {
   position: relative;
-  right: 170px;
   font-size: 20px;
   cursor: pointer;
   color: var(--color-sidebar-text);
   background: var(--color-status-red);
-  border: 1px solid var(--color-border-secondary);
+  border: 0;
   border-radius: 5px;
   padding: 5px 10px;
 }
 #editLineButton {
-  margin-top: 10px;
-  color: var(--color-sidebar-text);
-  background-color: var(--color-status-green);
+  position: relative;
+  font-size: 20px;
   cursor: pointer;
+  color: var(--color-sidebar-text);
+  background: var(--color-status-green);
   border: 0;
   border-radius: 5px;
-  font-size: 20px;
   padding: 5px 10px;
 }
 .status-indicator {

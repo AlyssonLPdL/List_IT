@@ -29,6 +29,9 @@
     let formMode = 'add'; // 'add' para adicionar, 'edit' para editar
     let currentEditingId = null;
     let selectedTags = [];
+    let allIds = [];
+    let currentIdx = 0;
+    let currentNavList = []; // <- lista de itens do contexto atual
 
     // ---------------------------- UTILS ----------------------------
     // Função para extrair nome base e número romano (se houver)
@@ -804,7 +807,7 @@
             if (itemElement) {
                 const itemId = itemElement.getAttribute('data-item-id');
                 const item = linhas.find(i => i.id == itemId);
-                if (item) showItemDetails(item);
+                if (item) showItemDetails(item, linhas);
             }
         });
     }
@@ -830,9 +833,13 @@
     }
 
     // Exibir detalhes de uma linha
-    async function showItemDetails(item) {
+    async function showItemDetails(item, navList = null) {
         modalInfo.classList.remove('show');
         modalInfo.classList.remove('hidden');
+        currentNavList = navList || (window.__ultimaChamadaLinhas || []);
+        allIds = currentNavList.map(i => i.id);
+        currentIdx = allIds.indexOf(item.id);
+
 
         // Determinar tipo de conteúdo
         let contentType;
@@ -854,59 +861,50 @@
         console.log("URL da imagem:", imageUrl);
 
         mainInfoContent.innerHTML = `
-            <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
-            <span id="close-modal-btn">&times;</span>
             <h2 class="clickable-title">${item.nome}</h2>
             <div id="info-div-box">
-                <p><strong>Conteúdo:</strong> ${item.conteudo}</p>
                 <fieldset>
+                    <legend style="font-weight:600;">Conteúdo:</legend>
+                    <p style="margin: 0; border: 0;">${item.conteudo}</p>
+                </fieldset>
+                <fieldset>
+                    <legend style="font-weight:600;">Status:</legend>
+                    <p style="margin: 0; border: 0;">${item.status}</p>
+                </fieldset>
+                <fieldset>
+                    <legend style="font-weight:600;">Opinião:</legend>
+                    <p style="margin: 0; border: 0;">${item.opiniao}</p>
+                </fieldset>
+                <fieldset>
+                    <legend style="font-weight:600;">Episódio:</legend>
+                    <p style="margin: 0; border: 0;">${item.episodio}</p>
+                </fieldset>
+                <fieldset style="width: 75%;">
                     <legend style="font-weight:600;">Tags:</legend>
                     <p style="margin: 0; border: 0;">${item.tags}</p>
                 </fieldset>
-                <p><strong>Status:</strong> ${item.status}</p>
-                <p><strong>Episódio/Capítulo:</strong> ${item.episodio}</p>
-                <p><strong>Opinião:</strong> ${item.opiniao}</p>
-                <div class="pesquisasContainer">
-                    <img class="pesquisaBtn" id="google" src="/static/img/Google.png" alt="Google">
-                    <img class="pesquisaBtn" id="mangaDex" src="/static/img/MangaDex.png" alt="MangaDex">
-                    <img class="pesquisaBtn" id="novelCool" src="/static/img/NovelCool.png" alt="novelCool">
-                    <!-- Ícones de pesquisa de Anime -->
-                    <img class="pesquisaBtn animeSearch" id="betterAnimes" src="/static/img/BetterAnimes.png" alt="BetterAnimes" style="display:none;">
-                    <img class="pesquisaBtn animeSearch" id="animesFire" src="/static/img/AnimesFire.png" alt="AnimesFire" style="display:none;">
+                <div class="item-actions">
+                    <button id="editLineButton"><i class="fas fa-edit"></i></button>
+                    <div class="sequence-controls">
+                        <button id="mainSequenceBtn">
+                            <i class="fas fa-project-diagram"></i> Sequência
+                        </button>
+                        <div class="sequence-actions" style="display: none;">
+                            ${await getSequenceButtons(item.id)}
+                        </div>
+                    </div>
+                    <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
                 </div>
             </div>
-            <button id="editLineButton"><i class="fas fa-edit"></i></button>
         `;
 
         modalPhoto.innerHTML = `
-            <img id="modalImage" src="${imageUrl}" alt="${item.nome}" style="max-width: 100%; height: 400px; border-radius: 10px;">
-            <div style="text-align: center; margin-top: 10px;">
-                <button id="refreshImageBtn" style="padding: 6px 12px; border-radius: 8px; background: green; color: white; border: none; cursor: pointer;">
-                    <i class="fas fa-rotate-right"></i>
-                </button>
-                <button id="customImageBtn" style="padding: 6px 12px; border-radius: 8px; background: orange; color: white; border: none; cursor: pointer; margin-left: 10px;">
-                    <i class="fas fa-link"></i> Link
-                </button>
-            </div>
-            <div id="customImageInputContainer" style="display: none; margin-top: 10px; text-align: center;">
-                <input type="text" id="customImageUrl" placeholder="Cole o link da imagem aqui..." style="padding: 6px; width: 80%; border-radius: 6px; border: 1px solid #ccc;">
-                <button id="submitCustomImage" style="padding: 6px 12px; border-radius: 8px; background: blue; color: white; border: none; cursor: pointer; margin-left: 10px;">
-                    Atualizar
-                </button>
-            </div>
+            <img id="modalImage" src="${imageUrl}" alt="${item.nome}" style="max-width: 100%; height: 400px; border-radius: 10px; cursor:pointer;">
         `;
 
         sequenceModal.innerHTML = `
             <div class="sequence-display" id="sequenceDisplay">
                 <div class="sequence-list" id="sequenceList"></div>
-            </div>
-            <div class="sequence-controls">
-                <button id="mainSequenceBtn">
-                    <i class="fas fa-project-diagram"></i> Sequência
-                </button>
-                <div class="sequence-actions" style="display: none;">
-                    ${await getSequenceButtons(item.id)}
-                </div>
             </div>
         `;
 
@@ -1089,17 +1087,31 @@
                 sequenceId = sequences.sequencias[0]?.id;
             }
 
-            const sequenceDisplay = document.getElementById('sequenceList');
+            const sequenceDisplay = document.getElementById('sequenceDisplay');
+            const sequenceList = document.getElementById('sequenceList');
+
+            // Se não houver sequência, esconde o modal de sequência
             if (!sequenceId) {
-                sequenceDisplay.innerHTML = '<p>Nenhuma sequência encontrada</p>';
+                // Esconde todo o bloco de sequência
+                sequenceModal.innerHTML = "";
+                sequenceModal.style.height = "0";
                 return;
             }
+
+            // Se houver, mostra normalmente
+            sequenceModal.innerHTML = `
+                <div class="sequence-display" id="sequenceDisplay">
+                    <div class="sequence-list" id="sequenceList"></div>
+                </div>
+            `;
+            sequenceModal.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
 
             const response = await fetch(`/sequencias/${sequenceId}`);
             const sequence = await response.json();
 
-            sequenceDisplay.innerHTML = sequence.itens.map(item => `
-                <div class="sequence-card">
+            const sequenceListDiv = document.getElementById('sequenceList');
+            sequenceListDiv.innerHTML = sequence.itens.map(item => `
+                <div class="sequence-card${getClasseExtra(item) ? ' ' + getClasseExtra(item) : ''}">
                     <div class="order">${item.ordem}</div>
                     <button class="remove-sequence-item" data-id="${item.id}">&times;</button>
                     <img src="${item.imagem_url}" alt="${item.nome}">
@@ -1128,7 +1140,7 @@
 
                     const index = Array.from(sequenceContainer.children).indexOf(itemElement);
                     const item = itens[index];
-                    if (item) showItemDetails(item);
+                    if (item) showItemDetails(item, itens);
                 });
             }
         }
@@ -1136,18 +1148,17 @@
         // Chamada inicial para carregar a sequência
         refreshSequenceDisplay();
 
-        document.getElementById('refreshImageBtn').addEventListener('click', async () => {
+        document.getElementById('modalImage').addEventListener('click', async () => {
             const currentUrl = document.getElementById('modalImage').src;
-            const nomes = item.nome;        // seu título
-            const tipo = contentType;       // "anime" ou "manga"
+            const nomes = item.nome;
+            const tipo = contentType;
             const maxAttempts = 5;
             const urls = [];
             const loader = document.getElementById('imageLoader');
 
-            loader.style.display = 'flex'; // Mostrar loader
+            loader.style.display = 'flex';
 
             try {
-                // Tenta buscar até 5 URLs diferentes
                 for (let i = 0; i < maxAttempts; i++) {
                     const url = await fetchImageUrl(nomes, tipo);
                     if (!url.includes("via.placeholder.com") && url !== currentUrl && !urls.includes(url)) {
@@ -1155,31 +1166,37 @@
                     }
                 }
 
-                loader.style.display = 'none'; // Esconde loader após fim da busca
+                loader.style.display = 'none';
 
                 if (urls.length === 0) {
                     return alert("Não foi possível encontrar alternativas melhores.");
                 }
 
-                // Cria o modal de seleção
                 let selector = document.querySelector('.image-selector-modal');
-
                 if (!selector) {
                     selector = document.createElement('div');
                     selector.className = 'image-selector-modal';
                     selector.innerHTML = `
                     <div class="image-selector-content">
-                    <span class="image-selector-close">&times;</span>
-                    <h3>Escolha uma nova capa:</h3>
-                    <div class="image-list"></div>
+                        <span class="image-selector-close">&times;</span>
+                        <h3>Escolha uma nova capa:</h3>
+                        <div class="image-list"></div>
+                        <div id="customImageInputContainer" style="margin-top: 10px; text-align: center;">
+                            <input type="text" id="customImageUrl" placeholder="Cole o link da imagem aqui..." style="padding: 6px; width: 80%; border-radius: 6px; border: 1px solid #ccc;">
+                            <button id="submitCustomImage" style="padding: 6px 12px; border-radius: 8px; background: orange; color: white; border: none; cursor: pointer; margin-top: 10px;">
+                                <i class="fas fa-link"></i> Atualizar por Link
+                            </button>
+                        </div>
                     </div>
                 `;
                     document.body.appendChild(selector);
                 }
                 const listDiv = selector.querySelector('.image-list');
+                listDiv.innerHTML = '';
                 urls.forEach(url => {
                     const img = document.createElement('img');
                     img.src = url;
+                    img.style.cursor = 'pointer';
                     img.addEventListener('click', async () => {
                         document.getElementById('modalImage').src = url;
                         await fetch(`/linhas/${item.id}/imagem`, {
@@ -1193,6 +1210,21 @@
                     listDiv.appendChild(img);
                 });
 
+                // Atualizar por link customizado dentro do seletor
+                selector.querySelector('#submitCustomImage').addEventListener('click', async () => {
+                    const newUrl = selector.querySelector('#customImageUrl').value.trim();
+                    if (newUrl) {
+                        await fetch('/update_image_url', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: item.id, new_url: newUrl })
+                        });
+                        document.getElementById('modalImage').src = newUrl;
+                        document.body.removeChild(selector);
+                        alert("Imagem atualizada!");
+                    }
+                });
+
                 // Fechar o modal se clicar no "×" ou fora do conteúdo
                 selector.querySelector('.image-selector-close').addEventListener('click', () => {
                     document.body.removeChild(selector);
@@ -1204,88 +1236,13 @@
                 });
 
             } catch (error) {
-                loader.style.display = 'none'; // Esconde loader em caso de erro
+                loader.style.display = 'none';
                 alert('Erro ao buscar imagens. Tente novamente.');
                 console.error(error);
             }
         });
 
         // Mostrar campo ao clicar no botão de link
-        document.getElementById('customImageBtn').addEventListener('click', () => {
-            document.getElementById('customImageInputContainer').style.display = 'block';
-        });
-
-        // Submeter novo link
-        document.getElementById('submitCustomImage').addEventListener('click', () => {
-            const newUrl = document.getElementById('customImageUrl').value.trim();
-            if (newUrl) {
-                fetch('/update_image_url', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: item.id, new_url: newUrl })
-                })
-                    .then(res => res.json())
-                    .then(data => {
-                        alert(data.mensagem);
-                        document.getElementById('modalImage').src = newUrl;
-                    })
-                    .catch(err => {
-                        alert('Erro ao atualizar imagem.');
-                        console.error(err);
-                    });
-            }
-        });
-
-        // Exibir/ocultar os botões de pesquisa de acordo com o tipo de conteúdo
-        if (contentType === "anime") {
-            document.querySelectorAll('.animeSearch').forEach(el => el.style.display = 'block');
-            document.querySelector('#mangaDex').style.display = 'none';
-            document.querySelector('#novelCool').style.display = 'none';
-        } else if (contentType === "manga") {
-            document.querySelectorAll('.animeSearch').forEach(el => el.style.display = 'none');
-            document.querySelector('#mangaDex').style.display = 'block';
-            document.querySelector('#novelCool').style.display = 'block';
-        }
-
-        // Adicionar event listeners para abrir as buscas
-        document.querySelector('#mangaDex').addEventListener('click', () => {
-            const mangaDexSearchUrl = `https://mangadex.org/search?q=${encodeURIComponent(item.nome)}`;
-            window.open(mangaDexSearchUrl, '_blank');
-        });
-
-        document.querySelector('#novelCool').addEventListener('click', () => {
-            const novelCoolSearchUrl = `https://www.novelcool.com/search/?wd=${encodeURIComponent(item.nome)}`;
-            window.open(novelCoolSearchUrl, '_blank');
-        });
-
-        document.querySelector('#google').addEventListener('click', () => {
-            const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.nome)}`;
-            window.open(googleSearchUrl, '_blank');
-        });
-
-        // Adicionar event listeners para as buscas de anime
-        document.querySelector('#betterAnimes').addEventListener('click', () => {
-            // Substituir espaços por "+" e remover caracteres especiais
-            const formattedQuery = item.nome
-                .replace(/[^\w\s-]/g, '')  // Remove caracteres não alfanuméricos (mantém apenas letras, números e espaços)
-                .replace(/\s+/g, '+')      // Substitui espaços por "+"
-                .toLowerCase();           // Converte para minúsculo, se necessário
-
-            const betterAnimesSearchUrl = `https://betteranime.net/pesquisa?searchTerm=${formattedQuery}`;
-            window.open(betterAnimesSearchUrl, '_blank');
-        });
-
-        document.querySelector('#animesFire').addEventListener('click', () => {
-            // Substituir espaços e outros caracteres especiais por "-"
-            const formattedQuery = item.nome
-                .replace(/[^\w\s-]/g, '')  // Remove caracteres não alfanuméricos (mantém apenas letras, números e espaços)
-                .replace(/\s+/g, '-')      // Substitui espaços por "-"
-                .toLowerCase();           // Converte para minúsculo, se necessário
-
-            const animesFireSearchUrl = `https://animefire.plus/pesquisar/${formattedQuery}`;
-            window.open(animesFireSearchUrl, '_blank');
-        });
-
         document.getElementById('deleteLineButton').addEventListener('click', () => deleteLine(item.id));
         document.getElementById('editLineButton').addEventListener('click', () => openEditModal(item));
 
@@ -1298,9 +1255,6 @@
                 modalInfo.classList.add('hidden');
             }, 300);
         }
-
-        // Botão de fechar
-        document.getElementById('close-modal-btn').addEventListener('click', fecharModalInfo);
 
         // Clicar fora do conteúdo do modal
         modalInfo.addEventListener('click', (e) => {
@@ -1327,6 +1281,26 @@
         void modalInfo.offsetWidth;
         modalInfo.classList.add('show');
     }
+
+    function openItemByIndex(idx) {
+        if (idx < 0 || idx >= allIds.length) return;
+        const nextItemId = allIds[idx];
+        const nextItem = currentNavList.find(i => i.id === nextItemId);
+        if (nextItem) showItemDetails(nextItem, currentNavList);
+    }
+
+    function handleModalArrowNav(e) {
+        if (!modalInfo.classList.contains('show')) return;
+        if (["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(e.key)) {
+            e.preventDefault();
+            if (e.key === "ArrowRight") openItemByIndex(currentIdx + 1);
+            if (e.key === "ArrowLeft") openItemByIndex(currentIdx - 1);
+            if (e.key === "ArrowDown") openItemByIndex(currentIdx + 5);
+            if (e.key === "ArrowUp") openItemByIndex(currentIdx - 5);
+        }
+    }
+    document.addEventListener('keydown', handleModalArrowNav);
+
 
     // Abrir modal de edição
     function openEditModal(item) {
@@ -1612,7 +1586,7 @@
 
             const index = Array.from(destaqueContainer.children).indexOf(itemElement);
             const item = itens[index];
-            if (item) showItemDetails(item);
+            if (item) showItemDetails(item, itens);
         });
     }
 
