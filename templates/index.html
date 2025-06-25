@@ -1,155 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>List-IT</title>
-  <link rel="stylesheet" href="/static/styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>List-IT</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
     <div class="container">
-        <!-- Sidebar fixa -->
-        <aside class="sidebar">
-            <h2>List-IT</h2>
-            <label class="theme-switch">
-                <input type="checkbox" id="theme-toggle">
-                <span class="slider round"></span>
-              </label>
-            <button class="btn" id="create-list-btn">Criar Lista</button>
-            <div class="sidebar-lists">
-                <!-- Listas serão exibidas aqui -->
-            </div>
-            <div class="tagsEspeciais">
-                <div class="tableExib tagBestLove">
-                    <div class="BestLove exibicao"></div>
-                    <p>BestLove</p>
-                </div>
-                <div class="tableExib tagGoat">
-                    <div class="Goat exibicao"></div>
-                    <p>Goat</p>
-                </div>
-                <div class="tableExib tagLove">
-                    <div class="Love exibicao"></div>
-                    <p>Love</p>
-                </div>
-                <div class="tableExib tagPika">
-                    <div class="PikaExib exibicao"></div>
-                    <p>Pika</p>
-                </div>
-                <div class="tableExib tagPutaria">
-                    <div class="PutariaExib exibicao"></div>
-                    <p>Putaria</p>
-                </div>
-                <div class="tableExib tagCancelado">
-                    <div class="CanceladoExib exibicao"></div>
-                    <p>Cancelado</p>
-                </div>                
-            </div>
-        </aside>
+      <!-- Sidebar fixa -->
+      <aside class="sidebar">
+        <h2>List-IT</h2>
+        <label class="theme-switch">
+          <input type="checkbox" id="theme-toggle" />
+          <span class="slider round"></span>
+        </label>
+        <button class="btn" id="create-list-btn">Criar Lista</button>
+        <div class="sidebar-lists">
+          <!-- Listas serão exibidas aqui -->
+        </div>
+        <div class="tagsEspeciais">
+          <div class="tableExib tagBestLove">
+            <div class="BestLove exibicao"></div>
+            <p>BestLove</p>
+          </div>
+          <div class="tableExib tagGoat">
+            <div class="Goat exibicao"></div>
+            <p>Goat</p>
+          </div>
+          <div class="tableExib tagLove">
+            <div class="Love exibicao"></div>
+            <p>Love</p>
+          </div>
+          <div class="tableExib tagPika">
+            <div class="PikaExib exibicao"></div>
+            <p>Pika</p>
+          </div>
+          <div class="tableExib tagPutaria">
+            <div class="PutariaExib exibicao"></div>
+            <p>Putaria</p>
+          </div>
+          <div class="tableExib tagCancelado">
+            <div class="CanceladoExib exibicao"></div>
+            <p>Cancelado</p>
+          </div>
+        </div>
+      </aside>
 
-        <!-- Conteúdo principal -->
-        <main class="main-content">
-            <h1>Bem-vindo!</h1>
-            <p>Selecione uma opção na barra lateral para começar.</p>
-            <div id="hatsune-miku_1">
-                <img src="/static/img/miku.png"
-                    alt="Hatsune Miku">
-            </div>
-        </main>
+      <!-- Conteúdo principal -->
+      <main class="main-content">
+        <h1>Bem-vindo!</h1>
+        <p>Selecione uma opção na barra lateral para começar.</p>
+        <div id="hatsune-miku_1">
+          <img src="/static/img/miku.png" alt="Hatsune Miku" />
+        </div>
+      </main>
     </div>
 
     <!-- Modal para adicionar Lista -->
     <div id="modal" class="modal hidden">
-        <div class="modal-content">
-            <span id="close-modal" class="close-btn">&times;</span>
-            <h2>Criar Lista</h2>
-            <form id="list-form">
-                <input type="text" id="list-name" name="list-name" placeholder="Nome da lista:" required>
-                <button class="btn" type="submit">Salvar</button>
-            </form>
-        </div>
+      <div class="modal-content">
+        <span id="close-modal" class="close-btn">&times;</span>
+        <h2>Criar Lista</h2>
+        <form id="list-form">
+          <input
+            type="text"
+            id="list-name"
+            name="list-name"
+            placeholder="Nome da lista:"
+            required
+          />
+          <button class="btn" type="submit">Salvar</button>
+        </form>
+      </div>
     </div>
 
     <!-- Modal para adicionar Linha -->
     <div id="line-modal" class="modal hidden">
-        <div class="modal-content" id="mainInfoContent">
-            <button type="button" id="close-line-modal">&times;</button>
-            <h2>Adicionar Linha</h2>
-            <form id="line-form">
-                <input type="text" id="line-name" placeholder="Nome" required>
+      <div class="modal-content" id="mainInfoContent">
+        <button type="button" id="close-line-modal">&times;</button>
+        <h2>Adicionar Linha</h2>
+        <form id="line-form">
+          <input type="text" id="line-name" placeholder="Nome" required />
 
-                <div class="tag-input-container">
-                    <h3 style="margin: 0">Tags:</h3>
-                    <div id="selected-tags" class="selected-tags"></div>
-                </div>                             
+          <div class="tag-input-container">
+            <h3 style="margin: 0">Tags:</h3>
+            <div id="selected-tags" class="selected-tags"></div>
+          </div>
 
-                <select id="line-content">
-                    <option value="Anime">Anime</option>
-                    <option value="Filme">Filme</option>
-                    <option value="Manga">Manga</option>
-                    <option value="Manhwa">Manhwa</option>
-                    <option value="Webtoon">Webtoon</option>
-                </select>
+          <select id="line-content">
+            <option value="Anime">Anime</option>
+            <option value="Filme">Filme</option>
+            <option value="Manga">Manga</option>
+            <option value="Manhwa">Manhwa</option>
+            <option value="Webtoon">Webtoon</option>
+          </select>
 
-                <select id="line-status">
-                    <option value="Assistir">Assistir</option>
-                    <option value="Ler">Ler</option>
-                    <option value="Vendo">Vendo</option>
-                    <option value="Lendo">Lendo</option>
-                    <option value="Dropado">Dropado</option>
-                    <option value="Cancelado">Cancelado</option>
-                    <option value="Concluido">Concluído</option>
-                    <option value="Conheço">Conheço</option>
-                </select>
+          <select id="line-status">
+            <option value="Assistir">Assistir</option>
+            <option value="Ler">Ler</option>
+            <option value="Vendo">Vendo</option>
+            <option value="Lendo">Lendo</option>
+            <option value="Dropado">Dropado</option>
+            <option value="Cancelado">Cancelado</option>
+            <option value="Concluido">Concluído</option>
+            <option value="Conheço">Conheço</option>
+          </select>
 
-                <input type="number" id="line-episode" placeholder="Episódio/Capítulo" step="any">
+          <input
+            type="number"
+            id="line-episode"
+            placeholder="Episódio/Capítulo"
+            step="any"
+          />
 
-                <select id="line-opinion">
-                    <option value="Favorito">Favorito</option>
-                    <option value="Muito Bom">Muito Bom</option>
-                    <option value="Recomendo">Recomendo</option>
-                    <option value="Bom">Bom</option>
-                    <option value="Mediano">Mediano</option>
-                    <option value="Ruim">Ruim</option>
-                    <option value="Horrivel">Horrível</option>
-                    <option value="Não Vi">Não Vi</option>
-                </select>
+          <select id="line-opinion">
+            <option value="Favorito">Favorito</option>
+            <option value="Muito Bom">Muito Bom</option>
+            <option value="Recomendo">Recomendo</option>
+            <option value="Bom">Bom</option>
+            <option value="Mediano">Mediano</option>
+            <option value="Ruim">Ruim</option>
+            <option value="Horrivel">Horrível</option>
+            <option value="Não Vi">Não Vi</option>
+          </select>
 
-                <button type="submit">Salvar Linha</button>
-            </form>
+          <button type="submit">Salvar Linha</button>
+        </form>
+      </div>
+      <div class="tags-container" id="tags-container">
+        <h2>Tags</h2>
+        <div class="tags-container-div">
+          <!-- Tags -->
         </div>
-        <div class="tags-container" id="tags-container">
-            <h2>Tags</h2>
-            <div class="tags-container-div">
-                <!-- Tags -->
-            </div>
-        </div>
+      </div>
     </div>
 
     <!-- Modal para exibir dados -->
     <div id="info-modal" class="modal hidden">
-        <div class="modal-content">
-            <!-- info modal aqui -->
-            <span id="close-modal-btn">&times;</span>
-            <button id="deleteLineButton">&#128465;</button>
-        </div>
-        <div id="modal-photo">
-            <!-- photo modal -->
-        </div>
-        <div id="modal-sequence" class="modal-sequence">
-            <!-- sequence modal -->
-        </div>
+      <div class="modal-content">
+        <!-- info modal aqui -->
+        <span id="close-modal-btn">&times;</span>
+        <button id="deleteLineButton">&#128465;</button>
+      </div>
+      <div id="modal-photo">
+        <!-- photo modal -->
+      </div>
+      <div id="modal-sequence" class="modal-sequence">
+        <!-- sequence modal -->
+      </div>
     </div>
-    
-    <div id="imageLoader" class="loader-modal" style="display: none;">
-        <div class="loader-content">
-          <span class="loader"></span>
-          <p>Buscando imagens...</p>
+
+    <!-- Modal para nome do arquivo de exportação -->
+    <div id="export-modal" class="modal hidden">
+      <div class="modal-content" style="max-width: 350px">
+        <h3>Nome do arquivo</h3>
+        <input
+          type="text"
+          id="export-filename"
+          value="Lista.xlsx"
+          style="
+            width: 100%;
+            margin-bottom: 16px;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+          "
+        />
+        <div style="text-align: right">
+          <button id="export-cancel-btn" style="margin-right: 8px">
+            Cancelar
+          </button>
+          <button id="export-confirm-btn">Exportar</button>
         </div>
-    </div>           
+      </div>
+    </div>
+
+    <div id="imageLoader" class="loader-modal" style="display: none">
+      <div class="loader-content">
+        <span class="loader"></span>
+        <p>Buscando imagens...</p>
+      </div>
+    </div>
     <script src="/static/script.js"></script>
-</body>
+  </body>
 </html>

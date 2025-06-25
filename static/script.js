@@ -330,6 +330,7 @@
 
         const response = await fetch(`/linhas/${lista.id}`);
         const linhas = await response.json();
+        window.__linhasAtuais = linhas;
 
         // Ordena as linhas utilizando funções utilitárias
         linhas.sort((a, b) => {
@@ -387,21 +388,31 @@
             </div>
             </div>
 
+            <div class="order-buttons">
+                <button id="order-az"><i class="fa-solid fa-arrow-down-a-z"></i></i></button>
+                <button id="order-za"><i class="fa-solid fa-arrow-up-a-z"></i></button>
+                <button id="order-ep"><i class="fa-solid fa-arrow-down-1-9"></i></button>
+                <button id="order-ep-desc"><i class="fa-solid fa-arrow-up-1-9"></i></button>
+                <button id="order-opinion"><i class="fas fa-star"></i></button>
+            </div>
+
             <div class="items-container">
             <div class="items-grid">
                 ${linhas.length > 0 ? linhas.map(item => `
                 <div class="item-card ${getClasseExtra(item)}" data-item-id="${item.id}">
-                    <div class="status-indicator">
-                    ${getStatusIcon(item.status)}
-                    </div>
-                    <div class="opinion-indicator">
-                    ${getOpiniaoIcon(item.opiniao)}
-                    </div>
+                    <div class="status-indicator">${getStatusIcon(item.status)}</div>
+                    <div class="opinion-indicator">${getOpiniaoIcon(item.opiniao)}</div>
+                    
                     <div class="item-card-image">
-                    <img src="${item.imagem_url && !item.imagem_url.includes('via.placeholder.com') ? item.imagem_url : 'https://via.placeholder.com/150'}" alt="${item.nome}">
+                        <img src="${item.imagem_url || 'https://via.placeholder.com/150'}" alt="${item.nome}">
                     </div>
+                    
                     <div class="item-card-content">
-                    <h3 class="item-card-title">${item.nome}</h3>
+                        <h3 class="item-card-title">${item.nome}</h3>
+                        <div class="item-card-info">
+                        <span>${item.episodio || 'N/A'}</span>
+                        <span>${item.conteudo || ''}</span>
+                        </div>
                     </div>
                 </div>
                 `).join('') : `
@@ -421,6 +432,77 @@
             </div>
             </div>
         `;
+
+        let currentOrder = 'az';
+
+        function sortLines(linhas, order) {
+            if (order === 'az') {
+                return [...linhas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+            }
+            if (order === 'za') {
+                return [...linhas].sort((a, b) => b.nome.localeCompare(a.nome, 'pt-BR', { sensitivity: 'base' }));
+            }
+            if (order === 'ep') {
+                return [...linhas].sort((a, b) => (parseInt(a.episodio) || 0) - (parseInt(b.episodio) || 0));
+            }
+            if (order === 'ep-desc') {
+                return [...linhas].sort((a, b) => (parseInt(b.episodio) || 0) - (parseInt(a.episodio) || 0));
+            }
+            if (order === 'opinion') {
+                return [...linhas].sort((a, b) => {
+                    function getPriority(item) {
+                        const classe = getClasseExtra(item);
+                        const opiniao = (item.opiniao || '').trim();
+
+                        if (classe === 'BestLove' && item.tags.includes('Goat')) return 0;
+                        if (classe === 'BestLove') return 1;
+                        if (classe === 'Goat') return 2;
+                        if (classe === 'Love' && opiniao === "Favorito") return 3;
+
+                        const opiniaoOrder = [
+                            "Favorito", "Muito Bom", "Recomendo", "Bom", "Mediano", "Ruim", "Horrivel", "Não vi"
+                        ];
+                        const idx = opiniaoOrder.indexOf(opiniao);
+                        return idx === -1 ? 99 : (4 + idx);
+                    }
+                    return getPriority(a) - getPriority(b);
+                });
+            }
+            return linhas;
+        }
+
+        // Adicione os listeners:
+        // ...dentro de showListDetails, após definir os listeners:
+        function setActiveOrderButton(id) {
+            document.querySelectorAll('.order-buttons button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        document.getElementById('order-az').addEventListener('click', () => {
+            currentOrder = 'az';
+            setActiveOrderButton('order-az');
+            showItems(sortLines(linhas, currentOrder));
+        });
+        document.getElementById('order-za').addEventListener('click', () => {
+            currentOrder = 'za';
+            setActiveOrderButton('order-za');
+            showItems(sortLines(linhas, currentOrder));
+        });
+        document.getElementById('order-ep').addEventListener('click', () => {
+            currentOrder = 'ep';
+            setActiveOrderButton('order-ep');
+            showItems(sortLines(linhas, currentOrder));
+        });
+        document.getElementById('order-ep-desc').addEventListener('click', () => {
+            currentOrder = 'ep-desc';
+            setActiveOrderButton('order-ep-desc');
+            showItems(sortLines(linhas, currentOrder));
+        });
+        document.getElementById('order-opinion').addEventListener('click', () => {
+            currentOrder = 'opinion';
+            setActiveOrderButton('order-opinion');
+            showItems(sortLines(linhas, currentOrder));
+        });
 
         const toggleCensure = document.getElementById('toggle-censure');
         toggleCensure.addEventListener('change', () => applyFilter(linhas));
@@ -564,9 +646,26 @@
         });
 
         // ...existing code...
-        document.getElementById('export-btn').addEventListener('click', async () => {
-            // Gera os dados filtrados como antes
-            const allItens = window.__ultimaChamadaLinhas || [];
+        document.getElementById('export-btn').addEventListener('click', () => {
+            // Mostra o modal de exportação
+            document.getElementById('export-modal').classList.remove('hidden');
+            document.getElementById('export-modal').classList.add('show');
+        });
+
+        // Evento para cancelar
+        document.getElementById('export-cancel-btn').addEventListener('click', () => {
+            document.getElementById('export-modal').classList.remove('show');
+            document.getElementById('export-modal').classList.add('hidden');
+        });
+
+        document.getElementById('export-confirm-btn').addEventListener('click', async () => {
+            const filename = document.getElementById('export-filename').value.trim() || 'Lista.xlsx';
+            document.getElementById('export-modal').classList.remove('show');
+            document.getElementById('export-modal').classList.add('hidden');
+
+            const allItens = (window.__ultimaChamadaLinhas && window.__ultimaChamadaLinhas.length > 0)
+                ? window.__ultimaChamadaLinhas
+                : (window.__linhasAtuais || []);
             const selected = window.__ultimoFiltroSelecionado || {
                 status: { include: new Set(), exclude: new Set() },
                 conteudo: { include: new Set(), exclude: new Set() },
@@ -620,7 +719,6 @@
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Export');
 
-            // Cabeçalho
             worksheet.columns = [
                 { header: 'Nome', key: 'Nome', width: 30 },
                 { header: 'Tag', key: 'Tag', width: 20 },
@@ -630,7 +728,6 @@
                 { header: 'Conteúdo', key: 'Conteudo', width: 15 }
             ];
 
-            // Gera cores pastel por nome
             const nameList = [...new Set(rows.map(r => r.Nome))];
             const nameColors = {};
             nameList.forEach(name => {
@@ -640,7 +737,6 @@
                 nameColors[name] = `FF${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
             });
 
-            // Adiciona as linhas e aplica cor de fundo
             rows.forEach(row => {
                 const excelRow = worksheet.addRow(row);
                 const fillColor = nameColors[row.Nome];
@@ -653,13 +749,12 @@
                 });
             });
 
-            // Gera o arquivo e baixa
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = "Lista.xlsx";
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             setTimeout(() => {
@@ -736,17 +831,19 @@
         const listItemsContainer = document.querySelector('.items-grid');
         listItemsContainer.innerHTML = filteredLinhas.map(item => `
             <div class="item-card ${getClasseExtra(item)}" data-item-id="${item.id}">
-                    <div class="status-indicator">
-                    ${getStatusIcon(item.status)}
-                    </div>
-                    <div class="opinion-indicator">
-                    ${getOpiniaoIcon(item.opiniao)}
-                    </div>
+                    <div class="status-indicator">${getStatusIcon(item.status)}</div>
+                    <div class="opinion-indicator">${getOpiniaoIcon(item.opiniao)}</div>
+                    
                     <div class="item-card-image">
-                    <img src="${item.imagem_url && !item.imagem_url.includes('via.placeholder.com') ? item.imagem_url : 'https://via.placeholder.com/150'}" alt="${item.nome}">
+                        <img src="${item.imagem_url || 'https://via.placeholder.com/150'}" alt="${item.nome}">
                     </div>
+                    
                     <div class="item-card-content">
-                    <h3 class="item-card-title">${item.nome}</h3>
+                        <h3 class="item-card-title">${item.nome}</h3>
+                        <div class="item-card-info">
+                        <span>${item.episodio || 'N/A'}</span>
+                        <span>${item.conteudo || ''}</span>
+                        </div>
                     </div>
                 </div>
         `).join('');
