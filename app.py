@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, Response, render_template, request, jsonify
 import sqlite3
 import requests
 import re
@@ -30,6 +30,7 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 lista_id INTEGER NOT NULL,
                 nome TEXT NOT NULL,
+                alias TEXT,
                 tags TEXT,
                 conteudo TEXT NOT NULL,
                 status TEXT NOT NULL,
@@ -37,6 +38,7 @@ def init_db():
                 opiniao TEXT NOT NULL,
                 imagem_url TEXT,
                 last_highlight TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (lista_id) REFERENCES listas(id)
             )
         """)
@@ -78,6 +80,25 @@ def get_db_connection():
 def index():
     """Renderiza o template principal."""
     return render_template("index.html")
+
+@app.route("/proxy_image")
+def proxy_image():
+    # recebe a URL alvo como parâmetro
+    url = request.args.get("url")
+    if not url:
+        return jsonify({"error": "url param missing"}), 400
+
+    # busca o conteúdo remoto
+    resp = requests.get(url, stream=True)
+    # retorna o conteúdo com o mesmo MIME type
+    excluded_headers = ["content-encoding", "transfer-encoding", "content-length"]
+    headers = [(name, value) for (name, value) in resp.raw.headers.items()
+               if name.lower() not in excluded_headers]
+
+    # adiciona CORS e envia
+    proxy_resp = Response(resp.content, resp.status_code, headers)
+    proxy_resp.headers["Access-Control-Allow-Origin"] = "*"
+    return proxy_resp
 
 # Listas
 @app.route("/listas", methods=["GET"])

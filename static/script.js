@@ -705,6 +705,7 @@
                 const itemTags = item.tags ? item.tags.split(',').map(t => t.trim()) : [''];
                 itemTags.forEach(tag => {
                     rows.push({
+                        ID: item.id,
                         Nome: item.nome,
                         Tag: tag,
                         Opinião: item.opiniao,
@@ -720,6 +721,7 @@
             const worksheet = workbook.addWorksheet('Export');
 
             worksheet.columns = [
+                { header: 'ID', key: 'ID', width: 8 }, // <-- Adicione esta linha
                 { header: 'Nome', key: 'Nome', width: 30 },
                 { header: 'Tag', key: 'Tag', width: 20 },
                 { header: 'Opinião', key: 'Opinião', width: 15 },
@@ -937,6 +939,26 @@
         allIds = currentNavList.map(i => i.id);
         currentIdx = allIds.indexOf(item.id);
 
+        // Criar container de export no início de showItemDetails:
+        let exportCard = document.getElementById('export-card');
+        if (!exportCard) {
+            exportCard = document.createElement('div');
+            exportCard.id = 'export-card';
+            Object.assign(exportCard.style, {
+                position: 'absolute',
+                top: '-9999px',
+                left: '-9999px',
+                width: '400px',
+                padding: '16px',
+                background: '#fff',
+                color: '#333',
+                borderRadius: '8px',
+                fontFamily: 'sans-serif',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            });
+            document.body.appendChild(exportCard);
+        }
+
 
         // Determinar tipo de conteúdo
         let contentType;
@@ -990,6 +1012,9 @@
                             ${await getSequenceButtons(item.id)}
                         </div>
                     </div>
+                    <button id="exportCardBtn" style="margin-top:12px; padding:8px 16px; border:none; background:#007bff; color:white; border-radius:4px; cursor:pointer;">
+                        Exportar como Imagem
+                    </button>
                     <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
                 </div>
             </div>
@@ -1004,6 +1029,20 @@
                 <div class="sequence-list" id="sequenceList"></div>
             </div>
         `;
+
+        // Dentro de showItemDetails, após renderizar o modal:
+        const html = `
+        <div style="text-align:center;">
+            <img src="${imageUrl}" style="width:100%; height:auto; border-radius:6px; margin-bottom:8px;">
+            <h2 style="font-size:20px; margin:8px 0;">${item.nome}</h2>
+        </div>
+        <p><strong>Conteúdo:</strong> ${item.conteudo}</p>
+        <p><strong>Status:</strong> ${item.status}</p>
+        <p><strong>Opinião:</strong> ${item.opiniao}</p>
+        <p><strong>Episódio:</strong> ${item.episodio}</p>
+        <p><strong>Tags:</strong> ${item.tags}</p>
+        `;
+        exportCard.innerHTML = html;
 
         modalPhoto.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
         sequenceModal.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
@@ -1242,6 +1281,29 @@
             }
         }
 
+        async function exportItemAsImage() {
+            const exportCard = document.getElementById('export-card');
+            const imgEl = exportCard.querySelector('img');
+
+            // 1) Aponte o <img> para o proxy (mesmo domínio)
+            const proxyUrl = `/proxy_image?url=${encodeURIComponent(item.imagem_url)}`;
+            imgEl.src = proxyUrl;
+
+            // 2) Aguarde o load da imagem via proxy
+            await new Promise(resolve => { imgEl.onload = resolve; });
+
+            // 3) Gere o canvas e force o download
+            const canvas = await html2canvas(exportCard);
+            const finalDataURL = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = finalDataURL;
+            link.download = `${item.nome.replace(/\s+/g, '_')}.png`;
+            link.click();
+
+            // 4) (Opcional) volte a exibir a URL original no modal
+            imgEl.src = item.imagem_url;
+        }
+
         // Chamada inicial para carregar a sequência
         refreshSequenceDisplay();
 
@@ -1311,14 +1373,19 @@
                 selector.querySelector('#submitCustomImage').addEventListener('click', async () => {
                     const newUrl = selector.querySelector('#customImageUrl').value.trim();
                     if (newUrl) {
-                        await fetch('/update_image_url', {
+                        const resp = await fetch('/update_image_url', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ id: item.id, new_url: newUrl })
                         });
-                        document.getElementById('modalImage').src = newUrl;
-                        document.body.removeChild(selector);
-                        alert("Imagem atualizada!");
+                        if (resp.ok) {
+                            item.imagem_url = newUrl; // Atualiza o objeto em memória
+                            document.getElementById('modalImage').src = newUrl;
+                            document.body.removeChild(selector);
+                            alert("Imagem atualizada!");
+                        } else {
+                            alert("Erro ao atualizar imagem!");
+                        }
                     }
                 });
 
@@ -1376,6 +1443,8 @@
             });
         });
         void modalInfo.offsetWidth;
+        // Ativar listener do botão de exportar
+        document.getElementById('exportCardBtn').addEventListener('click', exportItemAsImage);
         modalInfo.classList.add('show');
     }
 
