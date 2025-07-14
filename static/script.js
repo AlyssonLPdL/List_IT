@@ -635,6 +635,41 @@
             }
         });
 
+        document.querySelectorAll('.item-card').forEach(async element => {
+            const item = linhas.find(i => i.id == element.dataset.itemId);
+
+            // Se faltarem sinopse ou sinônimos, buscar
+            if (!item.sinopse || !item.sinonimos) {
+                let contentType;
+                switch (item.conteudo) {
+                    case "Anime":
+                    case "Filme":
+                        contentType = "anime";
+                        break;
+                    case "Manga":
+                    case "Manhwa":
+                    case "Webtoon":
+                        contentType = "manga";
+                        break;
+                    default:
+                        contentType = "anime";
+                }
+                const resp = await fetch(`/search_details?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
+                if (resp.ok) {
+                    const det = await resp.json();
+                    await fetch(`/linhas/${item.id}/details`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            sinonimos: det.sinonimos,
+                            sinopse: det.sinopse
+                        })
+                    });
+                }
+            }
+        });
+
+
         document.getElementById('add-line-btn').addEventListener('click', () => {
             formMode = 'add';
             lineForm.reset();
@@ -711,10 +746,16 @@
                         Opinião: item.opiniao,
                         Episódio: item.episodio,
                         Status: item.status,
-                        Conteudo: item.conteudo
+                        Conteudo: item.conteudo,
+                        // aqui adicionamos Sinônimos e Sinopse
+                        Sinonimos: Array.isArray(item.sinonimos)
+                            ? item.sinonimos.join('; ')
+                            : (item.sinonimos || ''),
+                        Sinopse: item.sinopse || ''
                     });
                 });
             });
+
 
             // --- ExcelJS ---
             const workbook = new ExcelJS.Workbook();
@@ -723,10 +764,12 @@
             worksheet.columns = [
                 { header: 'ID', key: 'ID', width: 8 }, // <-- Adicione esta linha
                 { header: 'Nome', key: 'Nome', width: 30 },
+                { header: 'Sinônimos', key: 'Sinonimos', width: 30 },
                 { header: 'Tag', key: 'Tag', width: 20 },
                 { header: 'Opinião', key: 'Opinião', width: 15 },
                 { header: 'Ep/Cap', key: 'Episódio', width: 10 },
                 { header: 'Status', key: 'Status', width: 15 },
+                { header: 'Sinopse', key: 'Sinopse', width: 50 },
                 { header: 'Conteúdo', key: 'Conteudo', width: 15 }
             ];
 
@@ -779,9 +822,29 @@
             .toLowerCase().trim();
 
         const filtered = linhas.filter(item => {
-            // 1) filtro por nome
-            if (nameFilter && !item.nome.toLowerCase().includes(nameFilter))
-                return false;
+            // 1) filtro por nome OU sinônimo
+            if (nameFilter) {
+                const nomeMatch = item.nome.toLowerCase().includes(nameFilter);
+
+                // Trata sinônimos como array, ou faz parse se for string JSON
+                let sinonimos = [];
+                if (Array.isArray(item.sinonimos)) {
+                    sinonimos = item.sinonimos;
+                } else if (typeof item.sinonimos === 'string') {
+                    try {
+                        sinonimos = JSON.parse(item.sinonimos);
+                    } catch (e) {
+                        sinonimos = [];
+                    }
+                }
+
+                const sinonimoMatch = sinonimos.some(s =>
+                    typeof s === 'string' && s.toLowerCase().includes(nameFilter)
+                );
+
+                if (!nomeMatch && !sinonimoMatch)
+                    return false;
+            }
 
             // 2) para cada tipo, aplicamos primeiro EXCLUDES, depois INCLUDES
             for (let type of ['status', 'conteudo', 'opiniao']) {
@@ -794,17 +857,18 @@
                     return false;
             }
 
-            // 3) tags: um pouco diferente, porque são múltiplas por item
+            // 3) tags: múltiplas por item
             const itemTags = item.tags
                 ? item.tags.split(',').map(t => t.trim())
                 : [];
 
-            // a) não querer certas tags?
+            // a) excluir tags indesejadas
             for (let bad of selected.tags.exclude) {
                 if (itemTags.includes(bad))
                     return false;
             }
-            // b) querer pelo menos uma das tags escolhidas?
+
+            // b) incluir pelo menos todas as tags desejadas
             if (selected.tags.include.size > 0) {
                 const allIncluded = [...selected.tags.include].every(tag => itemTags.includes(tag));
                 if (!allIncluded) return false;
@@ -816,6 +880,7 @@
         window.__ultimaChamadaLinhas = filtered;
         showItems(filtered);
     }
+
 
     // Função para exibir os itens filtrados
     function showItems(linhas) {
@@ -931,6 +996,77 @@
         document.getElementById('image-container').appendChild(imgElement);
     }
 
+    function bindSinopseButton(item) {
+        const btn = document.getElementById('showSynopsisBtn');
+        if (!btn) return;
+
+        btn.addEventListener('click', () => {
+            const synopsisModal = document.createElement('div');
+            synopsisModal.id = 'synopsis-modal';
+            synopsisModal.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            background: var(--color-card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.3);
+            z-index: 10000;
+            overflow-y: auto;
+        `;
+
+            synopsisModal.innerHTML = `
+            <h3 style="margin-top: 0;">Sinopse de ${item.nome}</h3>
+            <p id="sinopse-texto" style="line-height: 1.6;">${item.sinopse || 'Sinopse não disponível'}</p>
+            <button id="traduzir-btn">Traduzir</button>
+            <button id="closeSynopsis" style="
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                cursor: pointer;
+                color: #ccc;
+            ">&times;</button>
+        `;
+
+            document.body.appendChild(synopsisModal);
+
+            // Fechar modal
+            document.getElementById('closeSynopsis').addEventListener('click', () => {
+                document.body.removeChild(synopsisModal);
+            });
+
+            document.getElementById("traduzir-btn").addEventListener("click", async () => {
+                const textoOriginal = document.getElementById("sinopse-texto").textContent;
+                const resp = await fetch("/translate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: textoOriginal, target_lang: "pt" })
+                });
+
+                if (resp.ok) {
+                    const data = await resp.json();
+                    document.getElementById("sinopse-texto").textContent = data.traducao;
+                } else {
+                    alert("Erro ao traduzir.");
+                }
+            });
+
+            // Fechar ao clicar fora
+            synopsisModal.addEventListener('click', (e) => {
+                if (e.target === synopsisModal) {
+                    document.body.removeChild(synopsisModal);
+                }
+            });
+        });
+    }
+
     // Exibir detalhes de uma linha
     async function showItemDetails(item, navList = null) {
         modalInfo.classList.remove('show');
@@ -944,21 +1080,24 @@
         if (!exportCard) {
             exportCard = document.createElement('div');
             exportCard.id = 'export-card';
+            // estilos principais
             Object.assign(exportCard.style, {
+                width: '600px',
+                background: 'linear-gradient(180deg, rgb(6, 18, 67), rgb(42, 77, 142), rgb(0, 85, 185))',
+                overflow: 'hidden',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
+                fontFamily: "'Segoe UI', 'Helvetica Neue', sans-serif",
+                padding: '20px',
+                boxSizing: 'border-box',
                 position: 'absolute',
                 top: '-9999px',
                 left: '-9999px',
-                width: '400px',
-                padding: '16px',
-                background: '#fff',
-                color: '#333',
-                borderRadius: '8px',
-                fontFamily: 'sans-serif',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                opacity: '1',
+                PointerEvents: 'none',
+                zIndex: -1
             });
             document.body.appendChild(exportCard);
         }
-
 
         // Determinar tipo de conteúdo
         let contentType;
@@ -980,7 +1119,6 @@
         console.log("URL da imagem:", imageUrl);
 
         mainInfoContent.innerHTML = `
-            <h2 class="clickable-title">${item.nome}</h2>
             <div id="info-div-box">
                 <fieldset>
                     <legend style="font-weight:600;">Conteúdo:</legend>
@@ -1002,6 +1140,7 @@
                     <legend style="font-weight:600;">Tags:</legend>
                     <p style="margin: 0; border: 0;">${item.tags}</p>
                 </fieldset>
+                
                 <div class="item-actions">
                     <button id="editLineButton"><i class="fas fa-edit"></i></button>
                     <div class="sequence-controls">
@@ -1012,16 +1151,39 @@
                             ${await getSequenceButtons(item.id)}
                         </div>
                     </div>
-                    <button id="exportCardBtn" style="margin-top:12px; padding:8px 16px; border:none; background:#007bff; color:white; border-radius:4px; cursor:pointer;">
-                        Exportar como Imagem
+                    <button id="exportCardBtn" style="padding:6px 8px; font-size: 20px; border:none; background:#007bff; color:white; border-radius:4px; cursor:pointer;">
+                        <i class="fas fa-image"></i>
                     </button>
                     <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
                 </div>
             </div>
         `;
 
+        const hasSequence = await checkIfItemHasSequence(item.id);
+
         modalPhoto.innerHTML = `
-            <img id="modalImage" src="${imageUrl}" alt="${item.nome}" style="max-width: 100%; height: 400px; border-radius: 10px; cursor:pointer;">
+            <div class="modal-photo-container">
+                <h2 class="clickable-title" style="width: ${hasSequence ? '1010px' : '710px'}">${item.nome}</h2>
+                
+                <img id="modalImage" src="${imageUrl}" alt="${item.nome}" 
+                    style="max-width: 100%; height: 400px; border-radius: 10px; cursor:pointer;">
+                
+                <!-- Botão para abrir sinopse -->
+                <button id="showSynopsisBtn" style="
+                    position: absolute;
+                    bottom: -40px;
+                    right: 90px;
+                    padding: 8px 15px;
+                    background: #4a6fc5;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    z-index: 10;
+                ">
+                    <i class="fas fa-book-open"></i> Ver Sinopse
+                </button>
+            </div>
         `;
 
         sequenceModal.innerHTML = `
@@ -1031,18 +1193,217 @@
         `;
 
         // Dentro de showItemDetails, após renderizar o modal:
-        const html = `
-        <div style="text-align:center;">
-            <img src="${imageUrl}" style="width:100%; height:auto; border-radius:6px; margin-bottom:8px;">
-            <h2 style="font-size:20px; margin:8px 0;">${item.nome}</h2>
-        </div>
-        <p><strong>Conteúdo:</strong> ${item.conteudo}</p>
-        <p><strong>Status:</strong> ${item.status}</p>
-        <p><strong>Opinião:</strong> ${item.opiniao}</p>
-        <p><strong>Episódio:</strong> ${item.episodio}</p>
-        <p><strong>Tags:</strong> ${item.tags}</p>
+        exportCard.innerHTML = `
+            <div class="card-container">
+                <div class="card-header">
+                    <div class="gold-border"></div>
+                    <h1 class="card-title">${item.nome}</h1>
+                    
+                    <!-- Sinônimos adicionados aqui -->
+                    <div class="synonyms-container" style="margin-top: 8px;">
+                        ${Array.isArray(item.sinonimos) ? 
+                            item.sinonimos.map(s => `<span class="synonym-tag">${s}</span>`).join('') : 
+                            (item.sinonimos || '')
+                        }
+                    </div>
+                    
+                    <div class="gold-border"></div>
+                </div>
+                
+                <div class="card-content">
+                    <div class="image-container">
+                        <img src="${item.imagem_url}" alt="${item.nome}" class="card-image">
+                    </div>
+                    
+                    <!-- Sinopse adicionada aqui -->
+                    <div class="synopsis-container" id="synopsisContainer">
+                        <h3 class="synopsis-title">Sinopse</h3>
+                        <p class="synopsis-text">${item.sinopse || 'Sinopse não disponível'}</p>
+                    </div>
+                    
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Conteúdo:</span>
+                            <span class="info-value">${item.conteudo}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Status:</span>
+                            <span class="info-value">${item.status}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Opinião:</span>
+                            <span class="info-value">${item.opiniao}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Episódio:</span>
+                            <span class="info-value">${item.episodio}</span>
+                        </div>
+                        <div class="info-item full-width">
+                            <span class="info-label">Tags:</span>
+                            <span class="info-value">${item.tags}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
-        exportCard.innerHTML = html;
+
+        const style = document.createElement('style');
+        style.textContent = `
+            .card-container {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .card-header {
+                text-align: center;
+                position: relative;
+                padding: 10px 0;
+            }
+
+            .card-content {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .gold-border {
+                height: 3px;
+                background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+                margin: 5px 0;
+            }
+            
+            .card-title {
+                font-family: 'Cinzel', 'Georgia', serif;
+                font-size: 28px;
+                font-weight: 700;
+                margin: 0;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+                letter-spacing: 1px;
+                color: #FFD700;
+            }
+            
+            .image-container {
+                width: 80%;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+                border: 2px solid rgb(235, 180, 0);
+            }
+            
+            .card-image {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                margin-top: 15px;
+            }
+            
+            .info-item {
+                background: rgba(0, 0, 0, 0.2);
+                padding: 10px;
+                border-radius: 6px;
+                border-left: 3px solid #D4AF37;
+            }
+            
+            .full-width {
+                grid-column: span 2;
+            }
+            
+            .info-label {
+                display: block;
+                font-weight: 600;
+                font-size: 14px;
+                color: #FFD700;
+                margin-bottom: 3px;
+            }
+            
+            .info-value {
+                display: block;
+                font-size: 16px;
+                color: #FFFFFF;
+            }
+
+            .synonyms-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                justify-content: center;
+                margin: 8px 0 12px;
+            }
+            
+            .synonym-tag {
+                background: rgba(212, 175, 55, 0.2);
+                color: #FFD700;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 12px;
+                border: 1px solid rgba(212, 175, 55, 0.4);
+            }
+            
+            .synopsis-container {
+                background: rgba(0, 0, 0, 0.2);
+                padding: 12px;
+                border-radius: 8px;
+                margin: 15px 0;
+                border-left: 3px solid #D4AF37;
+            }
+            
+            .synopsis-title {
+                color: #FFD700;
+                margin-top: 0;
+                margin-bottom: 8px;
+                font-size: 16px;
+            }
+            
+            .synopsis-text {
+                color: #FFFFFF;
+                font-size: 14px;
+                line-height: 1.5;
+                margin: 0;
+                max-height: 150px;
+                overflow-y: hidden;
+                display: -webkit-box;
+                -webkit-line-clamp: 7;
+                line-clamp: 2;
+                -webkit-box-orient: vertical;
+                line-height: 1.4;
+            }
+            
+            .gold-sparkle {
+                width: 12px;
+                height: 12px;
+                background: #FFD700;
+                border-radius: 50%;
+                box-shadow: 0 0 10px 3px rgba(255, 215, 0, 0.7);
+                animation: pulse 2s infinite;
+            }
+            
+            @keyframes pulse {
+                0% { opacity: 0.7; transform: scale(1); }
+                50% { opacity: 1; transform: scale(1.2); }
+                100% { opacity: 0.7; transform: scale(1); }
+            }
+        `;
+        exportCard.appendChild(style);
+
+        async function checkIfItemHasSequence(itemId) {
+            try {
+                const response = await fetch(`/linhas/${itemId}/sequencias`);
+                const data = await response.json();
+                // ⬇️ aqui, usa o length do array
+                return Array.isArray(data.sequencias) && data.sequencias.length > 0;
+            } catch (error) {
+                console.error('Erro ao verificar sequências:', error);
+                return false;
+            }
+        }
 
         modalPhoto.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
         sequenceModal.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
@@ -1284,6 +1645,28 @@
         async function exportItemAsImage() {
             const exportCard = document.getElementById('export-card');
             const imgEl = exportCard.querySelector('img');
+            const synopsisText = exportCard.querySelector('.synopsis-text');
+
+            // Traduzir sinopse se necessário
+            if (synopsisText && synopsisText.textContent !== 'Sinopse não disponível') {
+                try {
+                    const resp = await fetch("/translate", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ 
+                            text: synopsisText.textContent, 
+                            target_lang: "pt" 
+                        })
+                    });
+                    
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        synopsisText.textContent = data.traducao;
+                    }
+                } catch (err) {
+                    console.error("Erro na tradução:", err);
+                }
+            }
 
             // 1) Aponte o <img> para o proxy (mesmo domínio)
             const proxyUrl = `/proxy_image?url=${encodeURIComponent(item.imagem_url)}`;
@@ -1306,6 +1689,7 @@
 
         // Chamada inicial para carregar a sequência
         refreshSequenceDisplay();
+        bindSinopseButton(item);
 
         document.getElementById('modalImage').addEventListener('click', async () => {
             const currentUrl = document.getElementById('modalImage').src;

@@ -4,6 +4,9 @@ import requests
 import re
 from datetime import datetime, timedelta, timezone
 import subprocess
+import json
+from deep_translator import GoogleTranslator
+import traceback
 
 app = Flask(__name__)
 
@@ -38,6 +41,8 @@ def init_db():
                 opiniao TEXT NOT NULL,
                 imagem_url TEXT,
                 last_highlight TEXT,
+                sinonimos TEXT,
+                sinopse TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (lista_id) REFERENCES listas(id)
             )
@@ -305,11 +310,187 @@ def update_image_url():
     print(f"[UPDATE_IMAGE_URL] Linha {linha_id} atualizada com URL: {new_url}")
     return jsonify({'mensagem': 'Imagem atualizada com sucesso.'})
 
+import requests
+import re
+import time
+
+def fetch_media_details(query, media_type="ANIME", retries=3):
+    url = "https://graphql.anilist.co"
+    gql = """
+    query($search: String) {
+      Page(page: 1, perPage: 5) {
+        media(search: $search, type: %s) {
+          title { romaji english }
+          synonyms
+          description
+        }
+      }
+    }
+    """ % media_type
+
+    # Limpeza básica, mantendo letras, números e espaço
+    clean = re.sub(r'[^\w\s]', '', query.strip().replace('-', ' '))
+
+    vars = {"search": clean}
+
+    for attempt in range(1, retries+1):
+        try:
+            resp = requests.post(url, json={"query": gql, "variables": vars})
+            resp.raise_for_status()
+
+            media = resp.json()["data"]["Page"]["media"]
+            if not media:
+                print(f"⚠️ Nenhum resultado encontrado na AniList para '{query}'")
+                return None
+
+            m = media[0]  # pega o primeiro resultado
+
+            romaji = m["title"].get("romaji") or ""
+            english = m["title"].get("english") or ""
+            synonyms_raw = m.get("synonyms") or []
+
+            synonyms_limited = synonyms_raw[:2]
+
+            sinonimos = []
+            if romaji: sinonimos.append(romaji)
+            if english: sinonimos.append(english)
+            sinonimos.extend(synonyms_limited)
+
+            sinopse = m.get("description") or ""
+
+            return {
+                "romaji": romaji,
+                "english": english,
+                "sinonimos": sinonimos,
+                "sinopse": sinopse
+            }
+
+        except requests.exceptions.HTTPError as e:
+            if resp.status_code == 429:
+                wait = 10 * attempt  # espera mais a cada tentativa
+                print(f"🚦 Rate limited (429). Esperando {wait} segundos e tentando novamente...")
+                time.sleep(wait)
+            else:
+                print(f"❌ Erro HTTP: {e}")
+                break
+        except Exception as e:
+            print(f"❌ Outro erro: {e}")
+            break
+
+        # Espera 1 segundo entre tentativas normais para evitar rebater rate limit
+        time.sleep(1)
+
+    print(f"❌ Falha ao buscar '{query}' depois de {retries} tentativas.")
+    return None
+
+@app.route("/search_details", methods=["GET"])
+def search_details():
+    q = request.args.get("q", "").strip()
+    t = request.args.get("type", "anime").lower()
+    if not q:
+        return jsonify({"error": "q param missing"}), 400
+    typ = "ANIME" if t == "anime" else "MANGA"
+    details = fetch_media_details(q, typ)
+    if not details:
+        return jsonify({"error": "Not found"}), 404
+    # devolve array de sinônimos e a sinopse
+    return jsonify(details)
+
+@app.route("/linhas/<int:linha_id>/details", methods=["PUT"])
+def update_linha_details(linha_id):
+    data = request.get_json()
+    sinonimos = data.get("sinonimos")      # lista de strings
+    sinopse = data.get("sinopse")      # texto
+    if sinonimos is None or sinopse is None:
+        return jsonify({"error": "fields missing"}), 400
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE linhas SET sinonimos = ?, sinopse = ? WHERE id = ?",
+        (json.dumps(sinonimos, ensure_ascii=False), sinopse, linha_id)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Details updated"}), 200
+
+@app.route("/translate", methods=["POST"])
+def translate():
+    data = request.get_json()
+    text = data.get("text")
+    target_lang = data.get("target_lang", "pt")
+
+    if not text:
+        return jsonify({"error": "Texto ausente"}), 400
+
+    try:
+        translated = GoogleTranslator(source='auto', target=target_lang).translate(text)
+        return jsonify({"traducao": translated})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/refresh_details", methods=["POST"])
+def refresh_all_details():
+    print("🚀 Iniciando refresh de detalhes...")
+
+    conn = sqlite3.connect("list_it.db")
+    cur = conn.cursor()
+    cur.execute("""
+      SELECT id, nome, conteudo FROM linhas
+      WHERE sinonimos IS NULL OR sinonimos = '[]' 
+         OR sinopse IS NULL OR sinopse = '[]'
+    """)
+    to_update = cur.fetchall()
+    conn.close()
+
+    print(f"🔍 Encontrados {len(to_update)} itens para atualizar.")
+
+    updated = 0
+    for idx, (linha_id, nome, conteudo) in enumerate(to_update, 1):
+        media_type = "anime" if conteudo.lower() in ["anime", "filme"] else "manga"
+        print(f"\n📦 ({idx}/{len(to_update)}) Buscando detalhes para '{nome}' ({media_type})...")
+
+        det = fetch_media_details(nome, media_type.upper())
+        if det:
+            has_data = det["romaji"] or det["english"] or det["sinonimos"] or det["sinopse"]
+            if has_data:
+                try:
+                    conn = sqlite3.connect("list_it.db", timeout=10)
+                    cur = conn.cursor()
+
+                    cur.execute("""
+                        UPDATE linhas 
+                        SET sinonimos = ?, 
+                            sinopse = ?
+                        WHERE id = ?
+                    """, (
+                        json.dumps(det["sinonimos"]),
+                        det["sinopse"],
+                        linha_id
+                    ))
+                    conn.commit()
+                    conn.close()
+
+                    print(f"✅ Linha {linha_id} atualizada com detalhes: "
+                          f"sinonimos={det['sinonimos']}, sinopse={'[ok]' if det['sinopse'] else '[vazio]'}")
+                    updated += 1
+                except Exception as e:
+                    print(f"❌ Erro ao atualizar linha_id={linha_id}: {e}")
+            else:
+                print(f"⚠️ Nenhum detalhe relevante encontrado, não atualizado.")
+        else:
+            print(f"⚠️ Nenhum dado encontrado na AniList.")
+
+        # ⚠️ IMPORTANTE: aguardar entre as requisições
+        time.sleep(2)  # ajuste para 1.5 ou 2 se ainda der 429
+
+    print(f"\n🏁 Finalizado! Total atualizados: {updated} de {len(to_update)}")
+    return jsonify({"updated": updated})
+
 @app.route("/linhas/<int:lista_id>", methods=["GET"])
 def get_linhas(lista_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, lista_id, nome, tags, conteudo, status, episodio, opiniao, imagem_url FROM linhas WHERE lista_id = ?", (lista_id,))
+    cursor.execute("SELECT id, lista_id, nome, tags, conteudo, status, episodio, opiniao, imagem_url, sinopse, sinonimos FROM linhas WHERE lista_id = ?", (lista_id,))
     linhas = [
         {
             "id": row[0],
@@ -320,7 +501,9 @@ def get_linhas(lista_id):
             "status": row[5],
             "episodio": row[6],
             "opiniao": row[7],
-            "imagem_url": row[8]
+            "imagem_url": row[8],
+            "sinopse": row[9],
+            "sinonimos": json.loads(row[10]) if row[10] else []
         }
         for row in cursor.fetchall()
     ]
@@ -413,7 +596,7 @@ def to_highlight(lista_id):
     # UTC agora menos 1 hora
     cutoff = (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
     cursor.execute("""
-        SELECT id, nome, imagem_url, tags, conteudo, status, episodio, opiniao
+        SELECT id, nome, imagem_url, tags, conteudo, status, episodio, opiniao, sinopse, sinonimos
         FROM linhas
         WHERE lista_id = ?
         AND (
@@ -587,7 +770,7 @@ def obter_sequencia(sequencia_id):
             # Obter itens da sequência em ordem com mais detalhes
             cursor.execute("""
                 SELECT l.id, l.nome, l.imagem_url, l.conteudo, l.status, 
-                    l.episodio, l.tags, l.opiniao, si.ordem 
+                    l.episodio, l.tags, l.opiniao, l.sinopse, l.sinonimos, si.ordem 
                 FROM linhas l
                 JOIN sequencia_itens si ON l.id = si.linha_id
                 WHERE si.sequencia_id = ?
@@ -601,8 +784,11 @@ def obter_sequencia(sequencia_id):
             "itens": itens,
             "total_itens": len(itens)
         })
-    except sqlite3.Error as e:
-        return jsonify({"erro": f"Erro ao obter sequência: {str(e)}"}), 500
+    except Exception as e:
+        # imprime a stack completa no console do Flask
+        traceback.print_exc()
+        # devolve o texto do erro no JSON pra debugar
+        return jsonify({"erro": str(e)}), 500
 
 # Operação 5: Remover item de uma sequência (com verificações)
 @app.route('/sequencias/<int:sequencia_id>/itens/<int:linha_id>', methods=['DELETE'])

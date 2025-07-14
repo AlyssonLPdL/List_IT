@@ -906,7 +906,7 @@ input:checked + .slider:before {
 }
 .modal-content {
   background-color: var(--color-card-bg);
-  padding: 1px 20px 40px 20px;
+  padding: 40px 20px 40px 20px;
   border-radius: 10px 0 0 10px;
   width: 400px;
   text-align: center;
@@ -971,13 +971,13 @@ input:checked + .slider:before {
   padding: 5px;
   border-radius: 5px;
   border: black solid 1px;
-  height: 33px;
+  height: 37px;
   cursor: pointer;
 }
 
 .sequence-actions {
   position: absolute;
-  right: 135px;
+  right: 179px;
   background: white;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   border-radius: 6px;
@@ -991,7 +991,7 @@ input:checked + .slider:before {
 }
 .item-actions {
   display:flex;
-  align-items: center;
+  align-items: stretch;
   gap: 15px;
 }
 
@@ -1411,7 +1411,20 @@ legend {
 .clickable-title {
   cursor: pointer;
   color: var(--color-status-blue);
+  position: absolute;
+  top: -115px;
+  left: -440px;
+  background: var(--color-card-bg);
+  padding: 20px;
+  border-radius: 10px;
+
+  display: inline-block;
+  max-width: 1000px; /* só como fallback */
+  white-space: normal;
+  word-break: break-word;
+  text-align: center;
 }
+
 .clickable-title:hover {
   color: var(--color-status-blue);
   opacity: 0.8;
