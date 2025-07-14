@@ -1075,6 +1075,49 @@
         allIds = currentNavList.map(i => i.id);
         currentIdx = allIds.indexOf(item.id);
 
+        const seqNavList = Array.isArray(navList)
+            && navList.length > 0
+            && navList[0].ordem !== undefined
+            ? navList
+            : [];
+
+        currentNavList = seqNavList;  // agora só terá algo se for sequência
+        console.log("[📋] usarei como currentNavList:", currentNavList);
+
+        // Pegamos o nome do item anterior, se existir
+        let sequenciaInfo = '';
+        if (currentNavList.length) {
+            const ids = currentNavList.map(i => i.id);
+            const idx = ids.indexOf(item.id);
+            if (idx > 0) {
+                const anterior = currentNavList[idx - 1];
+                sequenciaInfo = `Sequência após ${anterior.nome}`;
+            }
+        }
+
+        if (!sequenciaInfo) {
+            try {
+                // GET /linhas/:id/sequencias → lista de sequências que contém este item
+                const seqsRes = await fetch(`/linhas/${item.id}/sequencias`);
+                const seqsJson = await seqsRes.json();
+                if (seqsJson.total_sequencias > 0) {
+                    const seqId = seqsJson.sequencias[0].id;
+                    // GET /sequencias/:seqId → detalhes, incluindo itens
+                    const detailRes = await fetch(`/sequencias/${seqId}`);
+                    const detailJson = await detailRes.json();
+                    const itens = detailJson.itens || [];
+                    const ids = itens.map(i => i.id);
+                    const idx = ids.indexOf(item.id);
+                    if (idx > 0) {
+                        prevName = itens[idx - 1].nome;
+                        sequenciaInfo = `Sequência após ${prevName}`;
+                    }
+                }
+            } catch (e) {
+                console.warn("Erro ao buscar sequência via API:", e);
+            }
+        }
+
         // Criar container de export no início de showItemDetails:
         let exportCard = document.getElementById('export-card');
         if (!exportCard) {
@@ -1192,6 +1235,8 @@
             </div>
         `;
 
+
+
         // Dentro de showItemDetails, após renderizar o modal:
         exportCard.innerHTML = `
             <div class="card-container">
@@ -1201,10 +1246,10 @@
                     
                     <!-- Sinônimos adicionados aqui -->
                     <div class="synonyms-container" style="margin-top: 8px;">
-                        ${Array.isArray(item.sinonimos) ? 
-                            item.sinonimos.map(s => `<span class="synonym-tag">${s}</span>`).join('') : 
-                            (item.sinonimos || '')
-                        }
+                        ${Array.isArray(item.sinonimos) ?
+                item.sinonimos.map(s => `<span class="synonym-tag">${s}</span>`).join('') :
+                (item.sinonimos || '')
+            }
                     </div>
                     
                     <div class="gold-border"></div>
@@ -1215,6 +1260,11 @@
                         <img src="${item.imagem_url}" alt="${item.nome}" class="card-image">
                     </div>
                     
+                    ${sequenciaInfo
+                ? `<div class="sequencia-info" style="margin: 8px 0; color: #FFD700; font-style: italic;">
+                        ${sequenciaInfo}
+                        </div>`
+                : ''}
                     <!-- Sinopse adicionada aqui -->
                     <div class="synopsis-container" id="synopsisContainer">
                         <h3 class="synopsis-title">Sinopse</h3>
@@ -1405,8 +1455,8 @@
             }
         }
 
-        modalPhoto.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
-        sequenceModal.style.height = `${mainInfoContent.offsetHeight + 0.41}px`;
+        modalPhoto.style.height = `${mainInfoContent.offsetHeight}px`;
+        sequenceModal.style.height = `${mainInfoContent.offsetHeight}px`;
 
         // Funções auxiliares
         async function getSequenceButtons(itemId) {
@@ -1653,12 +1703,12 @@
                     const resp = await fetch("/translate", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ 
-                            text: synopsisText.textContent, 
-                            target_lang: "pt" 
+                        body: JSON.stringify({
+                            text: synopsisText.textContent,
+                            target_lang: "pt"
                         })
                     });
-                    
+
                     if (resp.ok) {
                         const data = await resp.json();
                         synopsisText.textContent = data.traducao;
