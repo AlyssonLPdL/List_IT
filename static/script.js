@@ -90,6 +90,18 @@
         showItems(filteredLinhas);
     }
 
+    function getEpisodeLabel(contentType) {
+        const ct = contentType.toLowerCase();
+        if (ct === 'filme') {
+            return 'Filmes';
+        }
+        if (['manga', 'manhwa', 'webtoon'].includes(ct)) {
+            return 'Capítulos';
+        }
+        // padrão para anime, série, etc.
+        return 'Episódio';
+    }
+
     // ---------------------------- MODAL EVENTS ----------------------------
     function initModalEvents() {
         // Abrir modal de criar lista
@@ -1176,7 +1188,7 @@
                     <p style="margin: 0; border: 0;">${item.opiniao}</p>
                 </fieldset>
                 <fieldset>
-                    <legend style="font-weight:600;">Episódio:</legend>
+                    <legend style="font-weight:600;">${getEpisodeLabel(item.conteudo)}:</legend>
                     <p style="margin: 0; border: 0;">${item.episodio}</p>
                 </fieldset>
                 <fieldset style="width: 80%;">
@@ -1285,7 +1297,7 @@
                             <span class="info-value">${item.opiniao}</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Episódio:</span>
+                            <span class="info-label">${getEpisodeLabel(item.conteudo)}:</span>
                             <span class="info-value">${item.episodio}</span>
                         </div>
                         <div class="info-item full-width">
@@ -1458,7 +1470,7 @@
         modalPhoto.style.height = `${mainInfoContent.offsetHeight}px`;
         sequenceModal.style.height = `${mainInfoContent.offsetHeight}px`;
 
-        function setupSequenceActionButtons(item) {
+        function setupSequenceActionButtons() {
             const mainBtn = document.getElementById('mainSequenceBtn');
             const actionsPanel = document.querySelector('.sequence-actions');
             if (!mainBtn || !actionsPanel) return;
