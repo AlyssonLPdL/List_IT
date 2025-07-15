@@ -1458,6 +1458,22 @@
         modalPhoto.style.height = `${mainInfoContent.offsetHeight}px`;
         sequenceModal.style.height = `${mainInfoContent.offsetHeight}px`;
 
+        function setupSequenceActionButtons(item) {
+            const mainBtn = document.getElementById('mainSequenceBtn');
+            const actionsPanel = document.querySelector('.sequence-actions');
+            if (!mainBtn || !actionsPanel) return;
+
+            // Remove listener antigo (se existia)
+            mainBtn.replaceWith(mainBtn.cloneNode(true));
+            const freshMainBtn = document.getElementById('mainSequenceBtn');
+
+            // Toda vez que clicar em “Sequência”, alterna display
+            freshMainBtn.addEventListener('click', () => {
+                const isOpen = actionsPanel.style.display === 'block';
+                actionsPanel.style.display = isOpen ? 'none' : 'block';
+            });
+        }
+
         // Funções auxiliares
         async function getSequenceButtons(itemId) {
             const response = await fetch(`/linhas/${itemId}/sequencias`);
@@ -1493,7 +1509,7 @@
                 actionsPanel.innerHTML = newButtons;
 
                 // Reatacha os event listeners aos novos botões
-                setupSequenceActionButtons();
+                setupSequenceActionButtons(item);
             }
         });
 
@@ -1521,10 +1537,6 @@
 
             if (e.target.id === 'addToSequence') {
                 showAddToSequenceModal(item);
-            }
-
-            if (e.target.id === 'removeFromSequence') {
-                showRemoveSequenceModal(item);
             }
 
             if (e.target.id === 'deleteSequence') {
