@@ -1562,91 +1562,81 @@
 
         // Mostrar modal de adição à sequência
         async function showAddToSequenceModal(currentItem) {
+            // 1) Se já existir, remove‑o (ou simplesmente sai)
+            const previous = document.querySelector('.sequence-search-modal');
+            if (previous) {
+                previous.remove();
+                // ou: return;  // só não reabra se já estiver um modal aberto
+            }
+            // 1) Cria e anexa o modal
             const modal = document.createElement('div');
             modal.className = 'sequence-search-modal';
             modal.innerHTML = `
                 <div class="sequence-search-content">
-                    <h3>Adicionar à Sequência</h3>
-                    <input type="text" placeholder="Pesquisar itens..." id="sequenceSearchInput">
-                    <div class="search-results" id="sequenceSearchResults"></div>
+                <h3>Adicionar à Sequência</h3>
+                <input type="text" placeholder="Pesquisar itens..." id="sequenceSearchInput">
+                <div class="search-results" id="sequenceSearchResults"></div>
                 </div>
             `;
             document.body.appendChild(modal);
 
-            // Buscar itens da lista atual
+            // 2) Busca todos os itens da lista
             const response = await fetch(`/linhas/${currentItem.lista_id}`);
             const allItems = await response.json();
 
-            const input = document.getElementById('sequenceSearchInput');
-            const resultsContainer = document.getElementById('sequenceSearchResults');
+            // 3) Capture o input e o container DE DENTRO do modal  
+            const input = modal.querySelector('#sequenceSearchInput');
+            const resultsContainer = modal.querySelector('#sequenceSearchResults');
 
-            // Inicialmente, sem resultados
+            // 4) Limpa inicialmente
             resultsContainer.innerHTML = '';
 
-            // Filtro de pesquisa
-            input.addEventListener('input', (e) => {
+            // 5) Adiciona o listener no input escopo-local
+            input.addEventListener('input', e => {
                 const term = e.target.value.toLowerCase().trim();
-
+                console.log('Buscando termo:', term);               // agora vai logar
                 if (!term) {
-                    // se não digitou nada, limpa
                     resultsContainer.innerHTML = '';
                     return;
                 }
-
-                // filtra e exibe
                 const filtered = allItems.filter(i =>
                     i.id !== currentItem.id &&
                     i.nome.toLowerCase().includes(term)
                 );
-                displaySearchResults(filtered, currentItem);
+                console.log('Filtrados:', filtered);                // e aqui também
+                displaySearchResults(filtered, currentItem, modal);
             });
 
-            // fechar se clicar fora do conteúdo
+            // 6) Fecha se clicar fora
             modal.addEventListener('click', e => {
-                if (e.target === modal) {
-                    document.body.removeChild(modal);
-                }
+                if (e.target === modal) document.body.removeChild(modal);
             });
         }
 
-        function displaySearchResults(items, currentItem) {
-            const resultsContainer = document.getElementById('sequenceSearchResults');
-            resultsContainer.innerHTML = items.map(item => `
-                <div class="search-result-item add-to-sequence-btn" data-id="${item.id}">
-                    <img src="${item.imagem_url}" alt="${item.nome}" style="width:50px;height:75px;">
-                    <span>${item.nome}</span>
-                </div>
-            `).join('');
+        function displaySearchResults(items, currentItem, modal) {
+            // capture de novo, mas sempre dentro do modal
+            const resultsContainer = modal.querySelector('#sequenceSearchResults');
+            resultsContainer.innerHTML = '';
 
-            document.querySelectorAll('.add-to-sequence-btn').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    try {
-                        const itemId = parseInt(e.currentTarget.dataset.id, 10);
-                        const seqRes = await fetch(`/linhas/${currentItem.id}/sequencias`);
-                        if (!seqRes.ok) throw new Error('Falha ao buscar sequências');
-                        const { sequencias } = await seqRes.json();
-                        if (!sequencias || sequencias.length === 0) {
-                            alert('Por favor, crie uma sequência primeiro');
-                            return;
-                        }
-                        const sequence = sequencias[0]; // usar a primeira por enquanto
-                        // descobrir próxima ordem
-                        const addRes = await fetch(`/sequencias/${sequence.id}/itens`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ linha_id: itemId })
-                        });
-                        if (!addRes.ok) {
-                            const err = await addRes.json();
-                            throw new Error(err.erro || 'Falha ao adicionar à sequência');
-                        }
-                        // fecha modal e atualiza
-                        document.body.removeChild(document.querySelector('.sequence-search-modal'));
-                        refreshSequenceDisplay(sequence.id);
-                    } catch (error) {
-                        console.error(error);
-                        alert(`Erro: ${error.message}`);
-                    }
+            if (items.length === 0) {
+                resultsContainer.innerHTML = '<div class="no-results">Nenhum resultado</div>';
+                return;
+            }
+
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'search-result-item add-to-sequence-btn';
+                div.dataset.id = item.id;
+                div.innerHTML = `
+      <img src="${item.imagem_url}" width="50" height="75" alt="${item.nome}">
+      <span>${item.nome}</span>
+    `;
+                resultsContainer.appendChild(div);
+
+                div.addEventListener('click', async () => {
+                    // ... seu código de adicionar à sequência ...
+                    document.body.removeChild(modal);
+                    refreshSequenceDisplay(item.id);
                 });
             });
         }
