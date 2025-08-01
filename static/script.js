@@ -693,26 +693,46 @@
         });
 
         // ...existing code...
+        // Abertura/Fechamento do modal (mantido igual)
+        const exportModal = document.getElementById('export-modal');
         document.getElementById('export-btn').addEventListener('click', () => {
-            // Mostra o modal de exportação
-            document.getElementById('export-modal').classList.remove('hidden');
-            document.getElementById('export-modal').classList.add('show');
+            exportModal.classList.remove('hidden');
+            exportModal.classList.add('show');
         });
-
-        // Evento para cancelar
         document.getElementById('export-cancel-btn').addEventListener('click', () => {
-            document.getElementById('export-modal').classList.remove('show');
-            document.getElementById('export-modal').classList.add('hidden');
+            exportModal.classList.remove('show');
+            exportModal.classList.add('hidden');
         });
 
         document.getElementById('export-confirm-btn').addEventListener('click', async () => {
             const filename = document.getElementById('export-filename').value.trim() || 'Lista.xlsx';
-            document.getElementById('export-modal').classList.remove('show');
-            document.getElementById('export-modal').classList.add('hidden');
 
-            const allItens = (window.__ultimaChamadaLinhas && window.__ultimaChamadaLinhas.length > 0)
-                ? window.__ultimaChamadaLinhas
-                : (window.__linhasAtuais || []);
+            const loaderModal = document.getElementById('export-loader-container');
+            const progressBar = document.getElementById('export-progress');
+
+            // Mostrar loader
+            loaderModal.classList.remove('hidden');
+            loaderModal.classList.add('show');
+            progressBar.value = 0;
+
+            const exportModal = document.getElementById('export-modal');
+            exportModal.classList.remove('show');
+            exportModal.classList.add('hidden');
+
+            const opts = {
+                id: document.getElementById('opt-id').checked,
+                nome: document.getElementById('opt-nome').checked,
+                sinonimos: document.getElementById('opt-sinonimos').checked,
+                tag: document.getElementById('opt-tag').checked,
+                opiniao: document.getElementById('opt-opiniao').checked,
+                episodio: document.getElementById('opt-episodio').checked,
+                status: document.getElementById('opt-status').checked,
+                sinopse: document.getElementById('opt-sinopse').checked,
+                translate: document.getElementById('opt-translate').checked,
+                conteudo: document.getElementById('opt-conteudo').checked,
+            };
+
+            const allItens = window.__linhasAtuais || [];
             const selected = window.__ultimoFiltroSelecionado || {
                 status: { include: new Set(), exclude: new Set() },
                 conteudo: { include: new Set(), exclude: new Set() },
@@ -746,78 +766,72 @@
                 return true;
             });
 
-            // Desmembra em linhas por tag
-            const rows = [];
-            filtered.forEach(item => {
-                const itemTags = item.tags ? item.tags.split(',').map(t => t.trim()) : [''];
-                itemTags.forEach(tag => {
-                    rows.push({
-                        ID: item.id,
-                        Nome: item.nome,
-                        Tag: tag,
-                        Opinião: item.opiniao,
-                        Episódio: item.episodio,
-                        Status: item.status,
-                        Conteudo: item.conteudo,
-                        // aqui adicionamos Sinônimos e Sinopse
-                        Sinonimos: Array.isArray(item.sinonimos)
-                            ? item.sinonimos.join('; ')
-                            : (item.sinonimos || ''),
-                        Sinopse: item.sinopse || ''
-                    });
-                });
-            });
+            const total = filtered.length;
+            let current = 0;
 
+            // Monta as linhas para o Excel
+            const rows = [];
+            for (let item of filtered) {
+                // Opcional: traduzir sinopse
+                let sinopseText = item.sinopse || '';
+                if (opts.translate && opts.sinopse && sinopseText) {
+                    try {
+                        const resp = await fetch('/translate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text: sinopseText, target_lang: 'pt' })
+                        });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            sinopseText = data.traducao;
+                        }
+                    } catch (e) {
+                        console.warn('Erro traduzindo sinopse:', e);
+                    }
+                }
+
+                // Para cada tag, gera uma linha
+                const tags = item.tags ? item.tags.split(',').map(t => t.trim()) : [''];
+                for (let tag of tags) {
+                    const row = {};
+                    if (opts.id) row.ID = item.id;
+                    if (opts.nome) row.Nome = item.nome;
+                    if (opts.sinonimos) row.Sinonimos = Array.isArray(item.sinonimos)
+                        ? item.sinonimos.join('; ')
+                        : item.sinonimos || '';
+                    if (opts.tag) row.Tag = tag;
+                    if (opts.opiniao) row.Opinião = item.opiniao;
+                    if (opts.episodio) row['Ep/Cap'] = item.episodio;
+                    if (opts.status) row.Status = item.status;
+                    if (opts.sinopse) row.Sinopse = sinopseText;
+                    if (opts.conteudo) row.Conteudo = item.conteudo;
+                    rows.push(row);
+                }
+                current++;
+                progressBar.value = Math.floor((current / total) * 100);
+            }
 
             // --- ExcelJS ---
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Export');
-
-            worksheet.columns = [
-                { header: 'ID', key: 'ID', width: 8 }, // <-- Adicione esta linha
-                { header: 'Nome', key: 'Nome', width: 30 },
-                { header: 'Sinônimos', key: 'Sinonimos', width: 30 },
-                { header: 'Tag', key: 'Tag', width: 20 },
-                { header: 'Opinião', key: 'Opinião', width: 15 },
-                { header: 'Ep/Cap', key: 'Episódio', width: 10 },
-                { header: 'Status', key: 'Status', width: 15 },
-                { header: 'Sinopse', key: 'Sinopse', width: 50 },
-                { header: 'Conteúdo', key: 'Conteudo', width: 15 }
-            ];
-
-            const nameList = [...new Set(rows.map(r => r.Nome))];
-            const nameColors = {};
-            nameList.forEach(name => {
-                const r = Math.floor(150 + Math.random() * 105);
-                const g = Math.floor(150 + Math.random() * 105);
-                const b = Math.floor(150 + Math.random() * 105);
-                nameColors[name] = `FF${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-            });
-
-            rows.forEach(row => {
-                const excelRow = worksheet.addRow(row);
-                const fillColor = nameColors[row.Nome];
-                excelRow.eachCell((cell, colNumber) => {
-                    cell.fill = {
-                        type: 'pattern',
-                        pattern: 'solid',
-                        fgColor: { argb: fillColor }
-                    };
-                });
-            });
+            worksheet.columns = Object.keys(rows[0] || {}).map(key => ({
+                header: key, key, width: 20
+            }));
+            rows.forEach(r => worksheet.addRow(r));
 
             const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = filename;
+            const blob = new Blob([buffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
             document.body.appendChild(a);
             a.click();
-            setTimeout(() => {
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            }, 100);
+            a.remove();
+            URL.revokeObjectURL(url);
+            loaderModal.classList.remove('show');
+            loaderModal.classList.add('hidden');
         });
         // ...existing code...
         document.getElementById('search-name')

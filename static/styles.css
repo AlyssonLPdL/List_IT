@@ -1723,6 +1723,34 @@ legend {
   animation: infinityAnimation 1s linear infinite;
 }
 
+.loader-flex {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 4px solid #ccc;
+  border-top-color: #333;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+.loader-text {
+  font-weight: bold;
+}
+progress {
+  width: 100%;
+  height: 20px;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
 /* =======================================
   ANIMAÇÕES
 ======================================= */

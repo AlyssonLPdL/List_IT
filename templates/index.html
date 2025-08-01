@@ -162,27 +162,57 @@
     </div>
 
     <!-- Modal para nome do arquivo de exportação -->
+    <!-- Modal de Exportação -->
     <div id="export-modal" class="modal hidden">
-      <div class="modal-content" style="max-width: 350px">
-        <h3>Nome do arquivo</h3>
+      <div class="modal-content">
+        <h3>Exportar Lista</h3>
+        <div class="export-options">
+          <label><input type="checkbox" id="opt-id" checked /> ID</label>
+          <label><input type="checkbox" id="opt-nome" checked /> Nome</label>
+          <label
+            ><input type="checkbox" id="opt-sinonimos" checked />
+            Sinônimos</label
+          >
+          <label><input type="checkbox" id="opt-tag" checked /> Tag</label>
+          <label
+            ><input type="checkbox" id="opt-opiniao" checked /> Opinião</label
+          >
+          <label
+            ><input type="checkbox" id="opt-episodio" checked /> Ep/Cap</label
+          >
+          <label
+            ><input type="checkbox" id="opt-status" checked /> Status</label
+          >
+          <label
+            ><input type="checkbox" id="opt-sinopse" checked /> Sinopse</label
+          >
+          <label
+            ><input type="checkbox" id="opt-translate" /> Traduzir
+            Sinopse</label
+          >
+          <label
+            ><input type="checkbox" id="opt-conteudo" checked /> Conteúdo</label
+          >
+        </div>
         <input
           type="text"
           id="export-filename"
-          value="Lista.xlsx"
-          style="
-            width: 100%;
-            margin-bottom: 16px;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-          "
+          placeholder="Nome do arquivo (ex: MinhaLista.xlsx)"
         />
-        <div style="text-align: right">
-          <button id="export-cancel-btn" style="margin-right: 8px">
-            Cancelar
-          </button>
-          <button id="export-confirm-btn">Exportar</button>
+        <div class="modal-actions">
+          <button id="export-confirm-btn" class="btn">Exportar</button>
+          <button id="export-cancel-btn" class="btn">Cancelar</button>
         </div>
+      </div>
+    </div>
+    <!-- Loader durante exportação -->
+    <div id="export-loader-container" class="modal hidden">
+      <div class="modal-content">
+        <div class="loader-flex">
+          <div class="spinner"></div>
+          <span class="loader-text">Gerando arquivo...</span>
+        </div>
+        <progress id="export-progress" value="0" max="100"></progress>
       </div>
     </div>
 
