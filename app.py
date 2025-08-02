@@ -7,6 +7,8 @@ import subprocess
 import json
 from deep_translator import GoogleTranslator
 import traceback
+import time
+import threading
 
 app = Flask(__name__)
 
@@ -88,10 +90,9 @@ def index():
 
 @app.route("/proxy_image")
 def proxy_image():
-    # recebe a URL alvo como parâmetro
     url = request.args.get("url")
-    if not url:
-        return jsonify({"error": "url param missing"}), 400
+    if not url or url == "undefined" or url == "null":
+        return jsonify({"error": "Parâmetro de URL inválido."}), 400
 
     # busca o conteúdo remoto
     resp = requests.get(url, stream=True)
@@ -310,10 +311,6 @@ def update_image_url():
     print(f"[UPDATE_IMAGE_URL] Linha {linha_id} atualizada com URL: {new_url}")
     return jsonify({'mensagem': 'Imagem atualizada com sucesso.'})
 
-import requests
-import re
-import time
-
 def fetch_media_details(query, media_type="ANIME", retries=3):
     url = "https://graphql.anilist.co"
     gql = """
@@ -328,36 +325,44 @@ def fetch_media_details(query, media_type="ANIME", retries=3):
     }
     """ % media_type
 
-    # Limpeza básica, mantendo letras, números e espaço
-    clean = re.sub(r'[^\w\s]', '', query.strip().replace('-', ' '))
+    vars = {"search": query.strip()}
 
-    vars = {"search": clean}
-
-    for attempt in range(1, retries+1):
+    for attempt in range(1, retries + 1):
         try:
             resp = requests.post(url, json={"query": gql, "variables": vars})
             resp.raise_for_status()
-
             media = resp.json()["data"]["Page"]["media"]
             if not media:
                 print(f"⚠️ Nenhum resultado encontrado na AniList para '{query}'")
                 return None
 
-            m = media[0]  # pega o primeiro resultado
-
+            m = media[0]
             romaji = m["title"].get("romaji") or ""
             english = m["title"].get("english") or ""
             synonyms_raw = m.get("synonyms") or []
 
-            synonyms_limited = synonyms_raw[:2]
-
             sinonimos = []
-            if romaji: sinonimos.append(romaji)
+
+            # 1. Prioriza inglês
             if english: sinonimos.append(english)
-            sinonimos.extend(synonyms_limited)
+
+            # 2. Procura possível espanhol nos synonyms
+            espanhol = next((s for s in synonyms_raw if re.search(r'\b(la|el|mi|de|una|un|los|las)\b', s.lower())), None)
+            if espanhol and espanhol not in sinonimos:
+                sinonimos.append(espanhol)
+
+            # 3. Adiciona romaji se ainda não está
+            if romaji and romaji not in sinonimos:
+                sinonimos.append(romaji)
+
+            # 4. Adiciona mais 1 ou 2 extras se ainda tiver espaço
+            for s in synonyms_raw:
+                if s not in sinonimos:
+                    sinonimos.append(s)
+                if len(sinonimos) >= 3:
+                    break
 
             sinopse = m.get("description") or ""
-
             return {
                 "romaji": romaji,
                 "english": english,
@@ -367,21 +372,75 @@ def fetch_media_details(query, media_type="ANIME", retries=3):
 
         except requests.exceptions.HTTPError as e:
             if resp.status_code == 429:
-                wait = 10 * attempt  # espera mais a cada tentativa
-                print(f"🚦 Rate limited (429). Esperando {wait} segundos e tentando novamente...")
+                wait = 10 * attempt
+                print(f"🚦 Rate limited (429). Esperando {wait}s...")
                 time.sleep(wait)
             else:
                 print(f"❌ Erro HTTP: {e}")
                 break
         except Exception as e:
-            print(f"❌ Outro erro: {e}")
+            print(f"❌ Erro geral: {e}")
             break
 
-        # Espera 1 segundo entre tentativas normais para evitar rebater rate limit
+        time.sleep(1)
+    return None
+
+def ensure_sinonimos_completos(db_path="list_it.db", verbose=True):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, nome, sinonimos FROM linhas")
+    rows = cursor.fetchall()
+
+    total = len(rows)
+    atualizados = 0
+
+    if verbose:
+        print(f"🔍 Verificando {total} linhas...")
+
+    for idx, (linha_id, nome, sinonimos_str) in enumerate(rows, start=1):
+        if verbose:
+            print(f"[{idx}/{total}] ID={linha_id} - Nome='{nome}'")
+
+        try:
+            sinonimos = json.loads(sinonimos_str) if sinonimos_str else []
+        except json.JSONDecodeError:
+            sinonimos = []
+
+        tem_romaji = any(re.match(r'^[a-zA-Z\s\-]+$', s) and s == s.title() for s in sinonimos)
+        tem_english = any(re.match(r'^[a-zA-Z\s\-]+$', s) and s.lower() != nome.lower() for s in sinonimos)
+
+        # Se já tem 3 ou mais e tem romaji e english, pula
+        if len(set(sinonimos)) >= 3 and tem_romaji and tem_english:
+            if verbose:
+                print("   ✅ Já possui romaji, english e extra. Pulando.\n")
+            continue
+
+        if verbose:
+            print("   🔄 Incompleto. Buscando na AniList...")
+
+        dados = fetch_media_details(nome)
+        if not dados:
+            if verbose:
+                print("   ⚠️ AniList não retornou dados.\n")
+            continue
+
+        novos = list(dict.fromkeys(dados['sinonimos']))[:3]
+        if verbose:
+            print(f"   🆕 Atualizando sinonimos: {novos}")
+
+        cursor.execute("UPDATE linhas SET sinonimos = ? WHERE id = ?",
+                       (json.dumps(novos, ensure_ascii=False), linha_id))
+        conn.commit()
+        atualizados += 1
+        time.sleep(0.3)
+        if verbose:
+            print("   💾 Atualizado.\n")
         time.sleep(1)
 
-    print(f"❌ Falha ao buscar '{query}' depois de {retries} tentativas.")
-    return None
+    conn.close()
+    if verbose:
+        print(f"\n🏁 Finalizado. Total atualizados: {atualizados}/{total}")
 
 @app.route("/search_details", methods=["GET"])
 def search_details():
@@ -390,11 +449,55 @@ def search_details():
     if not q:
         return jsonify({"error": "q param missing"}), 400
     typ = "ANIME" if t == "anime" else "MANGA"
+
+    # 1) Tenta ler do banco
+    with sqlite3.connect("list_it.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT sinopse, sinonimos FROM linhas WHERE nome = ? COLLATE NOCASE",
+            (q,)
+        )
+        row = cursor.fetchone()
+
+    if row:
+        sinopse_db, sinonimos_str = row
+        try:
+            sinonimos_db = json.loads(sinonimos_str) if sinonimos_str else []
+        except json.JSONDecodeError:
+            sinonimos_db = []
+
+        if sinopse_db and len(sinonimos_db) >= 3:
+            return jsonify({
+                "sinopse": sinopse_db,
+                "sinonimos": sinonimos_db
+            })
+
+    # 2) Buscar fora se faltava algo
     details = fetch_media_details(q, typ)
     if not details:
         return jsonify({"error": "Not found"}), 404
-    # devolve array de sinônimos e a sinopse
-    return jsonify(details)
+
+    # Só RETORNA. A escrita deve ser feita por outro endpoint.
+    return jsonify({
+        "sinopse": details["sinopse"],
+        "sinonimos": details["sinonimos"]
+    })
+
+@app.route("/linhas/<int:linha_id>/details", methods=["PUT"])
+def update_details(linha_id):
+    data = request.get_json()
+    sinopse = data.get("sinopse", "")
+    sinonimos = data.get("sinonimos", [])
+
+    with sqlite3.connect("list_it.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE linhas SET sinopse = ?, sinonimos = ? WHERE id = ?",
+            (sinopse, json.dumps(sinonimos, ensure_ascii=False), linha_id)
+        )
+        conn.commit()
+
+    return jsonify({"status": "ok"})
 
 @app.route("/linhas/<int:linha_id>/details", methods=["PUT"])
 def update_linha_details(linha_id):
@@ -490,23 +593,32 @@ def refresh_all_details():
 def get_linhas(lista_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, lista_id, nome, tags, conteudo, status, episodio, opiniao, imagem_url, sinopse, sinonimos FROM linhas WHERE lista_id = ?", (lista_id,))
-    linhas = [
-        {
-            "id": row[0],
-            "lista_id": row[1],
-            "nome": row[2],
-            "tags": row[3],
-            "conteudo": row[4],
-            "status": row[5],
-            "episodio": row[6],
-            "opiniao": row[7],
-            "imagem_url": row[8],
-            "sinopse": row[9],
-            "sinonimos": json.loads(row[10]) if row[10] else []
-        }
-        for row in cursor.fetchall()
-    ]
+    cursor.execute("""
+        SELECT id, lista_id, nome, tags, conteudo, status, episodio,
+               opiniao, imagem_url, sinopse, sinonimos
+          FROM linhas
+         WHERE lista_id = ?
+    """, (lista_id,))
+    linhas = []
+    for row in cursor.fetchall():
+        sinopse = row[9] or ""
+        sinonimos = json.loads(row[10]) if row[10] else []
+        # decide se ainda precisa de detalhes:
+        needs_details = not (sinopse and len(sinonimos) >= 3)
+        linhas.append({
+            "id":            row[0],
+            "lista_id":      row[1],
+            "nome":          row[2],
+            "tags":          row[3],
+            "conteudo":      row[4],
+            "status":        row[5],
+            "episodio":      row[6],
+            "opiniao":       row[7],
+            "imagem_url":    row[8],
+            "sinopse":       sinopse,
+            "sinonimos":     sinonimos,
+            "needs_details": needs_details   # <<< aqui
+        })
     conn.close()
     print(f"[GET_LINHAS] {len(linhas)} linhas carregadas para lista {lista_id}.")
     return jsonify(linhas)

@@ -647,11 +647,15 @@
             }
         });
 
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
         document.querySelectorAll('.item-card').forEach(async element => {
             const item = linhas.find(i => i.id == element.dataset.itemId);
 
             // Se faltarem sinopse ou sinônimos, buscar
-            if (!item.sinopse || !item.sinonimos) {
+            if (!item.needs_details) {
                 let contentType;
                 switch (item.conteudo) {
                     case "Anime":
@@ -666,18 +670,26 @@
                     default:
                         contentType = "anime";
                 }
-                const resp = await fetch(`/search_details?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
-                if (resp.ok) {
-                    const det = await resp.json();
-                    await fetch(`/linhas/${item.id}/details`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            sinonimos: det.sinonimos,
-                            sinopse: det.sinopse
-                        })
-                    });
+                try {
+                    const resp = await fetch(`/search_details?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
+                    if (resp.ok) {
+                        const det = await resp.json();
+                        await fetch(`/linhas/${item.id}/details`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                sinonimos: det.sinonimos,
+                                sinopse: det.sinopse
+                            })
+                        });
+                        console.log(`🔄 Detalhes atualizados para: ${item.nome}`);
+                    }
+                } catch (err) {
+                    console.error("Erro ao buscar detalhes:", err);
                 }
+
+                // Pausa entre as requisições
+                await sleep(1000);
             }
         });
 
@@ -710,7 +722,6 @@
             const loaderModal = document.getElementById('export-loader-container');
             const progressBar = document.getElementById('export-progress');
 
-            // Mostrar loader
             loaderModal.classList.remove('hidden');
             loaderModal.classList.add('show');
             progressBar.value = 0;
@@ -728,7 +739,6 @@
                 episodio: document.getElementById('opt-episodio').checked,
                 status: document.getElementById('opt-status').checked,
                 sinopse: document.getElementById('opt-sinopse').checked,
-                translate: document.getElementById('opt-translate').checked,
                 conteudo: document.getElementById('opt-conteudo').checked,
             };
 
@@ -769,55 +779,76 @@
             const total = filtered.length;
             let current = 0;
 
-            // Monta as linhas para o Excel
             const rows = [];
-            for (let item of filtered) {
-                // Opcional: traduzir sinopse
-                let sinopseText = item.sinopse || '';
-                if (opts.translate && opts.sinopse && sinopseText) {
-                    try {
-                        const resp = await fetch('/translate', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ text: sinopseText, target_lang: 'pt' })
-                        });
-                        if (resp.ok) {
-                            const data = await resp.json();
-                            sinopseText = data.traducao;
-                        }
-                    } catch (e) {
-                        console.warn('Erro traduzindo sinopse:', e);
-                    }
-                }
+            const colorMap = {};
+            const usedColors = new Set();
 
-                // Para cada tag, gera uma linha
+            function getRandomColor() {
+                const r = Math.floor(Math.random() * 200);  // evitar branco total (255)
+                const g = Math.floor(Math.random() * 200);
+                const b = Math.floor(Math.random() * 200);
+                const hex = [r, g, b].map(n => n.toString(16).padStart(2, '0')).join('').toUpperCase();
+                const color = hex; // ou `${hex}AA` se quiser transparência (ARGB)
+                if (usedColors.has(color)) return getRandomColor(); // evita repetição direta
+                usedColors.add(color);
+                return color;
+            }
+
+            // Gera cor única por item.id
+            for (let item of filtered) {
+                colorMap[item.id] = getRandomColor();
+            }
+
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Export');
+
+            const headerKeys = [];
+            if (opts.id) headerKeys.push('ID');
+            if (opts.nome) headerKeys.push('Nome');
+            if (opts.sinonimos) headerKeys.push('Sinonimos');
+            if (opts.tag) headerKeys.push('Tag');
+            if (opts.opiniao) headerKeys.push('Opinião');
+            if (opts.episodio) headerKeys.push('Ep/Cap');
+            if (opts.status) headerKeys.push('Status');
+            if (opts.sinopse) headerKeys.push('Sinopse');
+            if (opts.conteudo) headerKeys.push('Conteudo');
+
+            worksheet.columns = headerKeys.map(key => ({ header: key, key, width: 20 }));
+
+            for (let item of filtered) {
+                let sinopseText = item.sinopse || '';
                 const tags = item.tags ? item.tags.split(',').map(t => t.trim()) : [''];
+                const bgColor = colorMap[item.id];
+
                 for (let tag of tags) {
-                    const row = {};
-                    if (opts.id) row.ID = item.id;
-                    if (opts.nome) row.Nome = item.nome;
-                    if (opts.sinonimos) row.Sinonimos = Array.isArray(item.sinonimos)
+                    const rowData = {};
+                    if (opts.id) rowData.ID = item.id;
+                    if (opts.nome) rowData.Nome = item.nome;
+                    if (opts.sinonimos) rowData.Sinonimos = Array.isArray(item.sinonimos)
                         ? item.sinonimos.join('; ')
                         : item.sinonimos || '';
-                    if (opts.tag) row.Tag = tag;
-                    if (opts.opiniao) row.Opinião = item.opiniao;
-                    if (opts.episodio) row['Ep/Cap'] = item.episodio;
-                    if (opts.status) row.Status = item.status;
-                    if (opts.sinopse) row.Sinopse = sinopseText;
-                    if (opts.conteudo) row.Conteudo = item.conteudo;
-                    rows.push(row);
+                    if (opts.tag) rowData.Tag = tag;
+                    if (opts.opiniao) rowData.Opinião = item.opiniao;
+                    if (opts.episodio) rowData['Ep/Cap'] = item.episodio;
+                    if (opts.status) rowData.Status = item.status;
+                    if (opts.sinopse) rowData.Sinopse = sinopseText;
+                    if (opts.conteudo) rowData.Conteudo = item.conteudo;
+
+                    const excelRow = worksheet.addRow(rowData);
+
+                    // Aplica cor no fundo das células
+                    excelRow.eachCell((cell) => {
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: bgColor }
+                        };
+                    });
                 }
+
                 current++;
                 progressBar.value = Math.floor((current / total) * 100);
             }
-
-            // --- ExcelJS ---
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet('Export');
-            worksheet.columns = Object.keys(rows[0] || {}).map(key => ({
-                header: key, key, width: 20
-            }));
-            rows.forEach(r => worksheet.addRow(r));
 
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], {
@@ -833,6 +864,7 @@
             loaderModal.classList.remove('show');
             loaderModal.classList.add('hidden');
         });
+
         // ...existing code...
         document.getElementById('search-name')
             .addEventListener('input', () => filterItems(linhas, selected));
@@ -964,6 +996,16 @@
                         contentType = "anime";
                 }
 
+                const fetchedUrl = await fetchImageUrl(item.nome, contentType);
+                if (fetchedUrl && !fetchedUrl.includes('via.placeholder.com')) {
+                    await fetch(`/linhas/${item.id}/imagem`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imagem_url: fetchedUrl })
+                    });
+                    item.imagem_url = fetchedUrl;
+                }
+
                 try {
                     const response = await fetch(`/search_image?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
                     const data = await response.json();
@@ -1048,7 +1090,6 @@
             synopsisModal.innerHTML = `
             <h3 style="margin-top: 0;">Sinopse de ${item.nome}</h3>
             <p id="sinopse-texto" style="line-height: 1.6;">${item.sinopse || 'Sinopse não disponível'}</p>
-            <button id="traduzir-btn">Traduzir</button>
             <button id="closeSynopsis" style="
                 position: absolute;
                 top: 10px;
@@ -1066,22 +1107,6 @@
             // Fechar modal
             document.getElementById('closeSynopsis').addEventListener('click', () => {
                 document.body.removeChild(synopsisModal);
-            });
-
-            document.getElementById("traduzir-btn").addEventListener("click", async () => {
-                const textoOriginal = document.getElementById("sinopse-texto").textContent;
-                const resp = await fetch("/translate", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text: textoOriginal, target_lang: "pt" })
-                });
-
-                if (resp.ok) {
-                    const data = await resp.json();
-                    document.getElementById("sinopse-texto").textContent = data.traducao;
-                } else {
-                    alert("Erro ao traduzir.");
-                }
             });
 
             // Fechar ao clicar fora
@@ -1720,49 +1745,56 @@
             }
         }
 
-        async function exportItemAsImage() {
-            const exportCard = document.getElementById('export-card');
-            const imgEl = exportCard.querySelector('img');
-            const synopsisText = exportCard.querySelector('.synopsis-text');
-
-            // Traduzir sinopse se necessário
-            if (synopsisText && synopsisText.textContent !== 'Sinopse não disponível') {
-                try {
-                    const resp = await fetch("/translate", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            text: synopsisText.textContent,
-                            target_lang: "pt"
-                        })
+        async function exportItemAsImage(item) {
+            // 1) Se não tiver URL, busca uma
+            if (!item.imagem_url || item.imagem_url === "undefined" || item.imagem_url === "null") {
+                let contentType;
+                switch (item.conteudo) {
+                    case "Anime":
+                    case "Filme":
+                        contentType = "anime";
+                        break;
+                    case "Manga":
+                    case "Manhwa":
+                    case "Webtoon":
+                        contentType = "manga";
+                        break;
+                    default:
+                        contentType = "anime";
+                }
+                const fetchedUrl = await fetchImageUrl(item.nome, contentType);
+                if (fetchedUrl && !fetchedUrl.includes('via.placeholder.com')) {
+                    item.imagem_url = fetchedUrl;
+                    // opcional: salve no banco
+                    await fetch(`/linhas/${item.id}/imagem`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imagem_url: fetchedUrl })
                     });
-
-                    if (resp.ok) {
-                        const data = await resp.json();
-                        synopsisText.textContent = data.traducao;
-                    }
-                } catch (err) {
-                    console.error("Erro na tradução:", err);
+                } else {
+                    return alert("Imagem indisponível para exportação.");
                 }
             }
 
-            // 1) Aponte o <img> para o proxy (mesmo domínio)
-            const proxyUrl = `/proxy_image?url=${encodeURIComponent(item.imagem_url)}`;
-            imgEl.src = proxyUrl;
+            const exportCard = document.getElementById('export-card');
+            const imgEl = exportCard.querySelector('img');
 
-            // 2) Aguarde o load da imagem via proxy
-            await new Promise(resolve => { imgEl.onload = resolve; });
+            // 2) Use sempre o proxy para evitar CORS
+            imgEl.src = `/proxy_image?url=${encodeURIComponent(item.imagem_url)}`;
 
-            // 3) Gere o canvas e force o download
+            // 3) Aguarde o load antes de capturar
+            await new Promise(resolve => {
+                imgEl.onload = resolve;
+                imgEl.onerror = resolve;
+            });
+
+            // 4) Agora gera o canvas
             const canvas = await html2canvas(exportCard);
             const finalDataURL = canvas.toDataURL('image/png');
             const link = document.createElement('a');
             link.href = finalDataURL;
             link.download = `${item.nome.replace(/\s+/g, '_')}.png`;
             link.click();
-
-            // 4) (Opcional) volte a exibir a URL original no modal
-            imgEl.src = item.imagem_url;
         }
 
         // Chamada inicial para carregar a sequência
@@ -1906,7 +1938,8 @@
         });
         void modalInfo.offsetWidth;
         // Ativar listener do botão de exportar
-        document.getElementById('exportCardBtn').addEventListener('click', exportItemAsImage);
+        document.getElementById('exportCardBtn')
+            .addEventListener('click', () => exportItemAsImage(item));
         modalInfo.classList.add('show');
     }
 
