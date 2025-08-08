@@ -1,6 +1,7 @@
 import {
     state, mainContent, mainInfoContent, lineForm, modalInfo, modalPhoto, sequenceModal, lineModal
 } from './constants.js';
+import { exportItemAsImage } from './exportFunctions.js';
 import { initResizeObserver } from './utils.js';
 import {
     extractBaseAndNumber, romanToDecimal, applyFilter, getEpisodeLabel,
@@ -777,15 +778,6 @@ async function showItemDetails(item, navList = null) {
     console.log("URL da imagem:", imageUrl);
 
     let sequenciaInfo = '';
-    if (state.currentNavList.length) {
-        const ids = state.currentNavList.map(i => i.id);
-        const idx = ids.indexOf(item.id);
-        if (idx > 0) {
-            const anterior = state.currentNavList[idx - 1];
-            sequenciaInfo = `Sequência após ${anterior.nome}`;
-        }
-    }
-
     try {
         const seqsRes = await fetch(`/linhas/${item.id}/sequencias`);
         const seqsJson = await seqsRes.json();
@@ -794,12 +786,15 @@ async function showItemDetails(item, navList = null) {
             const detailRes = await fetch(`/sequencias/${seqId}`);
             const detailJson = await detailRes.json();
             const itens = detailJson.itens || [];
-            const ids = itens.map(i => String(i.id));
-            const idx = ids.indexOf(String(item.id));
+            const idx = itens.findIndex(i => String(i.id) === String(item.id));
             if (idx > 0) {
                 const prevName = itens[idx - 1].nome;
-                sequenciaInfo = `Sequência após ${prevName}`;
+                sequenciaInfo = `Sequência após <b>${prevName}</b>`;
+            } else if (idx === 0 && itens.length > 1) {
+                const nextName = itens[1].nome;
+                sequenciaInfo = `Primeira temporada, antes de <b>${nextName}</b>`;
             }
+            // Se for único na sequência, sequenciaInfo fica vazio
         }
     } catch (e) {
         console.warn('Erro ao buscar sequência:', e);
@@ -1473,4 +1468,4 @@ document.addEventListener('showItemDetails', (e) => {
 });
 
 
-export { showListDetails, handleFormSubmit, showItemDetails, showItems };
+export { showListDetails, handleFormSubmit, showItemDetails, showItems, bindSinopseButton };
