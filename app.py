@@ -8,7 +8,8 @@ import json
 from deep_translator import GoogleTranslator
 import traceback
 import time
-import threading
+from flask_caching import Cache
+
 
 app = Flask(__name__)
 
@@ -80,6 +81,12 @@ def get_db_connection():
     conn = sqlite3.connect('list_it.db')
     conn.row_factory = sqlite3.Row
     return conn
+
+# configura cache em memória (pode trocar para Redis, Memcached etc.)
+cache = Cache(app, config={
+    'CACHE_TYPE': 'SimpleCache',
+    'CACHE_DEFAULT_TIMEOUT': 86400 # 1 hora, por exemplo
+})
 
 # ------------------------------ Rotas ------------------------------
 
@@ -443,6 +450,7 @@ def ensure_sinonimos_completos(db_path="list_it.db", verbose=True):
         print(f"\n🏁 Finalizado. Total atualizados: {atualizados}/{total}")
 
 @app.route("/search_details", methods=["GET"])
+@cache.cached(timeout=86400, query_string=True)
 def search_details():
     q = request.args.get("q", "").strip()
     t = request.args.get("type", "anime").lower()
@@ -483,37 +491,69 @@ def search_details():
         "sinonimos": details["sinonimos"]
     })
 
-@app.route("/linhas/<int:linha_id>/details", methods=["PUT"])
-def update_details(linha_id):
-    data = request.get_json()
-    sinopse = data.get("sinopse", "")
-    sinonimos = data.get("sinonimos", [])
+@app.route("/linhas/<int:lista_id>/faltantes", methods=["GET"])
+def listar_faltantes(lista_id):
+    """
+    Retorna só os itens que ainda não têm:
+      • imagem_url não-placeholder,
+      • sinopse preenchida,
+      • e pelo menos 3 sinônimos.
+    """
 
-    with sqlite3.connect("list_it.db") as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE linhas SET sinopse = ?, sinonimos = ? WHERE id = ?",
-            (sinopse, json.dumps(sinonimos, ensure_ascii=False), linha_id)
-        )
-        conn.commit()
+    with sqlite3.connect("list_it.db", timeout=5) as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, nome, conteudo,
+                   COALESCE(imagem_url, '')  AS imagem_url,
+                   COALESCE(sinopse, '')     AS sinopse,
+                   COALESCE(sinonimos, '[]') AS sinonimos_str
+              FROM linhas
+             WHERE lista_id = ?
+        """, (lista_id,))
+        rows = cur.fetchall()
 
-    return jsonify({"status": "ok"})
+    faltantes = []
+    for id_, nome, conteudo, img, sinopse, sinon_str in rows:
+        # 1) parse JSON
+        try:
+            syn = json.loads(sinon_str)
+        except json.JSONDecodeError:
+            syn = []
+
+        # 2) cheque cada condição
+        falta_imagem   = (not img) or "placeholder.com" in img
+        falta_sinopse  = not sinopse.strip()
+        falta_synonyms = len(syn) < 3
+
+        if falta_imagem or falta_sinopse or falta_synonyms:
+            faltantes.append({
+                "id":        id_,
+                "nome":      nome,
+                "conteudo":  conteudo,
+                "imagem_url": img,
+                "sinopse":   sinopse,
+                "sinonimos": syn
+            })
+    return jsonify(faltantes)
 
 @app.route("/linhas/<int:linha_id>/details", methods=["PUT"])
 def update_linha_details(linha_id):
     data = request.get_json()
-    sinonimos = data.get("sinonimos")      # lista de strings
-    sinopse = data.get("sinopse")      # texto
-    if sinonimos is None or sinopse is None:
+    sinopse   = data.get("sinopse")
+    sinonimos = data.get("sinonimos")
+
+    if sinopse is None or sinonimos is None:
         return jsonify({"error": "fields missing"}), 400
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE linhas SET sinonimos = ?, sinopse = ? WHERE id = ?",
-        (json.dumps(sinonimos, ensure_ascii=False), sinopse, linha_id)
-    )
-    conn.commit()
-    conn.close()
+
+    # usa timeout e fecha conexão automaticamente
+    with sqlite3.connect("list_it.db", timeout=10) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE linhas SET sinonimos = ?, sinopse = ? WHERE id = ?",
+            (json.dumps(sinonimos, ensure_ascii=False), sinopse, linha_id)
+        )
+        conn.commit()
+
     return jsonify({"message": "Details updated"}), 200
 
 @app.route("/translate", methods=["POST"])
@@ -617,7 +657,7 @@ def get_linhas(lista_id):
             "imagem_url":    row[8],
             "sinopse":       sinopse,
             "sinonimos":     sinonimos,
-            "needs_details": needs_details   # <<< aqui
+            "needs_details": needs_details
         })
     conn.close()
     print(f"[GET_LINHAS] {len(linhas)} linhas carregadas para lista {lista_id}.")

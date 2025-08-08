@@ -183,6 +183,83 @@
     });
 
     // ---------------------------- GERENCIAMENTO DE LINHAS ----------------------------
+    /**
+     * Corrige um único item:
+     *  - Se faltar imagem, busca e dá PUT /linhas/:id/imagem
+     *  - Se faltar sinopse ou menos de 3 sinônimos, GET /search_details e PUT /linhas/:id/details
+     */
+    async function corrigirItem(item) {
+        const tipo = ["Anime", "Filme"].includes(item.conteudo) ? "anime" : "manga";
+
+        // 1) Primeiro verifica se precisa de imagem
+        if (!item.imagem_url || item.imagem_url.includes("placeholder")) {
+            try {
+                const imgUrl = await fetchImageUrl(item.nome, tipo);
+                if (imgUrl && !imgUrl.includes("placeholder")) {
+                    await fetch(`/linhas/${item.id}/imagem`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ imagem_url: imgUrl })
+                    });
+                    console.log(`🖼️ Imagem salva para ${item.nome}`);
+                    item.imagem_url = imgUrl; // Atualiza localmente
+                }
+            } catch (e) {
+                console.warn(`Erro ao salvar imagem de ${item.nome}:`, e);
+            }
+        }
+
+        // 2) Verifica se precisa de detalhes (sinopse ou sinônimos)
+        const needsDetails = !item.sinopse || !Array.isArray(item.sinonimos) || item.sinonimos.length < 3;
+
+        if (needsDetails) {
+            try {
+                const resp = await fetch(
+                    `/search_details?q=${encodeURIComponent(item.nome)}&type=${tipo}`
+                );
+
+                if (!resp.ok) {
+                    console.warn(`Nenhum detalhe para ${item.nome}: status ${resp.status}`);
+                    return;
+                }
+
+                const det = await resp.json();
+
+                // Só atualiza se vierem dados válidos
+                if (det.sinopse && Array.isArray(det.sinonimos)) {
+                    await fetch(`/linhas/${item.id}/details`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            sinopse: det.sinopse,
+                            sinonimos: det.sinonimos
+                        })
+                    });
+                    console.log(`📘 Detalhes salvos para ${item.nome}`);
+
+                    // Atualiza localmente
+                    item.sinopse = det.sinopse;
+                    item.sinonimos = det.sinonimos;
+                }
+            } catch (e) {
+                console.warn(`Erro ao buscar detalhes de ${item.nome}:`, e);
+            }
+        } else {
+            console.log(`✅ ${item.nome} já possui detalhes completos, pulando`);
+        }
+    }
+
+    /**
+     * Recebe um array de itens e processa um por um, com delay entre eles
+     */
+    async function processarFilaItens(itens) {
+        for (const item of itens) {
+            await corrigirItem(item);
+            // aguarda 800 ms para não estourar rate-limit
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+
     // Função para lidar com o envio do formulário de linha
     document.addEventListener("DOMContentLoaded", () => {
         const refreshButtons = document.querySelectorAll(".refreshImages");
@@ -358,6 +435,7 @@
             return aNumero - bNumero;
         });
 
+
         mainContent.innerHTML = `
             <div class="list-header">
             <h1 class="list-title">${lista.nome}</h1>
@@ -484,6 +562,11 @@
         }
 
         // Adicione os listeners:
+
+        const faltantes = linhas.filter(item => item.needs_details);
+        console.log(`🔍 ${faltantes.length} itens realmente precisam de detalhes`);
+
+        processarFilaItens(faltantes);
         // ...dentro de showListDetails, após definir os listeners:
         function setActiveOrderButton(id) {
             document.querySelectorAll('.order-buttons button').forEach(btn => btn.classList.remove('active'));
@@ -602,97 +685,6 @@
         });
 
         // Após renderizar os itens...
-        document.querySelectorAll('.item-info').forEach(async (element) => {
-            const itemId = element.getAttribute('data-item-id');
-            const item = linhas.find(i => i.id == itemId);
-
-            // Só faz a busca se imagem estiver vazia ou for placeholder
-            if (!item.imagem_url || item.imagem_url.includes("via.placeholder.com")) {
-                let contentType;
-                switch (item.conteudo) {
-                    case "Anime":
-                    case "Filme":
-                        contentType = "anime";
-                        break;
-                    case "Manga":
-                    case "Manhwa":
-                    case "Webtoon":
-                        contentType = "manga";
-                        break;
-                    default:
-                        contentType = "anime";
-                }
-
-                try {
-                    const response = await fetch(`/search_image?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
-                    const data = await response.json();
-                    const imageUrl = data.image_url;
-
-                    // Atualiza imagem no DOM
-                    element.querySelector('.item-image img').src = imageUrl;
-
-                    // ❌ Só salva no banco se NÃO for placeholder
-                    if (!imageUrl.includes("via.placeholder.com")) {
-                        console.log("Salvando imagem no banco:", imageUrl, item.id);
-                        await fetch(`/linhas/${item.id}/imagem`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ imagem_url: imageUrl })
-                        });
-                    }
-
-                } catch (err) {
-                    console.error("Erro ao buscar imagem:", err);
-                }
-            }
-        });
-
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
-        document.querySelectorAll('.item-card').forEach(async element => {
-            const item = linhas.find(i => i.id == element.dataset.itemId);
-
-            // Se faltarem sinopse ou sinônimos, buscar
-            if (!item.needs_details) {
-                let contentType;
-                switch (item.conteudo) {
-                    case "Anime":
-                    case "Filme":
-                        contentType = "anime";
-                        break;
-                    case "Manga":
-                    case "Manhwa":
-                    case "Webtoon":
-                        contentType = "manga";
-                        break;
-                    default:
-                        contentType = "anime";
-                }
-                try {
-                    const resp = await fetch(`/search_details?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
-                    if (resp.ok) {
-                        const det = await resp.json();
-                        await fetch(`/linhas/${item.id}/details`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                sinonimos: det.sinonimos,
-                                sinopse: det.sinopse
-                            })
-                        });
-                        console.log(`🔄 Detalhes atualizados para: ${item.nome}`);
-                    }
-                } catch (err) {
-                    console.error("Erro ao buscar detalhes:", err);
-                }
-
-                // Pausa entre as requisições
-                await sleep(1000);
-            }
-        });
-
 
         document.getElementById('add-line-btn').addEventListener('click', () => {
             formMode = 'add';
@@ -974,61 +966,6 @@
         `).join('');
 
         addItemClickEvent(filteredLinhas);
-
-        document.querySelectorAll('.item-info').forEach(async (element) => {
-            const itemId = element.getAttribute('data-item-id');
-            const item = linhas.find(i => i.id == itemId);
-
-            // Só faz a busca se imagem estiver vazia ou for placeholder
-            if (!item.imagem_url || item.imagem_url.includes("via.placeholder.com")) {
-                let contentType;
-                switch (item.conteudo) {
-                    case "Anime":
-                    case "Filme":
-                        contentType = "anime";
-                        break;
-                    case "Manga":
-                    case "Manhwa":
-                    case "Webtoon":
-                        contentType = "manga";
-                        break;
-                    default:
-                        contentType = "anime";
-                }
-
-                const fetchedUrl = await fetchImageUrl(item.nome, contentType);
-                if (fetchedUrl && !fetchedUrl.includes('via.placeholder.com')) {
-                    await fetch(`/linhas/${item.id}/imagem`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ imagem_url: fetchedUrl })
-                    });
-                    item.imagem_url = fetchedUrl;
-                }
-
-                try {
-                    const response = await fetch(`/search_image?q=${encodeURIComponent(item.nome)}&type=${encodeURIComponent(contentType)}`);
-                    const data = await response.json();
-                    const imageUrl = data.image_url;
-
-                    // Atualiza imagem no DOM
-                    element.querySelector('.item-image img').src = imageUrl;
-
-                    // ❌ Só salva no banco se NÃO for placeholder
-                    if (!imageUrl.includes("via.placeholder.com")) {
-                        console.log("Salvando imagem no banco:", imageUrl, item.id);
-                        await fetch(`/linhas/${item.id}/imagem`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ imagem_url: imageUrl })
-                        });
-                    }
-
-                } catch (err) {
-                    console.error("Erro ao buscar imagem:", err);
-                }
-            }
-        });
     }
 
     // Adicionar evento de clique às linhas usando delegação de eventos
@@ -1055,13 +992,6 @@
             console.error("Erro ao buscar imagem:", error);
             return "https://via.placeholder.com/150";
         }
-    }
-
-    function displayImage(imageUrl) {
-        const imgElement = document.createElement('img');
-        imgElement.src = imageUrl;
-        imgElement.alt = 'Imagem do conteúdo';
-        document.getElementById('image-container').appendChild(imgElement);
     }
 
     function bindSinopseButton(item) {
@@ -1153,14 +1083,13 @@
                 const seqsJson = await seqsRes.json();
                 if (seqsJson.total_sequencias > 0) {
                     const seqId = seqsJson.sequencias[0].id;
-                    // GET /sequencias/:seqId → detalhes, incluindo itens
                     const detailRes = await fetch(`/sequencias/${seqId}`);
                     const detailJson = await detailRes.json();
                     const itens = detailJson.itens || [];
                     const ids = itens.map(i => i.id);
                     const idx = ids.indexOf(item.id);
                     if (idx > 0) {
-                        prevName = itens[idx - 1].nome;
+                        const prevName = itens[idx - 1].nome;
                         sequenciaInfo = `Sequência após ${prevName}`;
                     }
                 }
@@ -1901,7 +1830,13 @@
         });
 
         // Mostrar campo ao clicar no botão de link
-        document.getElementById('deleteLineButton').addEventListener('click', () => deleteLine(item.id));
+        const delBtn = document.getElementById('deleteLineButton');
+        // remove qualquer listener anterior clonando o nó:
+        const fresh = delBtn.cloneNode(true);
+        delBtn.replaceWith(fresh);
+        // registra só **uma** vez
+        fresh.addEventListener('click', () => deleteLine(item.id), { once: true });
+
         document.getElementById('editLineButton').addEventListener('click', () => openEditModal(item));
 
         function fecharModalInfo() {
