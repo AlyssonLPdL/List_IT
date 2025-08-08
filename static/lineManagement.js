@@ -13,6 +13,83 @@ import { updateSelectedTags } from './tagsSystem.js';
 
 
 // ---------------------------- GERENCIAMENTO DE LINHAS ----------------------------
+/**
+     * Corrige um único item:
+     *  - Se faltar imagem, busca e dá PUT /linhas/:id/imagem
+     *  - Se faltar sinopse ou menos de 3 sinônimos, GET /search_details e PUT /linhas/:id/details
+     */
+async function corrigirItem(item) {
+    const tipo = ["Anime", "Filme"].includes(item.conteudo) ? "anime" : "manga";
+
+    // 1) Primeiro verifica se precisa de imagem
+    if (!item.imagem_url || item.imagem_url.includes("placeholder")) {
+        try {
+            const imgUrl = await fetchImageUrl(item.nome, tipo);
+            if (imgUrl && !imgUrl.includes("placeholder")) {
+                await fetch(`/linhas/${item.id}/imagem`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ imagem_url: imgUrl })
+                });
+                console.log(`🖼️ Imagem salva para ${item.nome}`);
+                item.imagem_url = imgUrl; // Atualiza localmente
+            }
+        } catch (e) {
+            console.warn(`Erro ao salvar imagem de ${item.nome}:`, e);
+        }
+    }
+
+    // 2) Verifica se precisa de detalhes (sinopse ou sinônimos)
+    const needsDetails = !item.sinopse || !Array.isArray(item.sinonimos) || item.sinonimos.length < 3;
+
+    if (needsDetails) {
+        try {
+            const resp = await fetch(
+                `/search_details?q=${encodeURIComponent(item.nome)}&type=${tipo}`
+            );
+
+            if (!resp.ok) {
+                console.warn(`Nenhum detalhe para ${item.nome}: status ${resp.status}`);
+                return;
+            }
+
+            const det = await resp.json();
+
+            // Só atualiza se vierem dados válidos
+            if (det.sinopse && Array.isArray(det.sinonimos)) {
+                await fetch(`/linhas/${item.id}/details`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        sinopse: det.sinopse,
+                        sinonimos: det.sinonimos
+                    })
+                });
+                console.log(`📘 Detalhes salvos para ${item.nome}`);
+
+                // Atualiza localmente
+                item.sinopse = det.sinopse;
+                item.sinonimos = det.sinonimos;
+            }
+        } catch (e) {
+            console.warn(`Erro ao buscar detalhes de ${item.nome}:`, e);
+        }
+    } else {
+        console.log(`✅ ${item.nome} já possui detalhes completos, pulando`);
+    }
+}
+
+/**
+ * Recebe um array de itens e processa um por um, com delay entre eles
+ */
+async function processarFilaItens(itens) {
+    for (const item of itens) {
+        await corrigirItem(item);
+        // aguarda 800 ms para não estourar rate-limit
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+}
+
 // Função para exibir detalhes da lista e suas linhas
 async function showListDetails(lista) {
     state.currentList = lista;
@@ -165,83 +242,6 @@ async function showListDetails(lista) {
 
     const faltantes = linhas.filter(item => item.needs_details);
     console.log(`🔍 ${faltantes.length} itens realmente precisam de detalhes`);
-
-    /**
-     * Corrige um único item:
-     *  - Se faltar imagem, busca e dá PUT /linhas/:id/imagem
-     *  - Se faltar sinopse ou menos de 3 sinônimos, GET /search_details e PUT /linhas/:id/details
-     */
-    async function corrigirItem(item) {
-        const tipo = ["Anime", "Filme"].includes(item.conteudo) ? "anime" : "manga";
-
-        // 1) Primeiro verifica se precisa de imagem
-        if (!item.imagem_url || item.imagem_url.includes("placeholder")) {
-            try {
-                const imgUrl = await fetchImageUrl(item.nome, tipo);
-                if (imgUrl && !imgUrl.includes("placeholder")) {
-                    await fetch(`/linhas/${item.id}/imagem`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ imagem_url: imgUrl })
-                    });
-                    console.log(`🖼️ Imagem salva para ${item.nome}`);
-                    item.imagem_url = imgUrl; // Atualiza localmente
-                }
-            } catch (e) {
-                console.warn(`Erro ao salvar imagem de ${item.nome}:`, e);
-            }
-        }
-
-        // 2) Verifica se precisa de detalhes (sinopse ou sinônimos)
-        const needsDetails = !item.sinopse || !Array.isArray(item.sinonimos) || item.sinonimos.length < 3;
-
-        if (needsDetails) {
-            try {
-                const resp = await fetch(
-                    `/search_details?q=${encodeURIComponent(item.nome)}&type=${tipo}`
-                );
-
-                if (!resp.ok) {
-                    console.warn(`Nenhum detalhe para ${item.nome}: status ${resp.status}`);
-                    return;
-                }
-
-                const det = await resp.json();
-
-                // Só atualiza se vierem dados válidos
-                if (det.sinopse && Array.isArray(det.sinonimos)) {
-                    await fetch(`/linhas/${item.id}/details`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            sinopse: det.sinopse,
-                            sinonimos: det.sinonimos
-                        })
-                    });
-                    console.log(`📘 Detalhes salvos para ${item.nome}`);
-
-                    // Atualiza localmente
-                    item.sinopse = det.sinopse;
-                    item.sinonimos = det.sinonimos;
-                }
-            } catch (e) {
-                console.warn(`Erro ao buscar detalhes de ${item.nome}:`, e);
-            }
-        } else {
-            console.log(`✅ ${item.nome} já possui detalhes completos, pulando`);
-        }
-    }
-
-    /**
-     * Recebe um array de itens e processa um por um, com delay entre eles
-     */
-    async function processarFilaItens(itens) {
-        for (const item of itens) {
-            await corrigirItem(item);
-            // aguarda 800 ms para não estourar rate-limit
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-    }
 
     // ...dentro de showListDetails, após definir os listeners:
     function setActiveOrderButton(id) {
@@ -560,7 +560,7 @@ function filterItems(linhas, selected) {
                 }
             }
 
-            const sinonimoMatch = sinonomos.some(s =>
+            const sinonimoMatch = sinonimos.some(s =>
                 typeof s === 'string' && s.toLowerCase().includes(nameFilter)
             );
 
