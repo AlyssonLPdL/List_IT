@@ -1168,7 +1168,11 @@ async function showItemDetails(item, navList = null) {
     }
     setupSequenceActionButtons();
 
-    document.getElementById('modalImage').addEventListener('click', async () => {
+    const oldImg = document.getElementById('modalImage');
+    const newImg = oldImg.cloneNode(true);
+    oldImg.parentNode.replaceChild(newImg, oldImg);
+
+    newImg.addEventListener('click', async () => {
         const currentUrl = document.getElementById('modalImage').src;
         const nomes = item.nome;
         const tipo = contentType;
