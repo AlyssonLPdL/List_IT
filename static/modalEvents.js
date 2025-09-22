@@ -1,5 +1,5 @@
 import { modal, lineModal, state, createListBtn, closeModal, closeLineModal } from './constants.js';
-
+import { updateSelectedTags } from './tagsSystem.js';
 
 // ---------------------------- MODAL EVENTS ----------------------------
 function initModalEvents() {

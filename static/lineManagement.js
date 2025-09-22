@@ -372,7 +372,6 @@ async function showListDetails(lista) {
         initResizeObserver();
     });
 
-    // ...existing code...
     // Abertura/Fechamento do modal (mantido igual)
     const exportModal = document.getElementById('export-modal');
     document.getElementById('export-btn').addEventListener('click', () => {
@@ -408,41 +407,10 @@ async function showListDetails(lista) {
             status: document.getElementById('opt-status').checked,
             sinopse: document.getElementById('opt-sinopse').checked,
             conteudo: document.getElementById('opt-conteudo').checked,
+            image: document.getElementById('opt-image').checked
         };
 
-        const allItens = window.__linhasAtuais || [];
-        const selected = window.__ultimoFiltroSelecionado || {
-            status: { include: new Set(), exclude: new Set() },
-            conteudo: { include: new Set(), exclude: new Set() },
-            opiniao: { include: new Set(), exclude: new Set() },
-            tags: { include: new Set(), exclude: new Set() }
-        };
-
-        const showPutariaManhwa = document.getElementById('toggle-censure').checked;
-        const filtered = allItens.filter(item => {
-            const isPutaria = getClasseExtra(item) === "Putaria";
-            const isManhwa = (item.conteudo || "").trim().toLowerCase() === "manhwa";
-            if (!showPutariaManhwa && isPutaria && isManhwa) return false;
-
-            const nameFilter = document.getElementById('search-name').value.toLowerCase().trim();
-            if (nameFilter && !item.nome.toLowerCase().includes(nameFilter)) return false;
-
-            for (let type of ['status', 'conteudo', 'opiniao']) {
-                const val = item[type];
-                const { include, exclude } = selected[type];
-                if (exclude.size && exclude.has(val)) return false;
-                if (include.size && !include.has(val)) return false;
-            }
-
-            const itemTags = item.tags ? item.tags.split(',').map(t => t.trim()) : [];
-            for (let bad of selected.tags.exclude) if (itemTags.includes(bad)) return false;
-            if (selected.tags.include.size) {
-                const allIncluded = [...selected.tags.include].every(tag => itemTags.includes(tag));
-                if (!allIncluded) return false;
-            }
-
-            return true;
-        });
+        const filtered = window.__itensVisiveis || [];
 
         const total = filtered.length;
         let current = 0;
@@ -480,6 +448,7 @@ async function showListDetails(lista) {
         if (opts.status) headerKeys.push('Status');
         if (opts.sinopse) headerKeys.push('Sinopse');
         if (opts.conteudo) headerKeys.push('Conteudo');
+        if (opts.image) headerKeys.push('Imagem');
 
         worksheet.columns = headerKeys.map(key => ({ header: key, key, width: 20 }));
 
@@ -501,6 +470,7 @@ async function showListDetails(lista) {
                 if (opts.status) rowData.Status = item.status;
                 if (opts.sinopse) rowData.Sinopse = sinopseText;
                 if (opts.conteudo) rowData.Conteudo = item.conteudo;
+                if (opts.image) rowData.Imagem = item.imagem_url || '';
 
                 const excelRow = worksheet.addRow(rowData);
 
@@ -560,7 +530,7 @@ function filterItems(linhas, selected) {
                 }
             }
 
-            const sinonimoMatch = sinonimos.some(s =>
+            const sinonimoMatch = sinonomos.some(s =>
                 typeof s === 'string' && s.toLowerCase().includes(nameFilter)
             );
 
@@ -599,7 +569,7 @@ function filterItems(linhas, selected) {
         return true;
     });
 
-    window.__ultimaChamadaLinhas = filtered;
+    window.__itensVisiveis = filtered;
     showItems(filtered);
 }
 
@@ -1189,34 +1159,33 @@ async function showItemDetails(item, navList = null) {
                     urls.push(url);
                 }
             }
-
+        } finally {
             loader.style.display = 'none';
+        }
 
-            if (urls.length === 0) {
-                return alert("Não foi possível encontrar alternativas melhores.");
-            }
-
-            let selector = document.querySelector('.image-selector-modal');
-            if (!selector) {
-                selector = document.createElement('div');
-                selector.className = 'image-selector-modal';
-                selector.innerHTML = `
-                    <div class="image-selector-content">
-                        <span class="image-selector-close">&times;</span>
-                        <h3>Escolha uma nova capa:</h3>
-                        <div class="image-list"></div>
-                        <div id="customImageInputContainer" style="margin-top: 10px; text-align: center;">
-                            <input type="text" id="customImageUrl" placeholder="Cole o link da imagem aqui..." style="padding: 6px; width: 80%; border-radius: 6px; border: 1px solid #ccc;">
-                            <button id="submitCustomImage" style="padding: 6px 12px; border-radius: 8px; background: orange; color: white; border: none; cursor: pointer; margin-top: 10px;">
-                                <i class="fas fa-link"></i> Atualizar por Link
-                            </button>
-                        </div>
+        // Sempre cria/abre o modal, mesmo que urls.length === 0
+        let selector = document.querySelector('.image-selector-modal');
+        if (!selector) {
+            selector = document.createElement('div');
+            selector.className = 'image-selector-modal';
+            selector.innerHTML = `
+                <div class="image-selector-content">
+                    <span class="image-selector-close">&times;</span>
+                    <h3>Escolha uma nova capa:</h3>
+                    <div class="image-list"></div>
+                    <div id="customImageInputContainer" style="margin-top: 10px; text-align: center;">
+                        <input type="text" id="customImageUrl" placeholder="Cole o link da imagem aqui..." style="padding: 6px; width: 80%; border-radius: 6px; border: 1px solid #ccc;">
+                        <button id="submitCustomImage" style="padding: 6px 12px; border-radius: 8px; background: orange; color: white; border: none; cursor: pointer; margin-top: 10px;">
+                            <i class="fas fa-link"></i> Atualizar por Link
+                        </button>
                     </div>
-                `;
-                document.body.appendChild(selector);
-            }
-            const listDiv = selector.querySelector('.image-list');
-            listDiv.innerHTML = '';
+                </div>
+            `;
+            document.body.appendChild(selector);
+        }
+        const listDiv = selector.querySelector('.image-list');
+        listDiv.innerHTML = '';
+        if (urls.length > 0) {
             urls.forEach(url => {
                 const img = document.createElement('img');
                 img.src = url;
@@ -1233,42 +1202,40 @@ async function showItemDetails(item, navList = null) {
                 });
                 listDiv.appendChild(img);
             });
-
-            // Atualizar por link customizado dentro do seletor
-            selector.querySelector('#submitCustomImage').addEventListener('click', async () => {
-                const newUrl = selector.querySelector('#customImageUrl').value.trim();
-                if (newUrl) {
-                    const resp = await fetch('/update_image_url', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: item.id, new_url: newUrl })
-                    });
-                    if (resp.ok) {
-                        item.imagem_url = newUrl; // Atualiza o objeto em memória
-                        document.getElementById('modalImage').src = newUrl;
-                        document.body.removeChild(selector);
-                        alert("Imagem atualizada!");
-                    } else {
-                        alert("Erro ao atualizar imagem!");
-                    }
-                }
-            });
-
-            // Fechar o modal se clicar no "×" ou fora do conteúdo
-            selector.querySelector('.image-selector-close').addEventListener('click', () => {
-                document.body.removeChild(selector);
-            });
-            selector.addEventListener('click', e => {
-                if (e.target === selector) {
-                    document.body.removeChild(selector);
-                }
-            });
-
-        } catch (error) {
-            loader.style.display = 'none';
-            alert('Erro ao buscar imagens. Tente novamente.');
-            console.error(error);
+        } else {
+            // Se não achou nenhuma, mostra só o campo de link
+            listDiv.innerHTML = `<div style="color:#888; margin:20px 0;">Nenhuma alternativa encontrada.<br>Insira um link manual abaixo.</div>`;
         }
+
+        // Atualizar por link customizado dentro do seletor
+        selector.querySelector('#submitCustomImage').addEventListener('click', async () => {
+            const newUrl = selector.querySelector('#customImageUrl').value.trim();
+            if (newUrl) {
+                const resp = await fetch('/update_image_url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: item.id, new_url: newUrl })
+                });
+                if (resp.ok) {
+                    item.imagem_url = newUrl; // Atualiza o objeto em memória
+                    document.getElementById('modalImage').src = newUrl;
+                    document.body.removeChild(selector);
+                    alert("Imagem atualizada!");
+                } else {
+                    alert("Erro ao atualizar imagem!");
+                }
+            }
+        });
+
+        // Fechar o modal se clicar no "×" ou fora do conteúdo
+        selector.querySelector('.image-selector-close').addEventListener('click', () => {
+            document.body.removeChild(selector);
+        });
+        selector.addEventListener('click', e => {
+            if (e.target === selector) {
+                document.body.removeChild(selector);
+            }
+        });
     });
 
     // Mostrar campo ao clicar no botão de link
