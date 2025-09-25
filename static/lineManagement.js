@@ -530,7 +530,7 @@ function filterItems(linhas, selected) {
                 }
             }
 
-            const sinonimoMatch = sinonomos.some(s =>
+            const sinonimoMatch = sinonimos.some(s =>
                 typeof s === 'string' && s.toLowerCase().includes(nameFilter)
             );
 
@@ -770,6 +770,44 @@ async function showItemDetails(item, navList = null) {
         console.warn('Erro ao buscar sequência:', e);
     }
 
+    // --- normaliza e cria HTML seguro para os sinônimos ---
+    function escapeHtml(unsafe) {
+        return String(unsafe).replace(/[&<>"']/g, function (m) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+        });
+    }
+
+    let synonymsHtml = '';
+
+    if (Array.isArray(item.sinonimos)) {
+        synonymsHtml = item.sinonimos
+            .map(s => `<span class="synonym-tag">${escapeHtml(String(s).trim())}</span>`)
+            .join(' ');
+    } else if (typeof item.sinonimos === 'string' && item.sinonimos.trim()) {
+        const raw = item.sinonimos.trim();
+        // tenta parse JSON: '["a","b"]'
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                synonymsHtml = parsed
+                    .map(s => `<span class="synonym-tag">${escapeHtml(String(s).trim())}</span>`)
+                    .join(' ');
+            } else {
+                // se parseou, mas não é array, usa o raw como fallback
+                synonymsHtml = escapeHtml(String(parsed));
+            }
+        } catch (e) {
+            // fallback: pode ser "a, b, c" ou "a; b"
+            const parts = raw.split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+            if (parts.length > 0) {
+                synonymsHtml = parts.map(s => `<span class="synonym-tag">${escapeHtml(s)}</span>`).join(' ');
+            } else {
+                // se nada funcionou, mostrar o texto cru (já escapado)
+                synonymsHtml = `<span class="synonym-tag">${escapeHtml(raw.replace(/^["'\[]+|["'\]]+$/g, ''))}</span>`;
+            }
+        }
+    }
+
     mainInfoContent.innerHTML = `
             <div id="info-div-box">
                 <fieldset>
@@ -862,10 +900,7 @@ async function showItemDetails(item, navList = null) {
                     
                     <!-- Sinônimos adicionados aqui -->
                     <div class="synonyms-container" style="margin-top: 8px;">
-                        ${Array.isArray(item.sinonimos) ?
-            item.sinonimos.map(s => `<span class="synonym-tag">${s}</span>`).join('') :
-            (item.sinonimos || '')
-        }
+                        ${synonymsHtml || ''}
                     </div>
                     
                     <div class="gold-border"></div>

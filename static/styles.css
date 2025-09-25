@@ -624,7 +624,7 @@ input:checked + .slider:before {
   justify-content: center;
 }
 .item-card-image {
-  height: 200px;
+  height: 230px;
   width: 100%;
   display: flex;
   align-items: center;
@@ -649,7 +649,6 @@ input:checked + .slider:before {
 }
 .item-card-image img {
   height: 100%;
-  max-width: 150px;
   object-fit: cover;
   border-radius: 8px;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
