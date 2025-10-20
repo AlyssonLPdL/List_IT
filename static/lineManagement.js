@@ -738,6 +738,7 @@ async function showItemDetails(item, navList = null) {
         case "Manga":
         case "Manhwa":
         case "Webtoon":
+        case "Novel":
             contentType = "manga";
             break;
         default:

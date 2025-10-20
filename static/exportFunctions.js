@@ -16,6 +16,7 @@ async function exportItemAsImage(item) {
                 case "Manga":
                 case "Manhwa":
                 case "Webtoon":
+                case "Novel":
                     contentType = "manga";
                     break;
                 default:

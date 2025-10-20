@@ -247,7 +247,7 @@ html {
   background: var(--color-card-bg);
   border-radius: 10px;
   position: relative;
-  top: 395px;
+  top: 35%;
 }
 
 .tagsEspeciais p {

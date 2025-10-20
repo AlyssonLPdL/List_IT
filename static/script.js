@@ -95,7 +95,7 @@
         if (ct === 'filme') {
             return 'Filmes';
         }
-        if (['manga', 'manhwa', 'webtoon'].includes(ct)) {
+        if (['manga', 'manhwa', 'webtoon', 'novel'].includes(ct)) {
             return 'Capítulos';
         }
         // padrão para anime, série, etc.
@@ -1132,6 +1132,7 @@
             case "Manga":
             case "Manhwa":
             case "Webtoon":
+            case "Novel":
                 contentType = "manga";
                 break;
             default:
@@ -1686,6 +1687,7 @@
                     case "Manga":
                     case "Manhwa":
                     case "Webtoon":
+                    case "Novel":
                         contentType = "manga";
                         break;
                     default:

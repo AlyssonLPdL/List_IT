@@ -56,7 +56,7 @@ function applyFilter(linhas) {
 function getEpisodeLabel(contentType) {
     const ct = contentType.toLowerCase();
     if (ct === 'filme') return 'Filmes';
-    if (['manga', 'manhwa', 'webtoon'].includes(ct)) return 'Capítulos';
+    if (['manga', 'manhwa', 'webtoon', 'novel'].includes(ct)) return 'Capítulos';
     return 'Episódio';
 }
 
