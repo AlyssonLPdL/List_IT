@@ -312,34 +312,40 @@ async function showListDetails(lista) {
 
     // 4) Seleções e filtro
     const selected = {
-        status: { include: new Set(), exclude: new Set() },
-        conteudo: { include: new Set(), exclude: new Set() },
-        opiniao: { include: new Set(), exclude: new Set() },
-        tags: { include: new Set(), exclude: new Set() }
+        status: { include: new Set(), exclude: new Set(), flexible: new Set() },
+        conteudo: { include: new Set(), exclude: new Set(), flexible: new Set() },
+        opiniao: { include: new Set(), exclude: new Set(), flexible: new Set() },
+        tags: { include: new Set(), exclude: new Set(), flexible: new Set() }
     };
 
     panel.addEventListener('click', e => {
         if (!e.target.classList.contains('filter-option')) return;
+
         const type = e.target.closest('.filter-section').dataset.type;
         const value = e.target.dataset.value;
         const sel = selected[type];
 
-        if (!sel.include.has(value) && !sel.exclude.has(value)) {
-            // 1º clique: marca como INCLUDE
+        // Ciclo de 4 estados: neutro → include → exclude → flexible → neutro
+        if (sel.include.has(value)) {
+            // Estado atual: INCLUDE → muda para EXCLUDE
+            sel.include.delete(value);
+            sel.exclude.add(value);
+            e.target.classList.remove('included');
+            e.target.classList.add('excluded');
+        } else if (sel.exclude.has(value)) {
+            // Estado atual: EXCLUDE → muda para FLEXIBLE
+            sel.exclude.delete(value);
+            sel.flexible.add(value);
+            e.target.classList.remove('excluded');
+            e.target.classList.add('flexible');
+        } else if (sel.flexible.has(value)) {
+            // Estado atual: FLEXIBLE → muda para NEUTRO
+            sel.flexible.delete(value);
+            e.target.classList.remove('flexible');
+        } else {
+            // Estado atual: NEUTRO → muda para INCLUDE
             sel.include.add(value);
             e.target.classList.add('included');
-        }
-        else if (sel.include.has(value)) {
-            // 2º clique: remove INCLUDE, marca EXCLUDE
-            sel.include.delete(value);
-            e.target.classList.remove('included');
-            sel.exclude.add(value);
-            e.target.classList.add('excluded');
-        }
-        else {
-            // 3º clique: remove EXCLUDE
-            sel.exclude.delete(value);
-            e.target.classList.remove('excluded');
         }
 
         filterItems(linhas, selected);
@@ -360,7 +366,7 @@ async function showListDetails(lista) {
         showItems(filteredLinhas);
     });
 
-    // Após renderizar os itens...
+    const filterToggle = document.getElementById('filter-toggle');
 
     document.getElementById('add-line-btn').addEventListener('click', () => {
         state.formMode = 'add';
@@ -410,7 +416,17 @@ async function showListDetails(lista) {
             image: document.getElementById('opt-image').checked
         };
 
-        const filtered = window.__itensVisiveis || [];
+        // fallback: usa itens visíveis se existirem, senão usa todas as linhas carregadas
+        const filtered = (window.__itensVisiveis && window.__itensVisiveis.length > 0)
+            ? window.__itensVisiveis
+            : (linhas && linhas.length > 0 ? sortLines(linhas, currentOrder) : []);
+
+        if (!filtered || filtered.length === 0) {
+            alert('Nada para exportar.');
+            loaderModal.classList.remove('show');
+            loaderModal.classList.add('hidden');
+            return;
+        }
 
         const total = filtered.length;
         let current = 0;
@@ -424,15 +440,14 @@ async function showListDetails(lista) {
             const g = Math.floor(Math.random() * 200);
             const b = Math.floor(Math.random() * 200);
             const hex = [r, g, b].map(n => n.toString(16).padStart(2, '0')).join('').toUpperCase();
-            const color = hex; // ou `${hex}AA` se quiser transparência (ARGB)
-            if (usedColors.has(color)) return getRandomColor(); // evita repetição direta
-            usedColors.add(color);
-            return color;
+            if (usedColors.has(hex)) return getRandomColor(); // evita repetição direta
+            usedColors.add(hex);
+            return hex;
         }
 
         // Gera cor única por item.id
         for (let item of filtered) {
-            colorMap[item.id] = getRandomColor();
+            colorMap[item.id] = getRandomColor(); // ex: "AABBCC"
         }
 
         const workbook = new ExcelJS.Workbook();
@@ -455,7 +470,8 @@ async function showListDetails(lista) {
         for (let item of filtered) {
             let sinopseText = item.sinopse || '';
             const tags = item.tags ? item.tags.split(',').map(t => t.trim()) : [''];
-            const bgColor = colorMap[item.id];
+            const hex = colorMap[item.id]; // "AABBCC"
+            const argb = `FF${hex}`; // ExcelJS espera ARGB de 8 chars
 
             for (let tag of tags) {
                 const rowData = {};
@@ -474,12 +490,12 @@ async function showListDetails(lista) {
 
                 const excelRow = worksheet.addRow(rowData);
 
-                // Aplica cor no fundo das células
+                // Aplica cor no fundo das células (usar argb com 8 chars)
                 excelRow.eachCell((cell) => {
                     cell.fill = {
                         type: 'pattern',
                         pattern: 'solid',
-                        fgColor: { argb: bgColor }
+                        fgColor: { argb: argb }
                     };
                 });
             }
@@ -499,6 +515,7 @@ async function showListDetails(lista) {
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
+        progressBar.value = 100;
         loaderModal.classList.remove('show');
         loaderModal.classList.add('hidden');
     });
@@ -510,15 +527,12 @@ async function showListDetails(lista) {
 }
 
 function filterItems(linhas, selected) {
-    const nameFilter = document.getElementById('search-name').value
-        .toLowerCase().trim();
+    const nameFilter = document.getElementById('search-name').value.toLowerCase().trim();
 
     const filtered = linhas.filter(item => {
-        // 1) filtro por nome OU sinônimo
+        // 1) Filtro por nome OU sinônimo
         if (nameFilter) {
             const nomeMatch = item.nome.toLowerCase().includes(nameFilter);
-
-            // Trata sinônimos como array, ou faz parse se for string JSON
             let sinonimos = [];
             if (Array.isArray(item.sinonimos)) {
                 sinonimos = item.sinonimos;
@@ -529,41 +543,59 @@ function filterItems(linhas, selected) {
                     sinonimos = [];
                 }
             }
-
             const sinonimoMatch = sinonimos.some(s =>
                 typeof s === 'string' && s.toLowerCase().includes(nameFilter)
             );
-
-            if (!nomeMatch && !sinonimoMatch)
-                return false;
+            if (!nomeMatch && !sinonimoMatch) return false;
         }
 
-        // 2) para cada tipo, aplicamos primeiro EXCLUDES, depois INCLUDES
+        // 2) Para cada tipo, aplicamos a nova lógica com modo flexível
         for (let type of ['status', 'conteudo', 'opiniao']) {
             const val = item[type];
-            const { include, exclude } = selected[type];
+            const sel = selected[type];
 
-            if (exclude.size > 0 && exclude.has(val))
-                return false;
-            if (include.size > 0 && !include.has(val))
-                return false;
+            // Verifica se sel existe e tem as propriedades necessárias
+            if (!sel) continue;
+
+            const { include, exclude, flexible } = sel;
+
+            // Exclude tem prioridade máxima
+            if (exclude && exclude.size > 0 && exclude.has(val)) return false;
+
+            // Lógica do modo flexível (OU)
+            if (flexible && flexible.size > 0) {
+                // Se há filtros flexíveis, o item deve ter PELO MENOS UM deles
+                if (!flexible.has(val)) return false;
+            } else if (include && include.size > 0) {
+                // Modo normal (E) - deve ter TODOS os includes
+                if (!include.has(val)) return false;
+            }
         }
 
-        // 3) tags: múltiplas por item
-        const itemTags = item.tags
-            ? item.tags.split(',').map(t => t.trim())
-            : [];
+        // 3) tags: múltiplas por item - lógica similar
+        const itemTags = item.tags ? item.tags.split(',').map(t => t.trim()) : [];
+        const selTags = selected.tags;
 
-        // a) excluir tags indesejadas
-        for (let bad of selected.tags.exclude) {
-            if (itemTags.includes(bad))
-                return false;
-        }
+        if (selTags) {
+            const { include, exclude, flexible } = selTags;
 
-        // b) incluir pelo menos todas as tags desejadas
-        if (selected.tags.include.size > 0) {
-            const allIncluded = [...selected.tags.include].every(tag => itemTags.includes(tag));
-            if (!allIncluded) return false;
+            // a) excluir tags indesejadas (prioridade máxima)
+            if (exclude) {
+                for (let bad of exclude) {
+                    if (itemTags.includes(bad)) return false;
+                }
+            }
+
+            // b) lógica do modo flexível para tags (OU)
+            if (flexible && flexible.size > 0) {
+                // Deve ter PELO MENOS UMA das tags flexíveis
+                const hasFlexibleTag = [...flexible].some(tag => itemTags.includes(tag));
+                if (!hasFlexibleTag) return false;
+            } else if (include && include.size > 0) {
+                // Modo normal (E) - deve ter TODAS as tags include
+                const allIncluded = [...include].every(tag => itemTags.includes(tag));
+                if (!allIncluded) return false;
+            }
         }
 
         return true;
@@ -874,6 +906,23 @@ async function showItemDetails(item, navList = null) {
                 ">
                     <i class="fas fa-book-open"></i> Ver Sinopse
                 </button>
+
+                <!-- Botão para abrir sinônimos (novo) -->
+                <button id="showSynonymsBtn" style="
+                    position: absolute;
+                    bottom: -40px;
+                    left: -440px;
+                    padding: 8px 15px;
+                    background: #6c8ef0;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    z-index: 10;
+                    width: 140px;
+                ">
+                    <i class="fas fa-tags"></i> Ver Sinônimos
+                </button>
             </div>
         `;
     setTimeout(() => {
@@ -892,6 +941,97 @@ async function showItemDetails(item, navList = null) {
 
     await refreshSequenceDisplay(item.id);
 
+    function bindSynonymsButton(item) {
+        const btn = document.getElementById('showSynonymsBtn');
+        if (!btn) return;
+
+        // Remove todos os listeners antigos clonando o nó
+        const freshBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(freshBtn, btn);
+
+        freshBtn.addEventListener('click', () => {
+            // Cria o modal
+            const synonymsModal = document.createElement('div');
+            synonymsModal.id = 'synonyms-modal';
+            synonymsModal.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            background: var(--color-card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.3);
+            z-index: 10000;
+            overflow-y: auto;
+        `;
+
+            // Prepara o conteúdo dos sinônimos
+            let synonymsContent = 'Nenhum sinônimo disponível';
+            if (Array.isArray(item.sinonimos) && item.sinonimos.length > 0) {
+                synonymsContent = item.sinonimos.map(syn => `
+                <div class="synonym-item" style="
+                    padding: 10px;
+                    margin: 5px 0;
+                    background: rgba(0,0,0,0.1);
+                    border-radius: 5px;
+                    cursor: pointer;
+                    border: 1px solid #ddd;
+                    transition: background 0.2s;
+                ">${syn}</div>
+            `).join('');
+            }
+
+            synonymsModal.innerHTML = `
+            <h3 style="margin-top: 0;">Sinônimos de ${item.nome}</h3>
+            <div id="synonyms-list" style="max-height: 300px; overflow-y: auto;">
+                ${synonymsContent}
+            </div>
+            <button id="closeSynonyms" style="
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                cursor: pointer;
+                color: #ccc;
+            ">&times;</button>
+        `;
+
+            document.body.appendChild(synonymsModal);
+
+            // Adiciona funcionalidade de copiar ao clicar em um sinônimo
+            const synonymItems = synonymsModal.querySelectorAll('.synonym-item');
+            synonymItems.forEach(synonym => {
+                synonym.addEventListener('click', () => {
+                    const textToCopy = synonym.textContent;
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        // Feedback visual
+                        synonym.style.background = '#4CAF50';
+                        synonym.style.color = 'white';
+                        setTimeout(() => {
+                            synonym.style.background = '';
+                            synonym.style.color = '';
+                        }, 500);
+                    });
+                });
+            });
+
+            // Delegação: fecha se clicar no botão OU fora do conteúdo
+            synonymsModal.addEventListener('click', (e) => {
+                if (
+                    e.target === synonymsModal || // clicou fora
+                    (e.target.id === 'closeSynonyms') // clicou no botão
+                ) {
+                    document.body.removeChild(synonymsModal);
+                }
+            });
+        });
+    }
     // Dentro de showItemDetails, após renderizar o modal:
     exportCard.innerHTML = `
             <div class="card-container">
@@ -1110,6 +1250,7 @@ async function showItemDetails(item, navList = null) {
     modalPhoto.style.height = `${mainInfoContent.offsetHeight}px`;
     sequenceModal.style.height = `${mainInfoContent.offsetHeight}px`;
     bindSinopseButton(item);
+    bindSynonymsButton(item);
     // Setup do botão de sequência e painel de ações
     function setupSequenceActionButtons() {
         const mainBtn = document.getElementById('mainSequenceBtn');
@@ -1414,7 +1555,7 @@ async function createNewLine() {
         conteudo: document.getElementById('line-content').value,
         status: document.getElementById('line-status').value,
         episodio: document.getElementById('line-episode').value,
-        opiniao: document.getElementById('line-opinion').value
+        opiniao: document.getElementById('line-opiniao').value
     };
 
     try {

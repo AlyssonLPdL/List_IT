@@ -1298,6 +1298,14 @@ h4 {
   background: rgb(145 205 118 / 70%);
   color: #0a6700;
   border-color: #0a6700;
+  box-shadow: 0 0 10px rgba(7, 255, 11, 0.5);
+}
+/* Adicione isso no seu CSS existente */
+.filter-option.flexible {
+    background-color: #ffeb3b !important;
+    color: #000 !important;
+    border: 2px solid #ffc107 !important;
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
 }
 
 .filter-option.excluded {
@@ -1305,7 +1313,9 @@ h4 {
   color: #570010;
   border-color: #570010;
   border-style: dashed;
+  box-shadow: 0 0 10px rgba(255, 32, 7, 0.5);
 }
+
 .active {
   background: var(--color-status-green);
 }
