@@ -10,7 +10,7 @@ import {
 import { showHighlights } from './highlights.js';
 import { getSequenceButtons, refreshSequenceDisplay, showAddToSequenceModal } from './sequenceManagement.js';
 import { updateSelectedTags } from './tagsSystem.js';
-
+import { generateTemplateHTML, showTemplatePreview } from './exportFunctions.js';
 
 // ---------------------------- GERENCIAMENTO DE LINHAS ----------------------------
 /**
@@ -734,6 +734,26 @@ async function showItemDetails(item, navList = null) {
     state.allIds = state.currentNavList.map(i => i.id);
     state.currentIdx = state.allIds.indexOf(item.id);
 
+    if (item && item.sinonimos) {
+        if (Array.isArray(item.sinonimos)) {
+            // ok
+        } else if (typeof item.sinonimos === 'string') {
+            const raw = item.sinonimos.trim();
+            try {
+                const parsed = JSON.parse(raw);
+                item.sinonimos = Array.isArray(parsed) ? parsed : [String(parsed)];
+            } catch (e) {
+                // fallback: separar por vírgula/; ou | e limpar espaços
+                item.sinonimos = raw.split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+            }
+        } else {
+            // qualquer outro tipo -> transformar em string única
+            item.sinonimos = [String(item.sinonimos)];
+        }
+    } else {
+        item.sinonimos = [];
+    }
+
     // Pegamos o nome do item anterior, se existir
 
     // Criar container de export no início de showItemDetails:
@@ -741,21 +761,17 @@ async function showItemDetails(item, navList = null) {
     if (!exportCard) {
         exportCard = document.createElement('div');
         exportCard.id = 'export-card';
-        // estilos principais
+        // Remove estilos fixos que interferem no template
         Object.assign(exportCard.style, {
-            width: '600px',
-            background: 'linear-gradient(180deg, rgb(6, 18, 67), rgb(42, 77, 142), rgb(0, 85, 185))',
-            overflow: 'hidden',
-            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
-            fontFamily: "'Segoe UI', 'Helvetica Neue', sans-serif",
-            padding: '20px',
-            boxSizing: 'border-box',
-            position: 'absolute',
-            top: '-9999px',
-            left: '-9999px',
-            opacity: '1',
-            PointerEvents: 'none',
-            zIndex: -1
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '420px',
+            height: '490px',
+            opacity: '0',             // invisível visualmente, mas renderizável
+            pointerEvents: 'none',
+            zIndex: 9999,
+            background: 'transparent'
         });
         document.body.appendChild(exportCard);
     }
@@ -874,7 +890,7 @@ async function showItemDetails(item, navList = null) {
                             ${await getSequenceButtons(item.id)}
                         </div>
                     </div>
-                    <button id="exportCardBtn" style="padding:6px 8px; font-size: 20px; border:none; background:#007bff; color:white; border-radius:4px; cursor:pointer;">
+                    <button id="previewTemplateBtn" style="padding:6px 8px; font-size: 20px; border:none; background:#17a2b8; color:white; border-radius:4px; cursor:pointer;">
                         <i class="fas fa-image"></i>
                     </button>
                     <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
@@ -883,6 +899,12 @@ async function showItemDetails(item, navList = null) {
         `;
 
     const hasSequence = await checkIfItemHasSequence(item.id);
+
+    const previewBtn = document.getElementById('previewTemplateBtn');
+    previewBtn.replaceWith(previewBtn.cloneNode(true));
+    document.getElementById('previewTemplateBtn').addEventListener('click', () => {
+        showTemplatePreview(item);
+    });
 
     modalPhoto.innerHTML = `
             <div class="modal-photo-container">
@@ -1032,214 +1054,27 @@ async function showItemDetails(item, navList = null) {
             });
         });
     }
-    // Dentro de showItemDetails, após renderizar o modal:
-    exportCard.innerHTML = `
-            <div class="card-container">
-                <div class="card-header">
-                    <div class="gold-border"></div>
-                    <h1 class="card-title">${item.nome}</h1>
-                    
-                    <!-- Sinônimos adicionados aqui -->
-                    <div class="synonyms-container" style="margin-top: 8px;">
-                        ${synonymsHtml || ''}
-                    </div>
-                    
-                    <div class="gold-border"></div>
-                </div>
-                
-                <div class="card-content">
-                    <div class="image-container">
-                        <img src="${item.imagem_url}" alt="${item.nome}" class="card-image">
-                    </div>
-                    
-                    ${sequenciaInfo
-            ? `<div class="sequencia-info" style="margin: 8px 0; color: #FFD700; font-style: italic;">
-                        ${sequenciaInfo}
-                        </div>`
-            : ''}
-                    <!-- Sinopse adicionada aqui -->
-                    <div class="synopsis-container" id="synopsisContainer">
-                        <h3 class="synopsis-title">Sinopse</h3>
-                        <p class="synopsis-text">${item.sinopse || 'Sinopse não disponível'}</p>
-                    </div>
-                    
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <span class="info-label">Conteúdo:</span>
-                            <span class="info-value">${item.conteudo}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Status:</span>
-                            <span class="info-value">${item.status}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Opinião:</span>
-                            <span class="info-value">${item.opiniao}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">${getEpisodeLabel(item.conteudo)}:</span>
-                            <span class="info-value">${item.episodio}</span>
-                        </div>
-                        <div class="info-item full-width">
-                            <span class="info-label">Tags:</span>
-                            <span class="info-value">${item.tags}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+    setTimeout(() => {
+        const nameText = exportCard.querySelector('#name-text');
+        if (nameText) {
+            // Usar a mesma função autoFitText do exportFunctions.js
+            let fontSize = 16;
+            nameText.style.fontSize = fontSize + 'px';
 
-    const style = document.createElement('style');
-    style.textContent = `
-            .card-container {
-                display: flex;
-                flex-direction: column;
-                gap: 15px;
+            while ((nameText.scrollHeight > nameText.parentElement.clientHeight ||
+                nameText.scrollWidth > nameText.parentElement.clientWidth) &&
+                fontSize > 10) {
+                fontSize--;
+                nameText.style.fontSize = fontSize + 'px';
             }
-            
-            .card-header {
-                text-align: center;
-                position: relative;
-                padding: 10px 0;
-            }
-
-            .card-content {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .gold-border {
-                height: 3px;
-                background: linear-gradient(90deg, transparent, #D4AF37, transparent);
-                margin: 5px 0;
-            }
-            
-            .card-title {
-                font-family: 'Cinzel', 'Georgia', serif;
-                font-size: 28px;
-                font-weight: 700;
-                margin: 0;
-                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-                letter-spacing: 1px;
-                color: #FFD700;
-            }
-            
-            .image-container {
-                width: 80%;
-                border-radius: 8px;
-                overflow: hidden;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-                border: 2px solid rgb(235, 180, 0);
-            }
-            
-            .card-image {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                display: block;
-            }
-            
-            .info-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 12px;
-                margin-top: 15px;
-            }
-            
-            .info-item {
-                background: rgba(0, 0, 0, 0.2);
-                padding: 10px;
-                border-radius: 6px;
-                border-left: 3px solid #D4AF37;
-            }
-            
-            .full-width {
-                grid-column: span 2;
-            }
-            
-            .info-label {
-                display: block;
-                font-weight: 600;
-                font-size: 14px;
-                color: #FFD700;
-                margin-bottom: 3px;
-            }
-            
-            .info-value {
-                display: block;
-                font-size: 16px;
-                color: #FFFFFF;
-            }
-
-            .synonyms-container {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 6px;
-                justify-content: center;
-                margin: 8px 0 12px;
-            }
-            
-            .synonym-tag {
-                background: rgba(212, 175, 55, 0.2);
-                color: #FFD700;
-                padding: 4px 8px;
-                border-radius: 12px;
-                font-size: 12px;
-                border: 1px solid rgba(212, 175, 55, 0.4);
-            }
-            
-            .synopsis-container {
-                background: rgba(0, 0, 0, 0.2);
-                padding: 12px;
-                border-radius: 8px;
-                margin: 15px 0;
-                border-left: 3px solid #D4AF37;
-            }
-            
-            .synopsis-title {
-                color: #FFD700;
-                margin-top: 0;
-                margin-bottom: 8px;
-                font-size: 16px;
-            }
-            
-            .synopsis-text {
-                color: #FFFFFF;
-                font-size: 14px;
-                line-height: 1.5;
-                margin: 0;
-                max-height: 150px;
-                overflow-y: hidden;
-                display: -webkit-box;
-                -webkit-line-clamp: 7;
-                line-clamp: 2;
-                -webkit-box-orient: vertical;
-                line-height: 1.4;
-            }
-            
-            .gold-sparkle {
-                width: 12px;
-                height: 12px;
-                background: #FFD700;
-                border-radius: 50%;
-                box-shadow: 0 0 10px 3px rgba(255, 215, 0, 0.7);
-                animation: pulse 2s infinite;
-            }
-            
-            @keyframes pulse {
-                0% { opacity: 0.7; transform: scale(1); }
-                50% { opacity: 1; transform: scale(1.2); }
-                100% { opacity: 0.7; transform: scale(1); }
-            }
-        `;
-    exportCard.appendChild(style);
+        }
+    }, 100);
 
     async function checkIfItemHasSequence(itemId) {
         try {
             const response = await fetch(`/linhas/${itemId}/sequencias`);
             const data = await response.json();
-            // ⬇️ aqui, usa o length do array
+            // ⬇️ aqui, usa o length do arraCcony
             return Array.isArray(data.sequencias) && data.sequencias.length > 0;
         } catch (error) {
             console.error('Erro ao verificar sequências:', error);
@@ -1458,10 +1293,90 @@ async function showItemDetails(item, navList = null) {
         });
     });
     void modalInfo.offsetWidth;
-    // Ativar listener do botão de exportar
-    document.getElementById('exportCardBtn')
-        .addEventListener('click', () => exportItemAsImage(item));
+    const exportCardBtn = document.getElementById('exportCardBtn');
+    if (exportCardBtn) {
+        const newExportBtn = exportCardBtn.cloneNode(true);
+        exportCardBtn.parentNode.replaceChild(newExportBtn, exportCardBtn);
+        newExportBtn.addEventListener('click', () => exportItemAsImage(item));
+    }
     modalInfo.classList.add('show');
+}
+
+function bindExportButton(item, buttonElement) {
+    if (!buttonElement) return;
+
+    const newButton = buttonElement.cloneNode(true);
+    buttonElement.parentNode.replaceChild(newButton, buttonElement);
+
+    newButton.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log('Exportando item:', item.nome);
+
+        // Adicionar feedback visual
+        const originalText = newButton.innerHTML;
+        newButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando...';
+        newButton.disabled = true;
+
+        try {
+            await exportItemAsImage(item);
+        } catch (error) {
+            console.error('Erro ao exportar:', error);
+            alert('Erro ao exportar imagem. Tente novamente.');
+        } finally {
+            // Restaurar botão
+            newButton.innerHTML = originalText;
+            newButton.disabled = false;
+        }
+    });
+}
+
+function bindPreviewButton(item, buttonElement) {
+    if (!buttonElement) return;
+
+    const newButton = buttonElement.cloneNode(true);
+    buttonElement.parentNode.replaceChild(newButton, buttonElement);
+
+    newButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log('Abrindo preview para:', item.nome);
+        showTemplatePreview(item);
+    });
+}
+
+function createActionButtons(item, lineElement) {
+    const actionsDiv = lineElement.querySelector('.item-actions') || document.createElement('div');
+    actionsDiv.className = 'item-actions';
+
+    // Limpar botões existentes
+    actionsDiv.innerHTML = '';
+
+    // Botão Preview
+    const previewBtn = document.createElement('button');
+    previewBtn.className = 'btn-preview';
+    previewBtn.innerHTML = '<i class="fas fa-eye"></i> Preview';
+    previewBtn.title = 'Visualizar card';
+
+    // Botão Exportar
+    const exportBtn = document.createElement('button');
+    exportBtn.className = 'btn-export';
+    exportBtn.innerHTML = '<i class="fas fa-download"></i> Exportar';
+    exportBtn.title = 'Exportar como imagem';
+
+    actionsDiv.appendChild(previewBtn);
+    actionsDiv.appendChild(exportBtn);
+
+    // Adicionar ao elemento da linha se não existir
+    if (!lineElement.querySelector('.item-actions')) {
+        lineElement.appendChild(actionsDiv);
+    }
+
+    // Vincular eventos
+    bindPreviewButton(item, previewBtn);
+    bindExportButton(item, exportBtn);
 }
 
 function openItemByIndex(idx) {
@@ -1555,7 +1470,7 @@ async function createNewLine() {
         conteudo: document.getElementById('line-content').value,
         status: document.getElementById('line-status').value,
         episodio: document.getElementById('line-episode').value,
-        opiniao: document.getElementById('line-opiniao').value
+        opiniao: document.getElementById('line-opinion').value
     };
 
     try {
@@ -1615,5 +1530,13 @@ document.addEventListener('showItemDetails', (e) => {
     showItemDetails(e.detail.item, e.detail.navList);
 });
 
-
-export { showListDetails, handleFormSubmit, showItemDetails, showItems, bindSinopseButton };
+export {
+    showListDetails,
+    handleFormSubmit,
+    showItemDetails,
+    showItems,
+    bindSinopseButton,
+    bindExportButton,
+    bindPreviewButton,
+    createActionButtons
+};

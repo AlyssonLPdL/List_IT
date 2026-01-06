@@ -10,10 +10,8 @@ import traceback
 import time
 from flask_caching import Cache
 
-
 app = Flask(__name__)
 
-# Dicionários globais para rastrear os índices usados nas buscas
 index_tracker = {}
 index_tracker_manga = {}
 
@@ -998,7 +996,7 @@ def atualizar_ordem_sequencia(sequencia_id):
             cursor = conn.cursor()
             
             # Verificar se a sequência existe
-            cursor.execute("SELECT 1 FROM sequencias WHERE id = ?", (sequencia_id,))
+            cursor.execute("SELECT id FROM sequencias WHERE id = ?", (sequencia_id,))
             if not cursor.fetchone():
                 return jsonify({"erro": "Sequência não encontrada"}), 404
             

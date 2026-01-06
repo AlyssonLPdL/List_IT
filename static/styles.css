@@ -1987,3 +1987,16 @@ progress {
     padding: 10px;
   }
 }
+/* CSS para garantir que o export-card funcione */
+#export-card {
+    font-family: Arial, sans-serif !important;
+}
+
+#export-card * {
+    box-sizing: border-box !important;
+}
+
+#export-card img {
+    max-width: none !important;
+    max-height: none !important;
+}
