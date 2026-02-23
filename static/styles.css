@@ -120,7 +120,7 @@ html {
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  max-height: 85%;
+  max-height: 85% !important;
   overflow-y: auto;
 }
 .tags-container-div .tag {
@@ -1364,7 +1364,6 @@ h4 {
   padding: 5px;
   display: none;
   flex-wrap: wrap;
-  gap: 8px;
   margin: 5px 0;
 }
 .selected-tags span {
@@ -1606,7 +1605,7 @@ legend {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000; /* acima de tudo */
+  z-index: 1001; /* acima de tudo */
 }
 
 .loader-content {
@@ -1999,4 +1998,227 @@ progress {
 #export-card img {
     max-width: none !important;
     max-height: none !important;
+}
+/* Estilos para o sistema de tags em acordeão */
+.tags-accordion-container {
+    display: flex;
+    flex-direction: column;
+    color: black;
+    gap: 10px;
+    padding-right: 5px;
+}
+
+.tags-container-div {
+    width: 100%;
+    overflow-y: auto;
+}
+
+.tags-accordion-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tags-accordion-container::-webkit-scrollbar-track {
+  background: var(--color-neutral-light);
+  border-radius: 10px;
+}
+
+.tags-accordion-container::-webkit-scrollbar-thumb {
+  background-color: var(--color-neutral-dark);
+  border-radius: 10px;
+  border: 2px solid var(--color-neutral-light);
+}
+
+.accordion-item {
+    border-radius: 15px;
+    background: var(--color-card-bg, #f5f5f5);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.accordion-item.hidden {
+    display: none !important;
+}
+
+.accordion-item.active {
+    border-color: var(--color-primary, #4a6fc5);
+    box-shadow: 0 4px 12px rgba(74, 111, 197, 0.2);
+}
+
+.accordion-header {
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    background: var(--color-primary-light, #e6f0ff);
+    border-left: 5px solid var(--color-primary, #4a6fc5);
+    transition: all 0.3s ease;
+    user-select: none;
+    border-radius: 15px;
+}
+
+.accordion-header:hover {
+    background: var(--color-primary-lighter, #d4e3ff);
+    transform: translateY(-2px);
+}
+
+.accordion-header.expanded {
+    background: var(--color-primary, #4a6fc5);
+    color: white;
+}
+
+.accordion-category-name {
+    font-weight: 700;
+    font-size: 16px;
+    color: inherit;
+}
+
+.accordion-category-count {
+    font-size: 13px;
+    color: inherit;
+    opacity: 0.8;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+.accordion-icon {
+    font-size: 14px;
+    color: inherit;
+    transition: transform 0.3s ease;
+}
+
+.accordion-content {
+    padding: 20px;
+    background: var(--color-bg, #fff);
+    border-top: 1px solid var(--color-border, #e0e0e0);
+    animation: slideDown 0.3s ease-out;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.accordion-content.hidden {
+    display: none;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Grid de tags dentro do acordeão */
+.tags-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.tag {
+    padding: 8px 12px;
+    background: var(--color-tag-bg, #e9ecef);
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tag:hover {
+    background: var(--color-primary-light, #4a6fc5);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    border-color: var(--color-primary, #4a6fc5);
+}
+
+/* Botão de voltar */
+.accordion-back-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    background: var(--color-primary-light, #e6f0ff);
+    border-radius: 10px;
+    cursor: pointer;
+    margin-bottom: 15px;
+    font-weight: 600;
+    color: var(--color-primary, #4a6fc5);
+    transition: all 0.2s ease;
+    border: 1px solid var(--color-primary-light, #e6f0ff);
+}
+
+.accordion-back-button:hover {
+    background: var(--color-primary, #4a6fc5);
+    color: white;
+    border-color: var(--color-primary, #4a6fc5);
+}
+
+.accordion-back-button.hidden {
+    display: none;
+}
+
+/* Estilos para tags selecionadas */
+.selected-tag {
+    padding: 8px 15px;
+    background: var(--color-primary, #4a6fc5);
+    color: white;
+    border-radius: 20px;
+    font-size: 13px;
+    margin: 5px;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.selected-tag:hover {
+    background: var(--color-primary-dark, #3a5bb5);
+    transform: scale(1.05);
+    border-color: var(--color-primary-light, #4a6fc5);
+}
+
+.selected-tag:after {
+    content: '×';
+    margin-left: 8px;
+    font-size: 16px;
+    opacity: 0.8;
+    font-weight: bold;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .tags-accordion-container {
+        max-height: 350px;
+    }
+    
+    .accordion-header {
+        padding: 12px 15px;
+    }
+    
+    .accordion-content {
+        padding: 15px;
+        max-height: 250px;
+    }
+    
+    .tags-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 8px;
+    }
+    
+    .tag {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
 }

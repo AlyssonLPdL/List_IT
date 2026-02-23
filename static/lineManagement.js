@@ -9,7 +9,7 @@ import {
 } from './utils.js';
 import { showHighlights } from './highlights.js';
 import { getSequenceButtons, refreshSequenceDisplay, showAddToSequenceModal } from './sequenceManagement.js';
-import { updateSelectedTags } from './tagsSystem.js';
+import { updateSelectedTags, showAllTags } from './tagsSystem.js';
 import { generateTemplateHTML, showTemplatePreview } from './exportFunctions.js';
 
 // ---------------------------- GERENCIAMENTO DE LINHAS ----------------------------
@@ -376,6 +376,8 @@ async function showListDetails(lista) {
         lineModal.classList.remove('hidden');
         lineModal.classList.add('show');
         initResizeObserver();
+        // Adicione esta linha:
+        setTimeout(() => showAllTags(), 100);
     });
 
     // Abertura/Fechamento do modal (mantido igual)
@@ -725,14 +727,19 @@ function bindSinopseButton(item) {
 async function showItemDetails(item, navList = null) {
     modalInfo.classList.remove('show');
     modalInfo.classList.remove('hidden');
+    const reqId = ++state.detailsReq;
     // Use navList se for sequência, senão usa o contexto padrão
     if (Array.isArray(navList) && navList.length > 0 && navList[0].ordem !== undefined) {
         state.currentNavList = navList;
     } else {
         state.currentNavList = navList || (window.__ultimaChamadaLinhas || []);
     }
+    // no topo do arquivo (perto do state), garanta isso:
+    state.detailsReq = 0;
     state.allIds = state.currentNavList.map(i => i.id);
     state.currentIdx = state.allIds.indexOf(item.id);
+    state.currentItem = item;
+    modalInfo.dataset.currentItemId = String(item.id);
 
     if (item && item.sinonimos) {
         if (Array.isArray(item.sinonimos)) {
@@ -1293,11 +1300,26 @@ async function showItemDetails(item, navList = null) {
         });
     });
     void modalInfo.offsetWidth;
-    const exportCardBtn = document.getElementById('exportCardBtn');
+    const exportCardBtn = modalInfo.querySelector('#exportCardBtn');
     if (exportCardBtn) {
         const newExportBtn = exportCardBtn.cloneNode(true);
         exportCardBtn.parentNode.replaceChild(newExportBtn, exportCardBtn);
-        newExportBtn.addEventListener('click', () => exportItemAsImage(item));
+
+        newExportBtn.addEventListener('click', () => {
+            const id = modalInfo.dataset.currentItemId;
+            if (!id) return;
+
+            // tenta usar o state primeiro, mas garante pelo id
+            if (state.currentItem && String(state.currentItem.id) === String(id)) {
+                exportItemAsImage(state.currentItem);
+                return;
+            }
+
+            // fallback se você tiver um index global (recomendado)
+            const byId = window.__itemsById;
+            const resolved = byId?.get ? byId.get(Number(id)) : null;
+            if (resolved) exportItemAsImage(resolved);
+        });
     }
     modalInfo.classList.add('show');
 }
@@ -1417,7 +1439,10 @@ function openEditModal(item) {
     document.querySelector('button[type="submit"]').textContent = 'Salvar Alterações';
     lineModal.classList.remove('hidden');
     lineModal.classList.add('show');
-    initResizeObserver();
+    setTimeout(() => {
+        initResizeObserver();
+        showAllTags();
+    }, 100);
 }
 
 // Atualizar uma linha

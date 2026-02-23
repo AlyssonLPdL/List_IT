@@ -39,6 +39,8 @@ def migrate_translate_sinopses(db_path: str = "list_it.db"):
           FROM linhas
          WHERE sinopse IS NOT NULL
            AND TRIM(sinopse) != ''
+         ORDER BY id DESC
+         LIMIT 30
     """)
     rows = cursor.fetchall()
     total = len(rows)

@@ -527,10 +527,10 @@
 
         function sortLines(linhas, order) {
             if (order === 'az') {
-                return [...linhas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+                return [...linhas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
             }
             if (order === 'za') {
-                return [...linhas].sort((a, b) => b.nome.localeCompare(a.nome, 'pt-BR', { sensitivity: 'base' }));
+                return [...linhas].sort((a, b) => b.nome.localeCompare(a.nome, 'pt-BR'));
             }
             if (order === 'ep') {
                 return [...linhas].sort((a, b) => (parseInt(a.episodio) || 0) - (parseInt(b.episodio) || 0));
