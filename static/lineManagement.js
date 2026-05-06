@@ -864,6 +864,16 @@ async function showItemDetails(item, navList = null) {
         }
     }
 
+    let lastHighlightText = '';
+    if (item.last_highlight) {
+        const lastHighlightDate = new Date(item.last_highlight);
+        const now = new Date();
+        const diffMs = now - lastHighlightDate;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        lastHighlightText = `Verificado à ${diffDays} dias e ${diffHours} horas`;
+    }
+
     mainInfoContent.innerHTML = `
             <div id="info-div-box">
                 <fieldset>
@@ -886,7 +896,10 @@ async function showItemDetails(item, navList = null) {
                     <legend style="font-weight:600;">Tags:</legend>
                     <p style="margin: 0; border: 0;">${item.tags}</p>
                 </fieldset>
-                
+                <div style="margin: 0; display:flex; align-items:center; gap:8px;">
+                    <p id="last-highlight-text" style="margin: 0; border: 0;">${lastHighlightText || 'Nunca'}</p>
+                    <button id="update-highlight-btn" data-id="${item.id}" style="padding:4px 8px; font-size:12px; border-radius:4px; cursor:pointer;">Atualizar</button>
+                </div>
                 <div class="item-actions">
                     <button id="editLineButton"><i class="fas fa-edit"></i></button>
                     <div class="sequence-controls">
@@ -908,6 +921,34 @@ async function showItemDetails(item, navList = null) {
     const hasSequence = await checkIfItemHasSequence(item.id);
 
     const previewBtn = document.getElementById('previewTemplateBtn');
+
+    // Listener para o botão Atualizar (atualiza last_highlight e a UI)
+    (function attachUpdateHighlightListener() {
+        const updateBtn = document.getElementById('update-highlight-btn');
+        if (!updateBtn) return;
+        updateBtn.addEventListener('click', async (e) => {
+            try {
+                const linhaId = e.currentTarget.dataset.id;
+                const res = await fetch(`/highlighted/${linhaId}`, { method: 'POST' });
+                if (!res.ok) throw new Error('Falha ao atualizar highlight');
+
+                const nowIso = new Date().toISOString();
+                item.last_highlight = nowIso;
+
+                const lastHighlightDate = new Date(nowIso);
+                const now = new Date();
+                const diffMs = now - lastHighlightDate;
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const newText = `Verificado à ${diffDays} dias e ${diffHours} horas`;
+
+                const span = document.getElementById('last-highlight-text');
+                if (span) span.textContent = newText;
+            } catch (err) {
+                console.error('Erro ao atualizar last_highlight:', err);
+            }
+        });
+    })();
     previewBtn.replaceWith(previewBtn.cloneNode(true));
     document.getElementById('previewTemplateBtn').addEventListener('click', () => {
         showTemplatePreview(item);

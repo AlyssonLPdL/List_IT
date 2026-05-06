@@ -633,26 +633,27 @@ def get_linhas(lista_id):
     cursor = conn.cursor()
     cursor.execute("""
         SELECT id, lista_id, nome, tags, conteudo, status, episodio,
-               opiniao, imagem_url, sinopse, sinonimos
+               opiniao, imagem_url, last_highlight, sinopse, sinonimos
           FROM linhas
          WHERE lista_id = ?
     """, (lista_id,))
     linhas = []
     for row in cursor.fetchall():
-        sinopse = row[9] or ""
-        sinonimos = json.loads(row[10]) if row[10] else []
+        sinopse = row['sinopse'] or ""
+        sinonimos = json.loads(row['sinonimos']) if row['sinonimos'] else []
         # decide se ainda precisa de detalhes:
         needs_details = not (sinopse and len(sinonimos) >= 3)
         linhas.append({
-            "id":            row[0],
-            "lista_id":      row[1],
-            "nome":          row[2],
-            "tags":          row[3],
-            "conteudo":      row[4],
-            "status":        row[5],
-            "episodio":      row[6],
-            "opiniao":       row[7],
-            "imagem_url":    row[8],
+            "id":            row['id'],
+            "lista_id":      row['lista_id'],
+            "nome":          row['nome'],
+            "tags":          row['tags'],
+            "conteudo":      row['conteudo'],
+            "status":        row['status'],
+            "episodio":      row['episodio'],
+            "opiniao":       row['opiniao'],
+            "imagem_url":    row['imagem_url'],
+            "last_highlight": row['last_highlight'],
             "sinopse":       sinopse,
             "sinonimos":     sinonimos,
             "needs_details": needs_details
@@ -743,10 +744,9 @@ def delete_linha(linha_id):
 def to_highlight(lista_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    # UTC agora menos 1 hora
     cutoff = (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
     cursor.execute("""
-        SELECT id, nome, imagem_url, tags, conteudo, status, episodio, opiniao, sinopse, sinonimos
+        SELECT id, nome, imagem_url, tags, conteudo, status, episodio, opiniao, sinopse, sinonimos, last_highlight
         FROM linhas
         WHERE lista_id = ?
         AND (

@@ -14,7 +14,7 @@ const tagCategories = {
         "Magia", "Fantasia", "Sobrenatural", "Deuses", "Reencarnar", "Kemonomimi", "Medieval", "Goat", "Isekai", "MC Vilão"
     ],
     "Emocional": [
-        "Drama", "Tristeza", "Cringe", "Fofo"
+        "Drama", "Tristeza", "Vergonhoso", "Fofo"
     ],
     "Slice of Life": [
         "Slice of Life", "Vida Escolar", "Dormitorios", "Morar Juntos"
