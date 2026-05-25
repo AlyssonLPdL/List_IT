@@ -391,7 +391,10 @@ async function showListDetails(lista) {
         exportModal.classList.add('hidden');
     });
 
-    document.getElementById('export-confirm-btn').addEventListener('click', async () => {
+    const exportConfirmBtn = document.getElementById('export-confirm-btn');
+    const freshExportConfirmBtn = exportConfirmBtn.cloneNode(true);
+    exportConfirmBtn.parentNode.replaceChild(freshExportConfirmBtn, exportConfirmBtn);
+    freshExportConfirmBtn.addEventListener('click', async () => {
         const filename = document.getElementById('export-filename').value.trim() || 'Lista.xlsx';
 
         const loaderModal = document.getElementById('export-loader-container');
