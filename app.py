@@ -135,6 +135,7 @@ def add_lista():
     subprocess.run(['git', 'add', 'list_it.db'])
     commit_message = f"Criando Lista: {data['nome']} id: {lista_id}"
     subprocess.run(['git', 'commit', '-m', commit_message])
+    subprocess.run(['git', 'push'])
     print(f"[COMMIT] {commit_message}")
     
     print(f"[ADD_LISTA] Lista criada: {data['nome']} (ID: {lista_id})")
@@ -252,6 +253,7 @@ def update_linha_imagem(linha_id):
         subprocess.run(['git', 'add', 'list_it.db'])
         commit_message = f"Atualizando Imagem da Linha: {nome} id: {linha_id}"
         subprocess.run(['git', 'commit', '-m', commit_message])
+        subprocess.run(['git', 'push'])
         print(f"[COMMIT] {commit_message}")
         
         conn.close()
@@ -285,6 +287,7 @@ def refresh_images():
         subprocess.run(['git', 'add', 'list_it.db'])
         commit_message = f"Refresh de imagens: {atualizados} imagens atualizadas"
         subprocess.run(['git', 'commit', '-m', commit_message])
+        subprocess.run(['git', 'push'])
         print(f"[COMMIT] {commit_message}")
     
     print(f"[REFRESH_IMAGES] {atualizados} imagens atualizadas.")
@@ -311,6 +314,7 @@ def update_image_url():
     subprocess.run(['git', 'add', 'list_it.db'])
     commit_message = f"Atualizando URL da Imagem: {nome} id: {linha_id}"
     subprocess.run(['git', 'commit', '-m', commit_message])
+    subprocess.run(['git', 'push'])
     print(f"[COMMIT] {commit_message}")
 
     print(f"[UPDATE_IMAGE_URL] Linha {linha_id} atualizada com URL: {new_url}")
@@ -633,26 +637,27 @@ def get_linhas(lista_id):
     cursor = conn.cursor()
     cursor.execute("""
         SELECT id, lista_id, nome, tags, conteudo, status, episodio,
-               opiniao, imagem_url, sinopse, sinonimos
+               opiniao, imagem_url, last_highlight, sinopse, sinonimos
           FROM linhas
          WHERE lista_id = ?
     """, (lista_id,))
     linhas = []
     for row in cursor.fetchall():
-        sinopse = row[9] or ""
-        sinonimos = json.loads(row[10]) if row[10] else []
+        sinopse = row['sinopse'] or ""
+        sinonimos = json.loads(row['sinonimos']) if row['sinonimos'] else []
         # decide se ainda precisa de detalhes:
         needs_details = not (sinopse and len(sinonimos) >= 3)
         linhas.append({
-            "id":            row[0],
-            "lista_id":      row[1],
-            "nome":          row[2],
-            "tags":          row[3],
-            "conteudo":      row[4],
-            "status":        row[5],
-            "episodio":      row[6],
-            "opiniao":       row[7],
-            "imagem_url":    row[8],
+            "id":            row['id'],
+            "lista_id":      row['lista_id'],
+            "nome":          row['nome'],
+            "tags":          row['tags'],
+            "conteudo":      row['conteudo'],
+            "status":        row['status'],
+            "episodio":      row['episodio'],
+            "opiniao":       row['opiniao'],
+            "imagem_url":    row['imagem_url'],
+            "last_highlight": row['last_highlight'],
             "sinopse":       sinopse,
             "sinonimos":     sinonimos,
             "needs_details": needs_details
@@ -678,6 +683,7 @@ def add_linha():
     subprocess.run(['git', 'add', 'list_it.db'])
     commit_message = f"Adicionando Linha: {data['nome']} id: {linha_id}"
     subprocess.run(['git', 'commit', '-m', commit_message])
+    subprocess.run(['git', 'push'])
     print(f"[COMMIT] {commit_message}")
 
     print(f"[ADD_LINHA] Linha adicionada: {data['nome']} (ID: {linha_id})")
@@ -708,6 +714,7 @@ def update_linha(linha_id):
         subprocess.run(['git', 'add', 'list_it.db'])
         commit_message = f"Atualizando Linha: {nome} id: {linha_id}"
         subprocess.run(['git', 'commit', '-m', commit_message])
+        subprocess.run(['git', 'push'])
         print(f"[COMMIT] {commit_message}")
         
         conn.close()
@@ -734,6 +741,7 @@ def delete_linha(linha_id):
     subprocess.run(['git', 'add', 'list_it.db'])
     commit_message = f"Removendo Linha: {nome} id: {linha_id}"
     subprocess.run(['git', 'commit', '-m', commit_message])
+    subprocess.run(['git', 'push'])
     print(f"[COMMIT] {commit_message}")
 
     print(f"[DELETE_LINHA] Linha {linha_id} excluída.")
@@ -743,10 +751,9 @@ def delete_linha(linha_id):
 def to_highlight(lista_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    # UTC agora menos 1 hora
     cutoff = (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
     cursor.execute("""
-        SELECT id, nome, imagem_url, tags, conteudo, status, episodio, opiniao, sinopse, sinonimos
+        SELECT id, nome, imagem_url, tags, conteudo, status, episodio, opiniao, sinopse, sinonimos, last_highlight
         FROM linhas
         WHERE lista_id = ?
         AND (
@@ -775,6 +782,7 @@ def mark_highlighted(linha_id):
     subprocess.run(['git', 'add', 'list_it.db'])
     commit_message = f"Marcando highlight na Linha: {nome} id: {linha_id}"
     subprocess.run(['git', 'commit', '-m', commit_message])
+    subprocess.run(['git', 'push'])
     print(f"[COMMIT] {commit_message}")
 
     return jsonify({'mensagem': 'Highlight atualizado.'})
@@ -803,6 +811,7 @@ def criar_sequencia():
             subprocess.run(['git', 'add', 'list_it.db'])
             commit_message = f"Criando Sequência: {nome} id: {sequencia_id}"
             subprocess.run(['git', 'commit', '-m', commit_message])
+            subprocess.run(['git', 'push'])
             print(f"[COMMIT] {commit_message}")
             
         except sqlite3.Error as e:
@@ -867,6 +876,7 @@ def adicionar_item_sequencia(sequencia_id):
         subprocess.run(['git', 'add', 'list_it.db'])
         commit_message = f"Adicionando {item_nome} à sequência {seq_nome} na ordem {nova_ordem}"
         subprocess.run(['git', 'commit', '-m', commit_message])
+        subprocess.run(['git', 'push'])
         print(f"[COMMIT] {commit_message}")
 
     return jsonify({
@@ -973,6 +983,7 @@ def remover_item_sequencia(sequencia_id, linha_id):
             subprocess.run(['git', 'add', 'list_it.db'])
             commit_message = f"Removendo {item_nome} da sequência {seq_nome}"
             subprocess.run(['git', 'commit', '-m', commit_message])
+            subprocess.run(['git', 'push'])
             print(f"[COMMIT] {commit_message}")
             
         return jsonify({
@@ -1027,6 +1038,7 @@ def atualizar_ordem_sequencia(sequencia_id):
             subprocess.run(['git', 'add', 'list_it.db'])
             commit_message = f"Atualizando ordem na sequência {seq_nome}"
             subprocess.run(['git', 'commit', '-m', commit_message])
+            subprocess.run(['git', 'push'])
             print(f"[COMMIT] {commit_message}")
             
         return jsonify({
@@ -1058,6 +1070,7 @@ def deletar_sequencia(sequencia_id):
             subprocess.run(['git', 'add', 'list_it.db'])
             commit_message = f"Removendo sequência {seq_nome}"
             subprocess.run(['git', 'commit', '-m', commit_message])
+            subprocess.run(['git', 'push'])
             print(f"[COMMIT] {commit_message}")
             
         return jsonify({

@@ -2,7 +2,7 @@
 import {
     mainInfoContentId, tagsContainerId, themeToggle
 } from './constants.js';
-
+import { getAllTagsFlat } from './tagsSystem.js';
 import { showItems } from './lineManagement.js';
 
 // Função para extrair nome base e número romano (se houver)
@@ -23,10 +23,38 @@ function romanToDecimal(roman) {
 
 // Função para configurar o ResizeObserver para ajustar altura dos containers
 function initResizeObserver() {
-    const resizeObserver = new ResizeObserver(() => {
-        tagsContainerId.style.height = `${mainInfoContentId.offsetHeight - 40}px`;
+    const resizeObserver = new ResizeObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.target === mainInfoContentId) {
+                // Pequeno delay para garantir que o DOM esteja atualizado
+                setTimeout(() => {
+                    // Ajusta a altura do container de tags baseado no conteúdo principal
+                    const mainInfoHeight = mainInfoContentId.offsetHeight;
+                    tagsContainerId.style.height = `${mainInfoHeight - 40}px`;
+                    
+                    // Ajusta a altura do .tags-container-div para 85% da altura do container
+                    const tagsContainerDiv = tagsContainerId.querySelector('.tags-container-div');
+                    if (tagsContainerDiv) {
+                        // Calcula 85% da altura do container pai
+                        const containerHeight = tagsContainerId.offsetHeight;
+                        tagsContainerDiv.style.maxHeight = `${containerHeight * 0.85}px`;
+                        tagsContainerDiv.style.height = `${containerHeight * 0.85}px`; // Adiciona height também
+                        
+                        // Debug: remove após verificar que funciona
+                        console.log('Alturas:', {
+                            container: containerHeight,
+                            tagsDiv: containerHeight * 0.85,
+                            computed: window.getComputedStyle(tagsContainerDiv).maxHeight
+                        });
+                    }
+                }, 100);
+            }
+        });
     });
+    
+    // Observa tanto o conteúdo principal quanto o container de tags
     resizeObserver.observe(mainInfoContentId);
+    resizeObserver.observe(tagsContainerId);
 }
 
 // Verificar preferência de tema ao carregar a página
@@ -186,5 +214,5 @@ function getOpiniaoIcon(opiniao) {
 // Exportar funções utilitárias
 export {
     extractBaseAndNumber, romanToDecimal, initResizeObserver, initTheme,
-    applyFilter, getEpisodeLabel, getClasseExtra, getStatusIcon, getOpiniaoIcon
+    applyFilter, getEpisodeLabel, getClasseExtra, getStatusIcon, getOpiniaoIcon, getAllTagsFlat
 };

@@ -26,7 +26,7 @@ def padronizar_tags():
         "Magia", "Fantasia", "Sobrenatural", "Deuses", "Reencarnar", "Medieval",
         
         # Drama e Emocional
-        "Drama", "Tristeza", "Cringe",
+        "Drama", "Tristeza", "Vergonhoso",
         
         # Sci-Fi e Tecnologia
         "SciFi", "VR/Jogo", "System",
@@ -94,7 +94,7 @@ def padronizar_tags():
         # Drama e Emocional
         "drama": "Drama",
         "tristeza": "Tristeza",
-        "cringe": "Cringe",
+        "vergonhoso": "Vergonhoso",
         
         # Sci-Fi e Tecnologia
         "scifi": "SciFi",

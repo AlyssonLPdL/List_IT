@@ -9,7 +9,7 @@ import {
 } from './utils.js';
 import { showHighlights } from './highlights.js';
 import { getSequenceButtons, refreshSequenceDisplay, showAddToSequenceModal } from './sequenceManagement.js';
-import { updateSelectedTags } from './tagsSystem.js';
+import { updateSelectedTags, showAllTags } from './tagsSystem.js';
 import { generateTemplateHTML, showTemplatePreview } from './exportFunctions.js';
 
 // ---------------------------- GERENCIAMENTO DE LINHAS ----------------------------
@@ -376,6 +376,8 @@ async function showListDetails(lista) {
         lineModal.classList.remove('hidden');
         lineModal.classList.add('show');
         initResizeObserver();
+        // Adicione esta linha:
+        setTimeout(() => showAllTags(), 100);
     });
 
     // Abertura/Fechamento do modal (mantido igual)
@@ -389,7 +391,10 @@ async function showListDetails(lista) {
         exportModal.classList.add('hidden');
     });
 
-    document.getElementById('export-confirm-btn').addEventListener('click', async () => {
+    const exportConfirmBtn = document.getElementById('export-confirm-btn');
+    const freshExportConfirmBtn = exportConfirmBtn.cloneNode(true);
+    exportConfirmBtn.parentNode.replaceChild(freshExportConfirmBtn, exportConfirmBtn);
+    freshExportConfirmBtn.addEventListener('click', async () => {
         const filename = document.getElementById('export-filename').value.trim() || 'Lista.xlsx';
 
         const loaderModal = document.getElementById('export-loader-container');
@@ -725,14 +730,19 @@ function bindSinopseButton(item) {
 async function showItemDetails(item, navList = null) {
     modalInfo.classList.remove('show');
     modalInfo.classList.remove('hidden');
+    const reqId = ++state.detailsReq;
     // Use navList se for sequência, senão usa o contexto padrão
     if (Array.isArray(navList) && navList.length > 0 && navList[0].ordem !== undefined) {
         state.currentNavList = navList;
     } else {
         state.currentNavList = navList || (window.__ultimaChamadaLinhas || []);
     }
+    // no topo do arquivo (perto do state), garanta isso:
+    state.detailsReq = 0;
     state.allIds = state.currentNavList.map(i => i.id);
     state.currentIdx = state.allIds.indexOf(item.id);
+    state.currentItem = item;
+    modalInfo.dataset.currentItemId = String(item.id);
 
     if (item && item.sinonimos) {
         if (Array.isArray(item.sinonimos)) {
@@ -857,6 +867,16 @@ async function showItemDetails(item, navList = null) {
         }
     }
 
+    let lastHighlightText = '';
+    if (item.last_highlight) {
+        const lastHighlightDate = new Date(item.last_highlight);
+        const now = new Date();
+        const diffMs = now - lastHighlightDate;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        lastHighlightText = `Verificado à ${diffDays} dias e ${diffHours} horas`;
+    }
+
     mainInfoContent.innerHTML = `
             <div id="info-div-box">
                 <fieldset>
@@ -879,7 +899,10 @@ async function showItemDetails(item, navList = null) {
                     <legend style="font-weight:600;">Tags:</legend>
                     <p style="margin: 0; border: 0;">${item.tags}</p>
                 </fieldset>
-                
+                <div style="margin: 0; display:flex; align-items:center; gap:8px;">
+                    <p id="last-highlight-text" style="margin: 0; border: 0;">${lastHighlightText || 'Nunca'}</p>
+                    <button id="update-highlight-btn" data-id="${item.id}" style="padding:4px 8px; font-size:12px; border-radius:4px; cursor:pointer;">Atualizar</button>
+                </div>
                 <div class="item-actions">
                     <button id="editLineButton"><i class="fas fa-edit"></i></button>
                     <div class="sequence-controls">
@@ -901,6 +924,34 @@ async function showItemDetails(item, navList = null) {
     const hasSequence = await checkIfItemHasSequence(item.id);
 
     const previewBtn = document.getElementById('previewTemplateBtn');
+
+    // Listener para o botão Atualizar (atualiza last_highlight e a UI)
+    (function attachUpdateHighlightListener() {
+        const updateBtn = document.getElementById('update-highlight-btn');
+        if (!updateBtn) return;
+        updateBtn.addEventListener('click', async (e) => {
+            try {
+                const linhaId = e.currentTarget.dataset.id;
+                const res = await fetch(`/highlighted/${linhaId}`, { method: 'POST' });
+                if (!res.ok) throw new Error('Falha ao atualizar highlight');
+
+                const nowIso = new Date().toISOString();
+                item.last_highlight = nowIso;
+
+                const lastHighlightDate = new Date(nowIso);
+                const now = new Date();
+                const diffMs = now - lastHighlightDate;
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const newText = `Verificado à ${diffDays} dias e ${diffHours} horas`;
+
+                const span = document.getElementById('last-highlight-text');
+                if (span) span.textContent = newText;
+            } catch (err) {
+                console.error('Erro ao atualizar last_highlight:', err);
+            }
+        });
+    })();
     previewBtn.replaceWith(previewBtn.cloneNode(true));
     document.getElementById('previewTemplateBtn').addEventListener('click', () => {
         showTemplatePreview(item);
@@ -1293,11 +1344,26 @@ async function showItemDetails(item, navList = null) {
         });
     });
     void modalInfo.offsetWidth;
-    const exportCardBtn = document.getElementById('exportCardBtn');
+    const exportCardBtn = modalInfo.querySelector('#exportCardBtn');
     if (exportCardBtn) {
         const newExportBtn = exportCardBtn.cloneNode(true);
         exportCardBtn.parentNode.replaceChild(newExportBtn, exportCardBtn);
-        newExportBtn.addEventListener('click', () => exportItemAsImage(item));
+
+        newExportBtn.addEventListener('click', () => {
+            const id = modalInfo.dataset.currentItemId;
+            if (!id) return;
+
+            // tenta usar o state primeiro, mas garante pelo id
+            if (state.currentItem && String(state.currentItem.id) === String(id)) {
+                exportItemAsImage(state.currentItem);
+                return;
+            }
+
+            // fallback se você tiver um index global (recomendado)
+            const byId = window.__itemsById;
+            const resolved = byId?.get ? byId.get(Number(id)) : null;
+            if (resolved) exportItemAsImage(resolved);
+        });
     }
     modalInfo.classList.add('show');
 }
@@ -1417,7 +1483,10 @@ function openEditModal(item) {
     document.querySelector('button[type="submit"]').textContent = 'Salvar Alterações';
     lineModal.classList.remove('hidden');
     lineModal.classList.add('show');
-    initResizeObserver();
+    setTimeout(() => {
+        initResizeObserver();
+        showAllTags();
+    }, 100);
 }
 
 // Atualizar uma linha

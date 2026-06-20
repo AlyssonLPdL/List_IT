@@ -44,7 +44,7 @@ async function showHighlights(lista) {
             if (extraClass) div.classList.add(extraClass);
 
             div.innerHTML = `
-                    <img src="${item.imagem_url}" style="width:80px;height:120px;border-radius:6px;">
+                    <img src="${item.imagem_url}" style="width:80px;height:120px;border-radius:6px;margin:5px 60px;">
                     <p class="highlight-text">${item.nome}</p>
                     <button data-id="${item.id}">Verificado ✔️</button>
                 `;
