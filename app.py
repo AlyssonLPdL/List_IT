@@ -691,18 +691,42 @@ def add_linha():
 
 @app.route("/linhas/<int:linha_id>", methods=["PUT"])
 def update_linha(linha_id):
-    data = request.get_json()
+    data = request.get_json() or {}
     nome = data.get('nome')
     conteudo = data.get('conteudo')
     status = data.get('status')
     episodio = data.get('episodio')
     opiniao = data.get('opiniao')
     tags = data.get('tags')
+    if isinstance(tags, (list, tuple)):
+        tags = ", ".join(str(x).strip() for x in tags if x is not None)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT nome, conteudo, status, episodio, opiniao, tags FROM linhas WHERE id = ?", (linha_id,))
+    existing = cursor.fetchone()
+    if not existing:
+        conn.close()
+        return jsonify({"error": "Linha não encontrada"}), 404
+
+    if nome is None:
+        nome = existing['nome']
+    if conteudo is None:
+        conteudo = existing['conteudo']
+    if status is None:
+        status = existing['status']
+    if episodio is None:
+        episodio = existing['episodio']
+    if opiniao is None:
+        opiniao = existing['opiniao']
+    if tags is None:
+        tags = existing['tags']
+
     if not nome or not conteudo or not status:
+        conn.close()
         return jsonify({"error": "Campos obrigatórios faltando"}), 400
+
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
         cursor.execute("""
             UPDATE linhas
             SET nome = ?, conteudo = ?, status = ?, episodio = ?, opiniao = ?, tags = ?

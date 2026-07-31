@@ -102,6 +102,12 @@ def _norm(s: str) -> str:
         return ""
     return _strip_accents(s).lower().strip()
 
+def _norm_command_name(s: str) -> str:
+    """Normalize names for open_<nome> commands, treating underscores/hyphens as spaces."""
+    if not isinstance(s, str):
+        return ""
+    return _norm(s.replace("_", " ").replace("-", " "))
+
 def search_items(itens, termo):
     termo_norm = _norm(termo)
     resultados = []
@@ -141,7 +147,9 @@ def fetch_lists_request():
         if r.status_code >= 400:
             return None, f"Erro {r.status_code}: {r.text}"
         return r.json(), None
-    except Exception as e:
+    except requests.exceptions.ConnectionError:
+        return None, f"Erro de rede: não foi possível conectar ao servidor em {url}. Verifique se o Flask está rodando com `python app.py`."
+    except requests.exceptions.RequestException as e:
         return None, f"Erro de rede: {e}"
 
 def fetch_lines_request(list_id):
@@ -151,7 +159,9 @@ def fetch_lines_request(list_id):
         if r.status_code >= 400:
             return None, f"Erro {r.status_code}: {r.text}"
         return r.json(), None
-    except Exception as e:
+    except requests.exceptions.ConnectionError:
+        return None, f"Erro de rede: não foi possível conectar ao servidor em {url}. Verifique se o Flask está rodando com `python app.py`."
+    except requests.exceptions.RequestException as e:
         return None, f"Erro de rede: {e}"
 
 # -------------------------
@@ -595,6 +605,33 @@ class OpenListContext:
         item = items[idx - 1]
         return ItemContext(self, item, idx), None
 
+    def open_item_by_name(self, nome):
+        if not isinstance(nome, str) or not nome.strip():
+            return None, "Nome inválido."
+        nome_normalizado = _norm_command_name(nome)
+        exact_match = None
+        partial_matches = []
+        for idx, item in enumerate(self.lines, start=1):
+            if not isinstance(item, dict):
+                continue
+            item_name = item.get("nome") or item.get("name") or ""
+            item_norm = _norm_command_name(item_name)
+            if item_norm == nome_normalizado:
+                exact_match = (idx, item)
+                break
+            if nome_normalizado in item_norm:
+                partial_matches.append((idx, item))
+        if exact_match:
+            idx, item = exact_match
+            return ItemContext(self, item, idx), None
+        if len(partial_matches) == 1:
+            idx, item = partial_matches[0]
+            return ItemContext(self, item, idx), None
+        if len(partial_matches) > 1:
+            nomes = [f"{idx}:{item.get('nome') or item.get('name')}" for idx, item in partial_matches[:5]]
+            return None, f"Vários itens correspondem a '{nome}': {', '.join(nomes)}"
+        return None, f"Nenhum item encontrado com nome '{nome}'."
+
     def search_items_by_name(self, termo):
         itens = search_items(self.lines, termo)
         titulo = f"RESULTADOS DE BUSCA: \"{termo}\" - {self.name}"
@@ -855,9 +892,19 @@ class ItemContext:
 
     # editar um campo simples
     def edit_field(self, field, new_value):
-        field = field.strip()
+        field = field.strip().lower()
         if not field:
             return "Campo inválido."
+        aliases = {
+            "ep": "episodio",
+            "episode": "episodio",
+            "image": "imagem_url",
+            "imagem": "imagem_url",
+            "sinonyms": "sinonimos",
+            "sinonym": "sinonimos",
+            "name": "nome",
+        }
+        field = aliases.get(field, field)
         self.item[field] = new_value
         self.modified = True
         return f"Campo '{field}' atualizado localmente."
@@ -882,13 +929,26 @@ class ItemContext:
     def save(self):
         if "id" not in self.item:
             return False, "Item sem ID, não é possível salvar."
+        tags_value = self.item.get("tags")
+        if isinstance(tags_value, (list, tuple)):
+            tags_value = ", ".join(str(x).strip() for x in tags_value if x is not None)
+        episodio_value = self.item.get("episodio")
+        if isinstance(episodio_value, str):
+            episodio_value = episodio_value.strip()
+            try:
+                episodio_value = int(episodio_value)
+            except ValueError:
+                try:
+                    episodio_value = float(episodio_value)
+                except ValueError:
+                    pass
         payload = {
             "nome": self.item.get("nome"),
             "conteudo": self.item.get("conteudo"),
             "status": self.item.get("status"),
-            "episodio": self.item.get("episodio"),
+            "episodio": episodio_value,
             "opiniao": self.item.get("opiniao"),
-            "tags": self.item.get("tags"),
+            "tags": tags_value,
             "sinopse": self.item.get("sinopse"),
             "imagem_url": self.item.get("imagem_url"),
             "sinonimos": self.item.get("sinonimos")
@@ -945,16 +1005,33 @@ class ItemContext:
 
 def cmd_open_list(raw_name):
     key = raw_name.strip()
+    key_norm = _norm_command_name(key)
     (listas, err) = with_minimum_spinner(lambda: fetch_lists_request(), text=f"Procurando lista '{key}'...", min_seconds=0.6)
     if err:
         fancy_header([f"Erro: {err}"])
         return None
     match = None
+    partial_matches = []
     for item in listas or []:
-        if isinstance(item, dict):
-            if str(item.get("id")) == key or (item.get("nome") and item["nome"].casefold() == key.casefold()):
-                match = item
-                break
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("id")) == key:
+            match = item
+            break
+        nome = item.get("nome") or ""
+        nome_norm = _norm_command_name(nome)
+        if nome_norm == key_norm:
+            match = item
+            break
+        if key_norm and key_norm in nome_norm:
+            partial_matches.append(item)
+    if not match:
+        if len(partial_matches) == 1:
+            match = partial_matches[0]
+        elif len(partial_matches) > 1:
+            nomes = [item.get('nome') or str(item.get('id')) for item in partial_matches[:5]]
+            fancy_header([f"Várias listas correspondem a '{key}': {', '.join(nomes)}"])
+            return None
     if not match:
         fancy_header([f"Não encontrei a lista '{key}'."])
         return None
@@ -1011,8 +1088,10 @@ def main():
                         typewriter_print(f"Problema: {data}", speed=0.004)
                     else:
                         typewriter_print("Lista criada com sucesso.", speed=0.004)
-                elif cmd.startswith("open_"):
-                    listkey = cmd[len("open_"):] or (args[0] if args else "")
+                elif cmd.lower().startswith("open_"):
+                    listkey = line[len("open_"):].strip()
+                    if not listkey and args:
+                        listkey = " ".join(args)
                     ctx = cmd_open_list(listkey)
                     if ctx:
                         current_ctx = ctx
@@ -1023,6 +1102,24 @@ def main():
                 else:
                     typewriter_print(f"Comando inválido: {cmd}", speed=0.003)
             else:
+                # --- abrir item por posição ou nome na exibição atual: open_3 ou open_Naruto ---
+                if line.lower().startswith("open_") and isinstance(current_ctx, (OpenListContext, ItemContext)):
+                    key = line[len("open_"):].strip()
+                    if not key and args:
+                        key = " ".join(args)
+                    parent_ctx = current_ctx if isinstance(current_ctx, OpenListContext) else current_ctx.parent
+                    if key.isdigit():
+                        idx = int(key)
+                        item_ctx, err = parent_ctx.open_item_by_index(idx)
+                    else:
+                        item_ctx, err = parent_ctx.open_item_by_name(key)
+                    if err:
+                        typewriter_print(f"Erro: {err}", speed=0.003)
+                    else:
+                        current_ctx = item_ctx
+                        current_ctx.show_details()
+                    continue
+
                 # Só deixa a exibição tratar se for um contexto de lista (não item!)
                 if isinstance(current_ctx, OpenListContext) and current_ctx.current_display and current_ctx.current_display.handle_command(cmd, args):
                     continue
@@ -1058,10 +1155,17 @@ def main():
                         typewriter_print("Método de sort desconhecido. Use: sort_0-9, sort_9-0, sort_a-z, sort_z-a, sort_rate [-r]", speed=0.003)
                     continue
 
-                # --- abrir item por posição na exibição atual: open_3 (quando estamos em OpenListContext) ---
-                if isinstance(current_ctx, OpenListContext) and cmd.startswith("open_") and cmd[len("open_"):].isdigit():
-                    idx = int(cmd[len("open_"):])
-                    item_ctx, err = current_ctx.open_item_by_index(idx)
+                # --- abrir item por posição ou nome na exibição atual: open_3 ou open_Naruto ---
+                if cmd.lower().startswith("open_") and isinstance(current_ctx, (OpenListContext, ItemContext)):
+                    key = line[len("open_"):].strip()
+                    if not key and args:
+                        key = " ".join(args)
+                    parent_ctx = current_ctx if isinstance(current_ctx, OpenListContext) else current_ctx.parent
+                    if key.isdigit():
+                        idx = int(key)
+                        item_ctx, err = parent_ctx.open_item_by_index(idx)
+                    else:
+                        item_ctx, err = parent_ctx.open_item_by_name(key)
                     if err:
                         typewriter_print(f"Erro: {err}", speed=0.003)
                     else:
