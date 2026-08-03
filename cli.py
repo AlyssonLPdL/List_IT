@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """
-cli.py — CLI interativo (atualizado com sort_* na camada open_)
-- Pergunta QUANTOS ITENS POR PÁGINA antes de mostrar resultados (máx 15)
-- Paginação: next, prev, número da página
-- sort_0-9, sort_9-0, sort_a-z, sort_z-a, sort_rate (aplica sobre a exibição atual)
-- Robustez: normaliza tags/opiniões (case + acentos)
+cli.py — CLI interativo com suporte a banco de espera, criação interativa de linhas,
+verificação da API AniList e migração.
 """
 
 import os
@@ -14,6 +11,7 @@ import time
 import threading
 import unicodedata
 import random
+import json
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
@@ -97,13 +95,11 @@ def _strip_accents(s: str) -> str:
     return "".join(ch for ch in nk if not unicodedata.combining(ch))
 
 def _norm(s: str) -> str:
-    """Lowercase + remove acentos + strip"""
     if not isinstance(s, str):
         return ""
     return _strip_accents(s).lower().strip()
 
 def _norm_command_name(s: str) -> str:
-    """Normalize names for open_<nome> commands, treating underscores/hyphens as spaces."""
     if not isinstance(s, str):
         return ""
     return _norm(s.replace("_", " ").replace("-", " "))
@@ -120,14 +116,12 @@ def search_items(itens, termo):
     return resultados
 
 def _split_tags_field(tags_field):
-    """Dado campo tags (string), retorna lista de tags normalizadas"""
     if not isinstance(tags_field, str):
         return []
     parts = [p.strip() for p in tags_field.split(",") if p.strip()]
-    return [(_norm(p), p) for p in parts]  # (normalized, original)
+    return [(_norm(p), p) for p in parts]
 
 def tags_contains(item, tag_check):
-    """Checa se item (dict) tem tag igual a tag_check (case/acentos-insensitive)"""
     if not isinstance(item, dict):
         return False
     tags_field = item.get("tags") or ""
@@ -136,6 +130,138 @@ def tags_contains(item, tag_check):
         if norm == norm_tag_check:
             return True
     return False
+
+# ============================================================
+# SISTEMA DE TAGS LOCAL (do tagsSystem.js)
+
+TAG_CATEGORIES = {
+    "Romance": [
+        "Romance", "Beijo", "Namoro", "Casamento", "Noivado",
+        "Romance do bom", "Fez Filho(s)", "Gravidez"
+    ],
+    "Ação": [
+        "Ação", "Poder", "Aventura", "Overpower", "Dungeon", "Mecha", "Demônio", "Monstros"
+    ],
+    "Fantasia": [
+        "Magia", "Fantasia", "Sobrenatural", "Deuses", "Reencarnar", "Kemonomimi", "Medieval", "Goat", "Isekai", "MC Vilão"
+    ],
+    "Emocional": [
+        "Drama", "Tristeza", "Vergonhoso", "Fofo"
+    ],
+    "Slice of Life": [
+        "Slice of Life", "Vida Escolar", "Dormitorios", "Morar Juntos"
+    ],
+    "Tematico": [
+        "Esporte", "Musical", "Terror", "Gore", "Comédia", "SciFi", "VR/Jogo", "System"
+    ],
+    "Gênero": [
+        "Shounen", "Shoujo-ai", "Mahou Shoujo", "Yuri", "Gender bender"
+    ],
+    "Adulto": [
+        "Ecchi", "Nudez", "Sexo", "Incesto", "NTR", "Harem", "Nudez Nippleless"
+    ],
+}
+
+
+def get_all_tags_flat():
+    """Retorna todas as tags em uma lista plana."""
+    tags = []
+    for category_tags in TAG_CATEGORIES.values():
+        tags.extend(category_tags)
+    return tags
+
+
+def print_tags_table(tags, cols=3):
+    """Exibe tags em 3 colunas com numeração."""
+    if not tags:
+        print("Nenhuma tag encontrada.")
+        return
+    
+    # Ordena as tags alfabeticamente
+    sorted_tags = sorted(tags)
+    rows = (len(sorted_tags) + cols - 1) // cols
+    
+    for r in range(rows):
+        line = ""
+        for c in range(cols):
+            idx = r + c * rows
+            if idx < len(sorted_tags):
+                tag = sorted_tags[idx]
+                # Trunca tags longas para manter alinhamento
+                display_tag = tag[:18] + ".." if len(tag) > 18 else tag
+                line += f"{idx+1:3d} - {display_tag:20s}"
+            else:
+                line += " " * 24
+        print(line)
+
+# -------------------------
+# Help / documentação
+# -------------------------
+def print_help_main():
+    fancy_header(["COMANDOS - MENU PRINCIPAL"])
+    commands = [
+        "show_lists                    - Lista todas as listas disponíveis.",
+        "show_wait_lists               - Lista todas as listas no banco de espera.",
+        "create_list <nome>            - Cria uma nova lista no banco principal.",
+        "create_wait_list <nome>       - Cria uma nova lista no banco de espera.",
+        "open <id|nome>               - Abre uma lista pelo ID ou nome (principal).",
+        "open_wait <id|nome>          - Abre uma lista do banco de espera.",
+        "delete_list <id|nome>        - Deleta uma lista (principal).",
+        "migrate_wait [id]             - Migra do banco de espera para o principal.",
+        "migrate_wait_dry              - Simula a migração.",
+        "clear_wait                   - Limpa todo o banco de espera (com confirmação).",
+        "verify_api                    - Verifica se a API do AniList está respondendo.",
+        "help | ?                      - Mostra este help.",
+        "clear | cls                   - Limpa a tela.",
+        "exit | quit                   - Sai do CLI.",
+    ]
+    for line in commands:
+        print(line)
+
+def print_help_list():
+    fancy_header(["COMANDOS - LISTA ABERTA"])
+    commands = [
+        "show_lines [filtro]           - Exibe as linhas da lista.",
+        "show_tags                     - Mostra todas as tags disponíveis.",
+        "search_<termo>                - Busca itens pelo nome.",
+        "open <nome>|<numero>          - Abre item por nome ou posição exibida.",
+        "show_<tag>                    - Exibe itens da tag indicada.",
+        "show_anime|show_filme|show_manga|show_manhwa|show_webtoon - Filtra por conteúdo.",
+        "show_<status>                 - Filtra por status.",
+        "sort_0-9 | sort_9-0           - Ordena por ID.",
+        "sort_a-z | sort_z-a           - Ordena por nome.",
+        "sort_rate [-r]                - Ordena por opinião.",
+        "next | prev                   - Navega páginas.",
+        "<numero>                      - Vai para a página indicada.",
+        "export_list [arquivo.xlsx]    - Exporta a exibição atual para XLSX.",
+        "create_line <nome>            - Cria uma nova linha interativamente na lista atual.",
+        "back | b                      - Volta ao menu principal.",
+        "help | ?                      - Mostra este help.",
+        "clear | cls                   - Limpa a tela.",
+        "exit | quit                   - Sai do CLI.",
+    ]
+    for line in commands:
+        print(line)
+
+def print_help_item():
+    fancy_header(["COMANDOS - ITEM ABERTO"])
+    commands = [
+        "next | n                      - Abre o próximo item.",
+        "prev | p                      - Abre o item anterior.",
+        "show_details                  - Mostra detalhes completos.",
+        "edit <campo> <novo_valor>     - Edita um campo localmente.",
+        "edit                          - Modo interativo de edição.",
+        "save                          - Salva as alterações no servidor.",
+        "refresh                       - Recarrega o item do servidor.",
+        "delete                        - Exclui o item (com confirmação).",
+        "check                         - Atualiza o highlight.",
+        "back | b                      - Volta para a lista.",
+        "help | ?                      - Mostra este help.",
+        "clear | cls                   - Limpa a tela.",
+        "exit | quit                   - Sai do CLI.",
+    ]
+    for line in commands:
+        print(line)
 
 # -------------------------
 # HTTP Requests
@@ -148,9 +274,19 @@ def fetch_lists_request():
             return None, f"Erro {r.status_code}: {r.text}"
         return r.json(), None
     except requests.exceptions.ConnectionError:
-        return None, f"Erro de rede: não foi possível conectar ao servidor em {url}. Verifique se o Flask está rodando com `python app.py`."
+        return None, f"Erro de rede: não foi possível conectar ao servidor em {url}."
     except requests.exceptions.RequestException as e:
         return None, f"Erro de rede: {e}"
+
+def fetch_wait_lists_request():
+    url = f"{API_BASE.rstrip('/')}/wait/listas"
+    try:
+        r = requests.get(url, timeout=6)
+        if r.status_code >= 400:
+            return None, f"Erro {r.status_code}: {r.text}"
+        return r.json(), None
+    except Exception as e:
+        return None, f"Erro: {e}"
 
 def fetch_lines_request(list_id):
     url = f"{API_BASE.rstrip('/')}/linhas/{list_id}"
@@ -159,13 +295,394 @@ def fetch_lines_request(list_id):
         if r.status_code >= 400:
             return None, f"Erro {r.status_code}: {r.text}"
         return r.json(), None
+    except Exception as e:
+        return None, f"Erro: {e}"
+
+def fetch_wait_lines_request(list_id):
+    url = f"{API_BASE.rstrip('/')}/wait/linhas/{list_id}"
+    try:
+        r = requests.get(url, timeout=8)
+        if r.status_code >= 400:
+            return None, f"Erro {r.status_code}: {r.text}"
+        return r.json(), None
+    except Exception as e:
+        return None, f"Erro: {e}"
+
+def verify_anilist_api():
+    """
+    Verifica a integridade da API do AniList com uma busca real.
+    Testa:
+    - Conectividade básica
+    - Busca por título (usa "Naruto" como referência)
+    - Retorno de imagem
+    - Retorno de sinopse
+    - Retorno de sinônimos
+    - Tempo de resposta
+    """
+    import time
+    from datetime import datetime
+    
+    url = "https://graphql.anilist.co"
+    test_title = "Naruto"
+    
+    # Cabeçalho
+    print("\n" + "╔" + "═" * 78 + "╗")
+    print("║" + " " * 20 + "🔍 VERIFICAÇÃO DA API ANILIST" + " " * 30 + "║")
+    print("╚" + "═" * 78 + "╝")
+    print(f"  📅 {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+    
+    resultados = {
+        "conectividade": False,
+        "busca": False,
+        "imagem": False,
+        "sinopse": False,
+        "sinonimos": False,
+        "tempo_resposta": 0,
+        "status_code": None,
+        "erro": None,
+        "detalhes": []
+    }
+    
+    # 1) Teste de conectividade básica
+    print("\n  📡 Testando conectividade...")
+    try:
+        start_time = time.time()
+        r = requests.get("https://graphql.anilist.co", timeout=5)
+        resultados["tempo_resposta"] = round((time.time() - start_time) * 1000, 2)
+        resultados["status_code"] = r.status_code
+        
+        if r.status_code == 200 or r.status_code == 400:
+            resultados["conectividade"] = True
+            print(f"     ✅ Conectividade OK ({resultados['tempo_resposta']}ms)")
+        else:
+            print(f"     ⚠️ Resposta inesperada: HTTP {r.status_code}")
+            resultados["erro"] = f"HTTP {r.status_code}"
     except requests.exceptions.ConnectionError:
-        return None, f"Erro de rede: não foi possível conectar ao servidor em {url}. Verifique se o Flask está rodando com `python app.py`."
-    except requests.exceptions.RequestException as e:
-        return None, f"Erro de rede: {e}"
+        print("     ❌ FALHA - Sem conexão com a internet ou servidor bloqueado")
+        resultados["erro"] = "Sem conexão com a internet"
+    except requests.exceptions.Timeout:
+        print("     ❌ FALHA - Tempo limite excedido (timeout)")
+        resultados["erro"] = "Timeout"
+    except Exception as e:
+        print(f"     ❌ FALHA - {str(e)}")
+        resultados["erro"] = str(e)
+    
+    # Se não houver conectividade, já exibe o relatório
+    if not resultados["conectividade"]:
+        print("\n" + "╔" + "═" * 78 + "╗")
+        print("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║")
+        print("╚" + "═" * 78 + "╝")
+        
+        print("\n  🔴 STATUS GERAL: ❌ API INDISPONÍVEL")
+        print(f"  🔴 Motivo: {resultados['erro']}")
+        print("  🔴 Testes passados: 0/5")
+        print(f"  🔴 Tempo de resposta: {resultados['tempo_resposta']}ms")
+        
+        print("\n  📋 Detalhamento:")
+        print("     ❌ Conectividade com a API")
+        print("     ❌ Busca por título")
+        print("     ❌ Retorno de imagem")
+        print("     ❌ Retorno de sinopse")
+        print("     ❌ Retorno de sinônimos")
+        
+        print("\n  💡 RECOMENDAÇÃO:")
+        print("     ⚠️ A API do AniList está inacessível no momento.")
+        print("     📌 Use o banco de ESPERA para adicionar itens.")
+        print("     📌 Depois execute 'migrate_wait' quando a API voltar.")
+        print("     📌 Verifique sua conexão com a internet.")
+        print("\n" + "═" * 80)
+        return False, resultados
+    
+    # 2) Query de busca
+    query = """
+    query($search: String) {
+      Page(page: 1, perPage: 3) {
+        media(search: $search, type: ANIME) {
+          title { romaji english native }
+          coverImage { large extraLarge }
+          description
+          synonyms
+          status
+          episodes
+          averageScore
+        }
+      }
+    }
+    """
+    
+    print(f"\n  🔎 Buscando por: '{test_title}'...")
+    
+    try:
+        start_time = time.time()
+        response = requests.post(
+            url,
+            json={"query": query, "variables": {"search": test_title}},
+            timeout=10,
+            headers={"Content-Type": "application/json"}
+        )
+        response_time = round((time.time() - start_time) * 1000, 2)
+        
+        if response.status_code != 200:
+            print(f"     ❌ Erro na busca: HTTP {response.status_code}")
+            print(f"     📄 Resposta: {response.text[:150]}...")
+            resultados["erro"] = f"HTTP {response.status_code} na busca"
+            resultados["status_code"] = response.status_code
+            
+            print("\n" + "╔" + "═" * 78 + "╗")
+            print("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║")
+            print("╚" + "═" * 78 + "╝")
+            
+            print("\n  🔴 STATUS GERAL: ⚠️ API RESPONDEU MAS FALHOU NA BUSCA")
+            print(f"  🔴 Motivo: {resultados['erro']}")
+            print("  🔴 Testes passados: 1/5")
+            print(f"  🔴 Tempo de resposta: {resultados['tempo_resposta']}ms")
+            
+            print("\n  📋 Detalhamento:")
+            print("     ✅ Conectividade com a API")
+            print("     ❌ Busca por título")
+            print("     ❌ Retorno de imagem")
+            print("     ❌ Retorno de sinopse")
+            print("     ❌ Retorno de sinônimos")
+            
+            print("\n  💡 RECOMENDAÇÃO:")
+            print("     ⚠️ A API está respondendo mas a busca falhou.")
+            print("     📌 Pode ser um problema temporário. Tente novamente em alguns minutos.")
+            print("     📌 Use o banco de ESPERA para adicionar itens agora.")
+            print("\n" + "═" * 80)
+            return False, resultados
+        
+        data = response.json()
+        resultados["busca"] = True
+        print(f"     ✅ Busca realizada com sucesso ({response_time}ms)")
+        
+    except requests.exceptions.Timeout:
+        print("     ❌ Timeout na busca")
+        resultados["erro"] = "Timeout na busca"
+        
+        print("\n" + "╔" + "═" * 78 + "╗")
+        print("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║")
+        print("╚" + "═" * 78 + "╝")
+        
+        print("\n  🔴 STATUS GERAL: ⚠️ TIMEOUT NA BUSCA")
+        print("  🔴 Testes passados: 1/5")
+        print(f"  🔴 Tempo de resposta: {resultados['tempo_resposta']}ms")
+        
+        print("\n  📋 Detalhamento:")
+        print("     ✅ Conectividade com a API")
+        print("     ❌ Busca por título (timeout)")
+        print("     ❌ Retorno de imagem")
+        print("     ❌ Retorno de sinopse")
+        print("     ❌ Retorno de sinônimos")
+        
+        print("\n  💡 RECOMENDAÇÃO:")
+        print("     ⚠️ A API está lenta. Tente novamente mais tarde.")
+        print("     📌 Use o banco de ESPERA para adicionar itens agora.")
+        print("\n" + "═" * 80)
+        return False, resultados
+        
+    except Exception as e:
+        print(f"     ❌ Erro: {e}")
+        resultados["erro"] = str(e)
+        
+        print("\n" + "╔" + "═" * 78 + "╗")
+        print("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║")
+        print("╚" + "═" * 78 + "╝")
+        
+        print("\n  🔴 STATUS GERAL: ⚠️ ERRO NA BUSCA")
+        print(f"  🔴 Motivo: {resultados['erro']}")
+        print("  🔴 Testes passados: 1/5")
+        
+        print("\n  📋 Detalhamento:")
+        print("     ✅ Conectividade com a API")
+        print("     ❌ Busca por título (erro)")
+        print("     ❌ Retorno de imagem")
+        print("     ❌ Retorno de sinopse")
+        print("     ❌ Retorno de sinônimos")
+        
+        print("\n  💡 RECOMENDAÇÃO:")
+        print("     ⚠️ Ocorreu um erro inesperado.")
+        print("     📌 Use o banco de ESPERA para adicionar itens.")
+        print("\n" + "═" * 80)
+        return False, resultados
+    
+    # 3) Analisar resultados da busca
+    media = data.get("data", {}).get("Page", {}).get("media", [])
+    
+    if not media:
+        print("     ⚠️ Nenhum resultado encontrado")
+        resultados["erro"] = "Nenhum resultado encontrado"
+        
+        print("\n" + "╔" + "═" * 78 + "╗")
+        print("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║")
+        print("╚" + "═" * 78 + "╝")
+        
+        print("\n  🔴 STATUS GERAL: ⚠️ BUSCA SEM RESULTADOS")
+        print("  🔴 Testes passados: 2/5")
+        print(f"  🔴 Tempo de resposta: {resultados['tempo_resposta']}ms")
+        
+        print("\n  📋 Detalhamento:")
+        print("     ✅ Conectividade com a API")
+        print("     ✅ Busca por título (mas sem resultados)")
+        print("     ❌ Retorno de imagem")
+        print("     ❌ Retorno de sinopse")
+        print("     ❌ Retorno de sinônimos")
+        
+        print("\n  💡 RECOMENDAÇÃO:")
+        print("     ⚠️ A API respondeu mas não encontrou o título de teste.")
+        print("     📌 Pode ser um problema nos dados da API.")
+        print("     📌 Use o banco de ESPERA para adicionar itens.")
+        print("\n" + "═" * 80)
+        return False, resultados
+    
+    # 4) Analisar dados do primeiro resultado
+    primeiro = media[0]
+    titulos = primeiro.get("title", {})
+    romaji = titulos.get("romaji", "N/A")
+    english = titulos.get("english", "")
+    native = titulos.get("native", "")
+    
+    print(f"\n  📋 Resultado encontrado:")
+    print(f"     📖 Título: {romaji}")
+    if english:
+        print(f"     🌐 Inglês: {english}")
+    if native:
+        print(f"     🇯🇵 Nativo: {native}")
+    
+    # 4.1) Imagem
+    cover = primeiro.get("coverImage", {})
+    large = cover.get("large", "")
+    extra = cover.get("extraLarge", "")
+    
+    if large:
+        resultados["imagem"] = True
+        print(f"     🖼️ Imagem: ✅ Disponível (large)")
+        # Testa se a URL da imagem é válida
+        try:
+            img_check = requests.head(large, timeout=3)
+            if img_check.status_code == 200:
+                print(f"        📸 URL válida (HTTP {img_check.status_code})")
+            else:
+                print(f"        ⚠️ URL retornou HTTP {img_check.status_code}")
+        except:
+            print(f"        ⚠️ Não foi possível verificar a URL")
+    elif extra:
+        resultados["imagem"] = True
+        print(f"     🖼️ Imagem: ✅ Disponível (extraLarge)")
+    else:
+        print(f"     🖼️ Imagem: ❌ NÃO DISPONÍVEL")
+        resultados["detalhes"].append("Imagem não disponível")
+    
+    # 4.2) Sinopse
+    desc = primeiro.get("description", "")
+    if desc and len(desc) > 50:
+        resultados["sinopse"] = True
+        print(f"     📝 Sinopse: ✅ Disponível ({len(desc)} caracteres)")
+        # Mostra preview mais limpo
+        preview = desc[:120].replace("\n", " ").strip()
+        print(f"        📄 {preview}...")
+    elif desc:
+        resultados["sinopse"] = True
+        print(f"     📝 Sinopse: ✅ Disponível (curta, {len(desc)} caracteres)")
+    else:
+        print(f"     📝 Sinopse: ❌ NÃO DISPONÍVEL")
+        resultados["detalhes"].append("Sinopse não disponível")
+    
+    # 4.3) Sinônimos
+    synonyms = primeiro.get("synonyms", [])
+    if synonyms and len(synonyms) > 0:
+        resultados["sinonimos"] = True
+        print(f"     🔤 Sinônimos: ✅ Disponível ({len(synonyms)} sinônimo(s))")
+        display = ", ".join(synonyms[:3])
+        if len(synonyms) > 3:
+            display += f" (+{len(synonyms)-3} mais)"
+        print(f"        📌 {display}")
+    else:
+        print(f"     🔤 Sinônimos: ❌ NÃO DISPONÍVEL")
+        resultados["detalhes"].append("Sinônimos não disponíveis")
+    
+    # 4.4) Informações extras
+    status = primeiro.get("status", "N/A")
+    episodes = primeiro.get("episodes", "N/A")
+    score = primeiro.get("averageScore", "N/A")
+    
+    print(f"\n  📊 Informações adicionais:")
+    print(f"     📌 Status: {status}")
+    print(f"     📌 Episódios: {episodes}")
+    print(f"     📌 Score médio: {score}/100")
+    
+    # 5) Sumário final
+    print("\n" + "╔" + "═" * 78 + "╗")
+    print("║" + " " * 28 + "📊 RELATÓRIO DA API" + " " * 33 + "║")
+    print("╚" + "═" * 78 + "╝")
+    
+    total_tests = 5
+    passed = sum([
+        resultados["conectividade"],
+        resultados["busca"],
+        resultados["imagem"],
+        resultados["sinopse"],
+        resultados["sinonimos"]
+    ])
+    
+    if passed == 5:
+        status_emoji = "🟢"
+        status_text = "COMPLETAMENTE FUNCIONAL"
+    elif passed >= 3:
+        status_emoji = "🟡"
+        status_text = "PARCIALMENTE FUNCIONAL"
+    else:
+        status_emoji = "🔴"
+        status_text = "COM PROBLEMAS"
+    
+    print(f"\n  {status_emoji} STATUS GERAL: {status_text}")
+    print(f"  📊 Testes passados: {passed}/{total_tests}")
+    print(f"  ⏱️ Tempo de resposta: {resultados['tempo_resposta']}ms")
+    
+    if resultados.get("status_code"):
+        print(f"  📡 HTTP Status: {resultados['status_code']}")
+    
+    print("\n  📋 Detalhamento:")
+    print(f"     {'✅' if resultados['conectividade'] else '❌'} Conectividade com a API")
+    print(f"     {'✅' if resultados['busca'] else '❌'} Busca por título")
+    print(f"     {'✅' if resultados['imagem'] else '❌'} Retorno de imagem")
+    print(f"     {'✅' if resultados['sinopse'] else '❌'} Retorno de sinopse")
+    print(f"     {'✅' if resultados['sinonimos'] else '❌'} Retorno de sinônimos")
+    
+    if resultados["detalhes"]:
+        print("\n  📌 Observações:")
+        for det in resultados["detalhes"]:
+            print(f"     ⚠️ {det}")
+    
+    # 6) Recomendações
+    print("\n  💡 RECOMENDAÇÃO:")
+    if passed == 5:
+        print("     ✅ Tudo funcionando perfeitamente!")
+        print("     ✅ Pode usar o banco PRINCIPAL normalmente.")
+        print("     ✅ As imagens, sinopse e sinônimos estão disponíveis.")
+    elif passed >= 3:
+        print("     ⚠️ API está funcionando parcialmente.")
+        print("     📌 Alguns dados podem não estar disponíveis.")
+        print("     📌 Use o banco PRINCIPAL com cautela.")
+        if not resultados["imagem"]:
+            print("     📌 Imagens não disponíveis. Considere adicionar manualmente.")
+        if not resultados["sinopse"]:
+            print("     📌 Sinopse não disponível.")
+        if not resultados["sinonimos"]:
+            print("     📌 Sinônimos não disponíveis.")
+    else:
+        print("     🔴 API com problemas ou indisponível.")
+        print("     📌 Use o banco de ESPERA para adicionar itens.")
+        print("     📌 Execute 'migrate_wait' quando a API normalizar.")
+        if resultados.get("erro"):
+            print(f"     📌 Motivo: {resultados['erro']}")
+    
+    print("\n" + "═" * 80)
+    
+    return passed >= 3, resultados
+
 
 # -------------------------
-# Paginação (com pedido ANTES)
+# Paginação
 # -------------------------
 class PaginatedDisplay:
     def __init__(self, items, title, items_per_page=None):
@@ -243,7 +760,6 @@ class PaginatedDisplay:
             for idx, item in enumerate(page_items, start=start_idx + 1):
                 self._pretty_print_item(idx, item)
 
-        # Rodapé
         print("-" * 80)
         typewriter_print(self._compact_page_display(), speed=0.003)
         typewriter_print("Navegue com 'next', 'prev' ou digite o número da página. Use 'back' para voltar.", speed=0.003)
@@ -270,16 +786,28 @@ class PaginatedDisplay:
         return " ".join(parts)
 
     def _pretty_print_item(self, idx, item):
-        if isinstance(item, dict):
-            name = item.get("nome") or item.get("name") or str(item.get("id", "N/A"))
-            extra_info = []
-            if item.get("status"):
-                extra_info.append(f"Status: {item['status']}")
-            if extra_info:
-                name += f" [{', '.join(extra_info)}]"
+        if not isinstance(item, dict):
+            typewriter_print(f"{idx}. {item}", speed=0.002)
+            return
+        nome = item.get("nome") or item.get("name") or str(item.get("id", "N/A"))
+        status = item.get("status")
+        status_str = f"[Status: {status}]" if status else ""
+        WIDTH = 80
+        left_part = f"{idx}. {nome}"
+        if status_str:
+            total_len = len(left_part) + len(status_str) + 2
+            if total_len > WIDTH:
+                max_name_len = WIDTH - len(status_str) - 4
+                if max_name_len < 10:
+                    max_name_len = 10
+                left_part = f"{idx}. {nome[:max_name_len]}..."
+            padding = WIDTH - len(left_part) - len(status_str)
+            if padding < 1:
+                padding = 1
+            line = f"{left_part}{' ' * padding}{status_str}"
         else:
-            name = str(item)
-        typewriter_print(f"{idx}. {name}", speed=0.002)
+            line = left_part.ljust(WIDTH)
+        typewriter_print(line, speed=0.002)
 
     def handle_command(self, cmd, args):
         cmd = str(cmd).strip().lower()
@@ -296,21 +824,12 @@ class PaginatedDisplay:
                 return True
         return False
 
-    # -------------------------
-    # Sorting: aplica sobre self.items e re-renderiza (se necessário)
-    # -------------------------
     def apply_sort(self, method):
-        """
-        method: one of "0-9","9-0","a-z","z-a","rate"
-        Retorna mensagem de confirmação ou erro.
-        """
         if not self.items:
             return "Nenhum item para ordenar."
-
         method = method.lower()
         try:
             if method == "0-9":
-                # ordenar por id crescente (tenta int)
                 def key_id(x):
                     if isinstance(x, dict):
                         v = x.get("id", x.get("Id", None))
@@ -323,7 +842,6 @@ class PaginatedDisplay:
                 self.items = sorted(self.items, key=key_id)
                 self.current_page = 1
                 return "Ordenado por id crescente (0-9)."
-
             if method == "9-0":
                 def key_id(x):
                     if isinstance(x, dict):
@@ -337,7 +855,6 @@ class PaginatedDisplay:
                 self.items = sorted(self.items, key=key_id, reverse=True)
                 self.current_page = 1
                 return "Ordenado por id decrescente (9-0)."
-
             if method == "a-z":
                 def key_name(x):
                     if isinstance(x, dict):
@@ -346,7 +863,6 @@ class PaginatedDisplay:
                 self.items = sorted(self.items, key=key_name)
                 self.current_page = 1
                 return "Ordenado A→Z."
-
             if method == "z-a":
                 def key_name(x):
                     if isinstance(x, dict):
@@ -355,15 +871,12 @@ class PaginatedDisplay:
                 self.items = sorted(self.items, key=key_name, reverse=True)
                 self.current_page = 1
                 return "Ordenado Z→A."
-
             if method in ("rate", "rate -r"):
                 opiniao_order = ["Favorito", "Muito Bom", "Recomendo", "Bom", "Mediano", "Ruim", "Horrivel", "Horrível", "Não Vi", "Nao Vi"]
-
                 def get_priority(item):
                     tags_field = item.get("tags") if isinstance(item, dict) else ""
                     tags_norm = [t for (t, orig) in _split_tags_field(tags_field)]
                     def has_tag(t): return _norm(t) in tags_norm
-
                     has_relation = any(has_tag(x) for x in ("namoro", "casamento", "noivado"))
                     is_bestlove = has_tag("goat") and has_tag("beijo") and has_tag("romance do bom") and has_relation
                     if is_bestlove:
@@ -381,24 +894,21 @@ class PaginatedDisplay:
                         if _norm(op) == opiniao_norm:
                             return 4 + idx
                     return 99
-
                 def key_rate(x):
                     try:
                         return (get_priority(x), _norm(x.get("nome") or x.get("name") or str(x.get("id",""))))
                     except Exception:
                         return (99, _norm(str(x)))
-
                 reverse = (method == "rate -r")
                 self.items = sorted(self.items, key=key_rate, reverse=reverse)
                 self.current_page = 1
                 return "Ordenado por 'rate' (reverse)." if reverse else "Ordenado por 'rate'."
-
             return "Método de ordenação desconhecido."
         except Exception as e:
             return f"Erro ao ordenar: {e}"
 
 # -------------------------
-# Funções auxiliares de filtro e parser (mantive as anteriores)
+# Funções auxiliares de filtro e parser
 # -------------------------
 def extrair_tags_dos_itens(itens):
     todas_tags = set()
@@ -563,18 +1073,30 @@ def parse_search_expression(expr_str):
     }
 
 # -------------------------
-# OpenListContext (com integração a PaginatedDisplay e sort)
+# Contextos
 # -------------------------
 class OpenListContext:
-    def __init__(self, list_obj):
+    def __init__(self, list_obj, is_waiting=False):
         self.list_obj = list_obj
         self.id = str(list_obj.get("id") or "")
         self.name = list_obj.get("nome") or self.id or "lista"
+        self.is_waiting = is_waiting
         self.lines = []
         self.current_display = None
 
     def fetch_and_cache_lines(self):
-        lines, err = with_minimum_spinner(lambda: fetch_lines_request(self.id), text=f"Buscando linhas da lista '{self.name}'...", min_seconds=0.6)
+        if self.is_waiting:
+            lines, err = with_minimum_spinner(
+                lambda: fetch_wait_lines_request(self.id),
+                text=f"Buscando linhas da lista de espera '{self.name}'...",
+                min_seconds=0.6
+            )
+        else:
+            lines, err = with_minimum_spinner(
+                lambda: fetch_lines_request(self.id),
+                text=f"Buscando linhas da lista '{self.name}'...",
+                min_seconds=0.6
+            )
         if err:
             return False, err
         if not isinstance(lines, list):
@@ -585,12 +1107,8 @@ class OpenListContext:
             return str(it).casefold()
         self.lines = sorted(lines, key=keyfn)
         return True, None
-    
+
     def open_item_by_index(self, one_based_index):
-        """
-        Retorna um ItemContext para o item na posição one_based_index
-        (1-based) da exibição atual (current_display.items) ou da lista completa.
-        """
         items = None
         if getattr(self, "current_display", None) and getattr(self.current_display, "items", None):
             items = self.current_display.items
@@ -708,23 +1226,13 @@ class OpenListContext:
         caps = ", ".join([t.capitalize() for t in types])
         self.current_display = PaginatedDisplay(itens, f"ITENS ({caps}) - {self.name}", items_per_page=None)
         self.current_display.render_page()
-    
+
     def export_current_display(self, filename_arg=None):
-        """
-        Exporta os itens da exibição atual (self.current_display.items) para um .xlsx.
-        Pergunta interativamente:
-        - nome do arquivo (default: <lista>.xlsx)
-        - quais colunas incluir (pergunta Y/n para cada)
-        Gera uma linha por TAG (se houver múltiplas tags) — mesma lógica do JS.
-        """
         if not getattr(self, "current_display", None):
             return False, "Nenhuma exibição ativa. Use 'show_lines' primeiro."
-
         items = list(self.current_display.items or [])
         if not items:
             return False, "Nenhum item visível para exportar."
-
-        # Pergunta nome do arquivo (se não passado)
         default_fname = f"{self.name}.xlsx"
         if filename_arg:
             filename = filename_arg.strip()
@@ -734,7 +1242,6 @@ class OpenListContext:
         if not filename.lower().endswith(".xlsx"):
             filename = filename + ".xlsx"
 
-        # Perguntas de opções (Y/n)
         def ask_opt(prompt, default=True):
             yn = "Y/n" if default else "y/N"
             raw = input(f"{prompt} [{yn}]: ").strip().lower()
@@ -755,11 +1262,9 @@ class OpenListContext:
             "image": ask_opt("Incluir Imagem (URL)?", True),
         }
 
-        # Cria mapa de cores único por item.id (hex ARGB esperado pelo openpyxl: 'FFRRGGBB')
         color_map = {}
         used = set()
         def rand_color():
-            # evitar branco total
             while True:
                 r = random.randint(0, 200)
                 g = random.randint(0, 200)
@@ -772,7 +1277,6 @@ class OpenListContext:
             key = str(it.get("id", str(id(it)))) if isinstance(it, dict) else str(it)
             color_map[key] = rand_color()
 
-        # Monta cabeçalho
         header_keys = []
         if opts["id"]: header_keys.append("ID")
         if opts["nome"]: header_keys.append("Nome")
@@ -788,18 +1292,14 @@ class OpenListContext:
         wb = Workbook()
         ws = wb.active
         ws.title = "Export"
-
         ws.append(header_keys)
 
         total = len(items)
         current = 0
 
         for it in items:
-            # id chave para color_map
             key = str(it.get("id", str(id(it)))) if isinstance(it, dict) else str(it)
             bg = color_map.get(key, "FFDDDDDD")
-
-            # tags: se não existir, cria uma lista com uma string vazia para uma única linha
             tags_field = ""
             if isinstance(it, dict):
                 tags_field = it.get("tags") or ""
@@ -841,7 +1341,6 @@ class OpenListContext:
                     row.append(it.get("imagem_url") if isinstance(it, dict) else "")
 
                 ws.append(row)
-                # aplica fill na última linha adicionada
                 last_row_idx = ws.max_row
                 fill = PatternFill(start_color=bg, end_color=bg, fill_type="solid")
                 for col_idx in range(1, len(header_keys) + 1):
@@ -849,29 +1348,232 @@ class OpenListContext:
                     cell.fill = fill
 
             current += 1
-            # progresso simples
             pct = int((current / total) * 100)
             sys.stdout.write(f"\rExportando... {current}/{total} ({pct}%)")
             sys.stdout.flush()
 
-        # salva e finaliza
         wb.save(filename)
-        print()  # nova linha depois do progresso
+        print()
         return True, f"Arquivo salvo: {os.path.abspath(filename)}"
-    
+
+    # ============================================================
+    # Criação interativa de linha (CORRIGIDA)
+    # ============================================================
+
+    def interactive_create_line(self, nome, is_waiting=False):
+        """
+        Realiza o fluxo interativo de criação de uma nova linha.
+        USANDO TAGS DO ARQUIVO LOCAL (não busca do banco).
+        """
+        
+        # 1) Usar tags do arquivo local
+        all_tags = get_all_tags_flat()
+        
+        # 2) Exibir tags em colunas (5 colunas)
+        clear_screen()
+        print("=" * 80)
+        print(f"CRIANDO NOVA LINHA: {nome}")
+        print("=" * 80)
+        print("\n📋 TAGS DISPONÍVEIS (do sistema):")
+        print("-" * 80)
+        
+        # Pergunta tags
+        print_tags_table(all_tags)
+        print("-" * 80)
+        tag_choice = input("Quais tags essa linha vai ter? (digite os números separados por vírgula, ou deixe em branco): ").strip()
+        selected_tags = []
+        if tag_choice:
+            # Processa números
+            sorted_tags = sorted(all_tags)
+            for part in tag_choice.split(','):
+                part = part.strip()
+                if part.isdigit():
+                    idx = int(part) - 1
+                    if 0 <= idx < len(sorted_tags):
+                        selected_tags.append(sorted_tags[idx])
+                    else:
+                        print(f"⚠️ Número {part} inválido (fora do range). Ignorando.")
+            if selected_tags:
+                print(f"✅ Tags selecionadas: {', '.join(selected_tags)}")
+            else:
+                print("ℹ️ Nenhuma tag válida selecionada.")
+        
+        tags_str = ", ".join(selected_tags) if selected_tags else ""
+        input("\nPressione ENTER para continuar...")
+
+        # 3) Tipo de mídia
+        clear_screen()
+        print("=" * 80)
+        print(f"TIPO DE MÍDIA para '{nome}'")
+        print("=" * 80)
+        media_options = [
+            ("Anime", "anime"),
+            ("Filme", "filme"),
+            ("Manga", "manga"),
+            ("Manhwa", "manhwa"),
+            ("Webtoon", "webtoon")
+        ]
+        for i, (label, _) in enumerate(media_options, 1):
+            print(f"{i} - {label}")
+        while True:
+            choice = input("Escolha o tipo (número): ").strip()
+            if choice.isdigit():
+                idx = int(choice) - 1
+                if 0 <= idx < len(media_options):
+                    conteudo = media_options[idx][1]
+                    break
+            print("Opção inválida. Tente novamente.")
+
+        # 4) Status (baseado no tipo)
+        clear_screen()
+        print("=" * 80)
+        print(f"STATUS para '{nome}'")
+        print("=" * 80)
+        # Define opções baseadas no conteúdo
+        if conteudo in ["anime", "filme"]:
+            status_options = [
+                ("Assistindo", "assistindo"),
+                ("Concluído", "concluido"),
+                ("Assistir", "assistir"),
+                ("Cancelado", "cancelado"),
+                ("Dropado", "dropado")
+            ]
+        else:  # manga, manhwa, webtoon
+            status_options = [
+                ("Lendo", "lendo"),
+                ("Concluído", "concluido"),
+                ("Ler", "ler"),
+                ("Cancelado", "cancelado"),
+                ("Dropado", "dropado")
+            ]
+        for i, (label, _) in enumerate(status_options, 1):
+            print(f"{i} - {label}")
+        while True:
+            choice = input("Escolha o status (número): ").strip()
+            if choice.isdigit():
+                idx = int(choice) - 1
+                if 0 <= idx < len(status_options):
+                    status = status_options[idx][1]
+                    break
+            print("Opção inválida. Tente novamente.")
+
+        # 5) Episódio/Capítulo
+        clear_screen()
+        print("=" * 80)
+        print(f"EPISÓDIO/CAPÍTULO para '{nome}'")
+        print("=" * 80)
+        episodio_input = input("Em qual episódio/capítulo você parou? (deixe em branco se não aplicável): ").strip()
+        episodio = None
+        if episodio_input:
+            try:
+                episodio = int(episodio_input)
+            except ValueError:
+                try:
+                    episodio = float(episodio_input)
+                except ValueError:
+                    print("⚠️ Valor inválido. Será salvo como vazio.")
+                    episodio = None
+
+        # 6) Opinião
+        clear_screen()
+        print("=" * 80)
+        print(f"OPINIÃO sobre '{nome}'")
+        print("=" * 80)
+        opiniao_options = [
+            ("Favorito", "Favorito"),
+            ("Muito Bom", "Muito Bom"),
+            ("Recomendo", "Recomendo"),
+            ("Bom", "Bom"),
+            ("Mediano", "Mediano"),
+            ("Ruim", "Ruim"),
+            ("Horrível", "Horrível"),
+            ("Não Vi", "Não Vi")
+        ]
+        for i, (label, _) in enumerate(opiniao_options, 1):
+            print(f"{i} - {label}")
+        while True:
+            choice = input("Escolha a opinião (número): ").strip()
+            if choice.isdigit():
+                idx = int(choice) - 1
+                if 0 <= idx < len(opiniao_options):
+                    opiniao = opiniao_options[idx][1]
+                    break
+            print("Opção inválida. Tente novamente.")
+
+        # 7) Confirmar e enviar
+        clear_screen()
+        print("=" * 80)
+        print("RESUMO DA CRIAÇÃO")
+        print("=" * 80)
+        print(f"📌 Nome: {nome}")
+        print(f"🏷️ Tags: {tags_str or '(nenhuma)'}")
+        print(f"📺 Tipo: {conteudo}")
+        print(f"📊 Status: {status}")
+        print(f"📖 Episódio/Cap: {episodio if episodio is not None else '(não informado)'}")
+        print(f"⭐ Opinião: {opiniao}")
+        print("=" * 80)
+        confirm = input("Criar esta linha? (s/N): ").strip().lower()
+        if confirm != 's':
+            print("❌ Criação cancelada.")
+            return
+
+        # 8) Enviar para o servidor
+        payload = {
+            "lista_id": self.id,
+            "nome": nome,
+            "tags": tags_str,
+            "conteudo": conteudo,
+            "status": status,
+            "episodio": episodio,
+            "opiniao": opiniao
+        }
+        
+        if is_waiting:
+            url = f"{API_BASE.rstrip('/')}/wait/linhas"
+        else:
+            url = f"{API_BASE.rstrip('/')}/linhas"
+
+        try:
+            print("\n⏳ Enviando para o servidor...")
+            r = requests.post(url, json=payload, timeout=8)
+            if r.status_code >= 400:
+                print(f"❌ Erro ao criar linha: {r.status_code} - {r.text}")
+            else:
+                print("✅ Linha criada com sucesso!")
+                # Atualiza a lista de linhas
+                self.fetch_and_cache_lines()
+                self.show_lines()
+        except Exception as e:
+            print(f"❌ Erro de rede: {e}")
+
+    def _print_tags_table(self, tags):
+        """Exibe tags em 3 colunas com numeração."""
+        if not tags:
+            print("Nenhuma tag encontrada no sistema.")
+            return
+        # Divide em 3 colunas
+        cols = 3
+        rows = (len(tags) + cols - 1) // cols
+        for r in range(rows):
+            line = ""
+            for c in range(cols):
+                idx = r + c * rows
+                if idx < len(tags):
+                    tag = tags[idx]
+                    display_tag = tag[:18] + ".." if len(tag) > 18 else tag
+                    line += f"{idx+1:2d} - {display_tag:20s}"
+                else:
+                    line += " " * 24
+            print(line)
+
 class ItemContext:
-    """
-    Contexto para um item aberto a partir da exibição atual.
-    Prompt ficará: "<item_id> >"
-    """
     def __init__(self, parent_ctx, item, idx_in_view):
-        self.parent = parent_ctx              # instância OpenListContext
+        self.parent = parent_ctx
         self.item = dict(item) if isinstance(item, dict) else {"nome": str(item)}
-        self.index_in_view = int(idx_in_view) # 1-based posição na exibição atual
+        self.index_in_view = int(idx_in_view)
         self.name = str(self.item.get("id") or self.item.get("nome") or f"item{self.index_in_view}")
         self.modified = False
 
-    # Mostrar tudo de forma clara
     def show_details(self):
         i = self.item
         lines = [
@@ -890,7 +1592,6 @@ class ItemContext:
         ]
         fancy_header(["="*72, *lines, "="*72])
 
-    # editar um campo simples
     def edit_field(self, field, new_value):
         field = field.strip().lower()
         if not field:
@@ -909,7 +1610,6 @@ class ItemContext:
         self.modified = True
         return f"Campo '{field}' atualizado localmente."
 
-    # modo interativo de edição (pergunta campo por campo)
     def interactive_edit(self):
         editable = ["nome","conteudo","status","episodio","opiniao","tags","sinopse","imagem_url","sinonimos"]
         print("Modo interativo — deixe em branco para manter o valor atual.")
@@ -917,7 +1617,6 @@ class ItemContext:
             cur = self.item.get(f, "")
             raw = input(f"{f} (atual: {cur}) => ").rstrip("\n")
             if raw != "":
-                # manter listas de sinônimos se input com ; -> transformar em lista?
                 if f == "sinonimos" and ";" in raw:
                     self.item[f] = [s.strip() for s in raw.split(";") if s.strip()]
                 else:
@@ -925,7 +1624,6 @@ class ItemContext:
                 self.modified = True
         return "Edição local concluída."
 
-    # salvar no servidor (aplica PUT em /linhas/<id>)
     def save(self):
         if "id" not in self.item:
             return False, "Item sem ID, não é possível salvar."
@@ -953,7 +1651,6 @@ class ItemContext:
             "imagem_url": self.item.get("imagem_url"),
             "sinonimos": self.item.get("sinonimos")
         }
-        # remove chaves None
         payload = {k: v for k, v in payload.items() if v is not None}
         url = f"{API_BASE.rstrip('/')}/linhas/{self.item['id']}"
         try:
@@ -965,7 +1662,6 @@ class ItemContext:
         except Exception as e:
             return False, f"Erro de rede: {e}"
 
-    # refresh (GET /linhas/<id>) e atualiza local
     def refresh(self):
         if "id" not in self.item:
             return False, "Item sem ID."
@@ -982,7 +1678,6 @@ class ItemContext:
         except Exception as e:
             return False, f"Erro de rede: {e}"
 
-    # excluir
     def delete(self):
         if "id" not in self.item:
             return False, "Item sem ID."
@@ -995,7 +1690,24 @@ class ItemContext:
         except Exception as e:
             return False, f"Erro de rede: {e}"
 
-    # mover para próximo/prev (retorna novo ItemContext ou None)
+    def check(self):
+        if "id" not in self.item:
+            return False, "Item sem ID."
+        url = f"{API_BASE.rstrip('/')}/highlighted/{self.item['id']}"
+        try:
+            r = requests.post(url, timeout=8)
+            if r.status_code >= 400:
+                return False, f"Erro {r.status_code}: {r.text}"
+            try:
+                payload = r.json()
+                if isinstance(payload, dict) and "mensagem" in payload:
+                    self.item["last_highlight"] = payload.get("last_highlight", self.item.get("last_highlight"))
+            except Exception:
+                pass
+            return True, "Highlight atualizado com sucesso."
+        except Exception as e:
+            return False, f"Erro de rede: {e}"
+
     def open_adjacent(self, offset):
         target_idx = self.index_in_view - 1 + offset
         items = self.parent.current_display.items if getattr(self.parent, "current_display", None) else self.parent.lines
@@ -1003,10 +1715,24 @@ class ItemContext:
             return None
         return ItemContext(self.parent, items[target_idx], target_idx + 1)
 
-def cmd_open_list(raw_name):
+# -------------------------
+# Funções de abertura e criação de listas
+# -------------------------
+def cmd_open_list(raw_name, is_waiting=False):
     key = raw_name.strip()
     key_norm = _norm_command_name(key)
-    (listas, err) = with_minimum_spinner(lambda: fetch_lists_request(), text=f"Procurando lista '{key}'...", min_seconds=0.6)
+    if is_waiting:
+        (listas, err) = with_minimum_spinner(
+            lambda: fetch_wait_lists_request(),
+            text=f"Procurando lista de espera '{key}'...",
+            min_seconds=0.6
+        )
+    else:
+        (listas, err) = with_minimum_spinner(
+            lambda: fetch_lists_request(),
+            text=f"Procurando lista '{key}'...",
+            min_seconds=0.6
+        )
     if err:
         fancy_header([f"Erro: {err}"])
         return None
@@ -1035,13 +1761,178 @@ def cmd_open_list(raw_name):
     if not match:
         fancy_header([f"Não encontrei a lista '{key}'."])
         return None
-    ctx = OpenListContext(match)
+    ctx = OpenListContext(match, is_waiting=is_waiting)
     ok, fetch_err = ctx.fetch_and_cache_lines()
     if not ok:
         fancy_header([f"❌ Erro ao carregar linhas: {fetch_err}"])
         return None
-    fancy_header([f"✅ LISTA '{match.get('nome') or match.get('id')}' ABERTA"])
+    fancy_header([f"✅ LISTA '{match.get('nome') or match.get('id')}' ABERTA" +
+                  (" (ESPERA)" if is_waiting else "")])
     return ctx
+
+def cmd_delete_list(raw_name):
+    key = raw_name.strip()
+    key_norm = _norm_command_name(key)
+    (listas, err) = with_minimum_spinner(lambda: fetch_lists_request(), text=f"Procurando lista '{key}'...", min_seconds=0.6)
+    if err:
+        print(f"Erro ao buscar listas: {err}")
+        return False
+    match = None
+    partial_matches = []
+    for item in listas or []:
+        if not isinstance(item, dict):
+            continue
+        id_str = str(item.get("id") or "")
+        name = item.get("nome") or item.get("name") or ""
+        if key_norm == _norm_command_name(id_str) or key_norm == _norm_command_name(name):
+            match = item
+            break
+        if key_norm in _norm_command_name(name) or key_norm in _norm_command_name(id_str):
+            partial_matches.append(item)
+    if not match:
+        if len(partial_matches) == 1:
+            match = partial_matches[0]
+        elif partial_matches:
+            print("Várias correspondências encontradas:")
+            for it in partial_matches:
+                print(f" - {it.get('id')} : {it.get('nome')}")
+            print("Seja mais específico.")
+            return False
+        else:
+            print("Lista não encontrada.")
+            return False
+    confirm = input(f"Tem certeza que deseja deletar a lista '{match.get('nome')}' (ID {match.get('id')})? [y/N]: ").strip().lower()
+    if confirm != 'y':
+        print("Operação cancelada.")
+        return False
+    url = f"{API_BASE.rstrip('/')}/listas/{match.get('id')}"
+    try:
+        r = requests.delete(url, timeout=8)
+        if r.status_code >= 400:
+            print(f"Erro ao deletar lista: HTTP {r.status_code} - {getattr(r, 'text', '')}")
+            return False
+        print(f"Lista '{match.get('nome')}' deletada com sucesso.")
+        return True
+    except requests.exceptions.RequestException as e:
+        print(f"Erro de requisição: {e}")
+        return False
+
+def cmd_create_list(nome, is_waiting=False):
+    """Cria uma nova lista (principal ou espera)."""
+    url = f"{API_BASE.rstrip('/')}/wait/listas" if is_waiting else f"{API_BASE.rstrip('/')}/listas"
+    try:
+        r = requests.post(url, json={"nome": nome}, timeout=6)
+        if r.status_code >= 400:
+            print(f"Erro ao criar lista: {r.status_code} - {r.text}")
+        else:
+            data = r.json()
+            print(f"Lista '{nome}' criada com sucesso (ID: {data.get('id')})")
+    except Exception as e:
+        print(f"Erro de rede: {e}")
+
+def cmd_migrate_wait(lista_id=None, dry_run=False):
+    """Migra do banco de espera para o principal."""
+    payload = {}
+    if lista_id:
+        payload["lista_id"] = lista_id
+    if dry_run:
+        payload["dry_run"] = True
+    url = f"{API_BASE.rstrip('/')}/migrate/wait/to/main"
+    try:
+        r = requests.post(url, json=payload, timeout=120)
+        if r.status_code != 200:
+            print(f"Erro na migração: {r.status_code} - {r.text}")
+            return
+        data = r.json()
+        if dry_run:
+            print("📋 SIMULAÇÃO DE MIGRAÇÃO")
+            for det in data.get('detalhes', []):
+                print(f"  Lista: {det['lista']} -> {det['acao']}")
+            return
+        print("✅ Migração concluída!")
+        print(f"  Listas migradas: {data.get('listas_migradas', 0)}")
+        print(f"  Linhas migradas: {data.get('linhas_migradas', 0)}")
+        if data.get('linhas_com_erro', 0) > 0:
+            print(f"  ⚠️ {data['linhas_com_erro']} linhas com erro.")
+            for err in data.get('erros', []):
+                print(f"    - {err['linha']}: {err['erro']}")
+    except Exception as e:
+        print(f"Erro: {e}")
+
+def cmd_clear_wait():
+    confirm = input("⚠️ Tem certeza que deseja limpar todo o banco de espera? (y/N): ").strip().lower()
+    if confirm == "y":
+        url = f"{API_BASE.rstrip('/')}/wait/clear?confirm=true"
+        try:
+            r = requests.delete(url, timeout=10)
+            if r.status_code == 200:
+                print("Banco de espera limpo com sucesso.")
+            else:
+                print(f"Erro: {r.status_code}")
+        except Exception as e:
+            print(f"Erro: {e}")
+    else:
+        print("Operação cancelada.")
+
+# DEPOIS - Parser mais robusto
+
+def parse_command(line):
+    """
+    Parseia o comando de forma mais robusta.
+    Suporta comandos com aspas simples e duplas.
+    """
+    line = line.strip()
+    if not line:
+        return None, []
+    
+    # Se o comando começa com create_line, open, etc, trata de forma especial
+    # Primeiro, identifica o comando (primeira palavra)
+    parts = line.split(' ', 1)
+    cmd = parts[0].lower()
+    
+    if len(parts) == 1:
+        return cmd, []
+    
+    # Para o resto, tenta parsear respeitando aspas
+    args_str = parts[1]
+    args = []
+    current = ''
+    in_quotes = False
+    quote_char = ''
+    i = 0
+    
+    while i < len(args_str):
+        ch = args_str[i]
+        
+        if not in_quotes:
+            if ch == '"' or ch == "'":
+                in_quotes = True
+                quote_char = ch
+                i += 1
+                continue
+            elif ch == ' ':
+                if current:
+                    args.append(current)
+                    current = ''
+                i += 1
+                continue
+            else:
+                current += ch
+                i += 1
+        else:
+            if ch == quote_char:
+                in_quotes = False
+                quote_char = ''
+                i += 1
+                continue
+            else:
+                current += ch
+                i += 1
+    
+    if current:
+        args.append(current)
+    
+    return cmd, args
 
 # -------------------------
 # Loop principal
@@ -1051,14 +1942,25 @@ def main():
     fancy_header(["BEM VINDO AO CLI INTERATIVO"])
     while True:
         try:
-            prompt = f"{current_ctx.name}> " if current_ctx else PROMPT_MAIN
+            if current_ctx:
+                prompt = f"{current_ctx.name}> "
+            else:
+                prompt = PROMPT_MAIN
             line = input(prompt).strip()
             if not line:
                 continue
-            parts = shlex.split(line)
-            cmd = parts[0].lower()
-            args = parts[1:]
+            cmd, args = parse_command(line)
 
+            if cmd in ("help", "?"):
+                if current_ctx is None:
+                    print_help_main()
+                elif isinstance(current_ctx, ItemContext):
+                    print_help_item()
+                else:
+                    print_help_list()
+                continue
+
+            # --- Comandos globais ---
             if not current_ctx:
                 if cmd == "show_lists":
                     (listas, err) = with_minimum_spinner(lambda: fetch_lists_request(), text="Buscando listas...", min_seconds=0.6)
@@ -1068,217 +1970,265 @@ def main():
                     else:
                         display = PaginatedDisplay(listas or [], "LISTAS DISPONÍVEIS", items_per_page=None)
                         display.render_page()
-                elif cmd == "create_new_list":
-                    if not args:
-                        print("Uso: create_new_list <nome>")
-                        continue
-                    name = " ".join(args)
-                    def do_post():
-                        url = f"{API_BASE.rstrip('/')}/listas"
-                        try:
-                            r = requests.post(url, json={"nome": name}, timeout=6)
-                            if r.status_code >= 400:
-                                return False, f"Erro {r.status_code}: {r.text}"
-                            return True, r.json()
-                        except Exception as e:
-                            return False, f"Erro de rede: {e}"
-                    ok, data = with_minimum_spinner(do_post, text=f"Criando lista '{name}'...", min_seconds=0.6)
-                    fancy_header([f"CRIANDO LISTA"])
-                    if not ok:
-                        typewriter_print(f"Problema: {data}", speed=0.004)
+                    continue
+
+                if cmd == "show_wait_lists":
+                    (listas, err) = with_minimum_spinner(lambda: fetch_wait_lists_request(), text="Buscando listas de espera...", min_seconds=0.6)
+                    fancy_header(["LISTAS DE ESPERA"])
+                    if err:
+                        typewriter_print(f"Erro: {err}", speed=0.002)
                     else:
-                        typewriter_print("Lista criada com sucesso.", speed=0.004)
-                elif cmd.lower().startswith("open_"):
-                    listkey = line[len("open_"):].strip()
-                    if not listkey and args:
-                        listkey = " ".join(args)
-                    ctx = cmd_open_list(listkey)
+                        display = PaginatedDisplay(listas or [], "LISTAS DE ESPERA", items_per_page=None)
+                        display.render_page()
+                    continue
+
+                if cmd == "create_list":
+                    if not args:
+                        print("Uso: create_list <nome>")
+                        continue
+                    nome = " ".join(args)
+                    cmd_create_list(nome, is_waiting=False)
+                    continue
+
+                if cmd == "create_wait_list":
+                    if not args:
+                        print("Uso: create_wait_list <nome>")
+                        continue
+                    nome = " ".join(args)
+                    cmd_create_list(nome, is_waiting=True)
+                    continue
+
+                if cmd == "delete_list":
+                    if not args:
+                        print("Uso: delete_list <id|nome>")
+                        continue
+                    key = " ".join(args)
+                    cmd_delete_list(key)
+                    continue
+
+                if cmd == "open":
+                    if not args:
+                        print("Uso: open <id|nome>")
+                        continue
+                    listkey = " ".join(args)
+                    ctx = cmd_open_list(listkey, is_waiting=False)
                     if ctx:
                         current_ctx = ctx
-                elif cmd in ("clear", "cls"):
+                    continue
+
+                if cmd == "open_wait":
+                    if not args:
+                        print("Uso: open_wait <id|nome>")
+                        continue
+                    listkey = " ".join(args)
+                    ctx = cmd_open_list(listkey, is_waiting=True)
+                    if ctx:
+                        current_ctx = ctx
+                    continue
+
+                if cmd == "verify_api":
+                    verify_anilist_api()
+                    continue
+
+                if cmd == "migrate_wait":
+                    lista_id = args[0] if args else None
+                    cmd_migrate_wait(lista_id, dry_run=False)
+                    continue
+
+                if cmd == "migrate_wait_dry":
+                    cmd_migrate_wait(dry_run=True)
+                    continue
+
+                if cmd == "clear_wait":
+                    cmd_clear_wait()
+                    continue
+
+                if cmd in ("clear", "cls"):
                     clear_screen()
-                elif cmd in ("exit", "quit"):
+                    continue
+
+                if cmd in ("exit", "quit"):
                     break
+
+                typewriter_print(f"Comando inválido: {cmd}", speed=0.003)
+                continue
+
+            # --- Contexto de lista ou item ---
+
+            # Comandos de criação de linha (dentro do contexto)
+            if cmd == "create_line":
+                if not args:
+                    print("Uso: create_line <nome>")
+                    continue
+                nome = " ".join(args)
+                if isinstance(current_ctx, OpenListContext):
+                    current_ctx.interactive_create_line(nome, is_waiting=current_ctx.is_waiting)
                 else:
-                    typewriter_print(f"Comando inválido: {cmd}", speed=0.003)
-            else:
-                # --- abrir item por posição ou nome na exibição atual: open_3 ou open_Naruto ---
-                if line.lower().startswith("open_") and isinstance(current_ctx, (OpenListContext, ItemContext)):
-                    key = line[len("open_"):].strip()
-                    if not key and args:
-                        key = " ".join(args)
-                    parent_ctx = current_ctx if isinstance(current_ctx, OpenListContext) else current_ctx.parent
-                    if key.isdigit():
-                        idx = int(key)
-                        item_ctx, err = parent_ctx.open_item_by_index(idx)
-                    else:
-                        item_ctx, err = parent_ctx.open_item_by_name(key)
-                    if err:
-                        typewriter_print(f"Erro: {err}", speed=0.003)
-                    else:
-                        current_ctx = item_ctx
+                    print("Este comando só pode ser usado dentro de uma lista aberta.")
+                continue
+
+            if cmd == "create_wait_line":
+                if not args:
+                    print("Uso: create_wait_line <nome>")
+                    continue
+                nome = " ".join(args)
+                if isinstance(current_ctx, OpenListContext):
+                    print("Use create_line; a lista atual já define se será criado no banco principal ou de espera.")
+                    current_ctx.interactive_create_line(nome, is_waiting=current_ctx.is_waiting)
+                else:
+                    print("Este comando só pode ser usado dentro de uma lista aberta.")
+                continue
+
+            # Se estamos dentro de um ItemContext, tratar comandos específicos
+            if isinstance(current_ctx, ItemContext):
+                # nav
+                if cmd in ("next", "n"):
+                    nxt = current_ctx.open_adjacent(1)
+                    if nxt:
+                        current_ctx = nxt
                         current_ctx.show_details()
+                    else:
+                        typewriter_print("Não há próximo item.", speed=0.003)
+                    continue
+                if cmd in ("prev", "p"):
+                    prev = current_ctx.open_adjacent(-1)
+                    if prev:
+                        current_ctx = prev
+                        current_ctx.show_details()
+                    else:
+                        typewriter_print("Não há item anterior.", speed=0.003)
                     continue
 
-                # Só deixa a exibição tratar se for um contexto de lista (não item!)
-                if isinstance(current_ctx, OpenListContext) and current_ctx.current_display and current_ctx.current_display.handle_command(cmd, args):
+                if cmd == "show_details":
+                    current_ctx.show_details()
                     continue
 
-                # --- SORT HANDLER (aplica à exibição atual) ---
+                if cmd == "edit" and args:
+                    field = args[0]
+                    newval = " ".join(args[1:]) if len(args) > 1 else ""
+                    if newval == "":
+                        typewriter_print("Uso: edit <campo> <novo_valor>  (ou só 'edit' para modo interativo)", speed=0.003)
+                        continue
+                    msg = current_ctx.edit_field(field, newval)
+                    typewriter_print(msg, speed=0.003)
+                    continue
+
+                if cmd == "edit":
+                    msg = current_ctx.interactive_edit()
+                    typewriter_print(msg, speed=0.003)
+                    continue
+
+                if cmd == "save":
+                    ok, msg = current_ctx.save()
+                    if ok:
+                        typewriter_print(msg, speed=0.003)
+                        try:
+                            pid = current_ctx.item.get("id")
+                            parent_items = current_ctx.parent.lines
+                            for i, it in enumerate(parent_items):
+                                if str(it.get("id")) == str(pid):
+                                    parent_items[i] = current_ctx.item
+                                    break
+                        except Exception:
+                            pass
+                    else:
+                        typewriter_print(f"Erro ao salvar: {msg}", speed=0.003)
+                    continue
+
+                if cmd == "refresh":
+                    ok, msg = current_ctx.refresh()
+                    typewriter_print(msg if ok else f"Erro: {msg}", speed=0.003)
+                    continue
+
+                if cmd == "delete":
+                    confirm = input("Confirmar exclusão deste item? (y/N): ").strip().lower()
+                    if confirm == "y":
+                        ok, msg = current_ctx.delete()
+                        if ok:
+                            typewriter_print("Item excluído.", speed=0.003)
+                            parent = current_ctx.parent
+                            parent.fetch_and_cache_lines()
+                            current_ctx = parent
+                        else:
+                            typewriter_print(f"Erro: {msg}", speed=0.003)
+                    else:
+                        typewriter_print("Exclusão cancelada.", speed=0.003)
+                    continue
+
+                if cmd == "check":
+                    ok, msg = current_ctx.check()
+                    if ok:
+                        typewriter_print(msg, speed=0.003)
+                    else:
+                        typewriter_print(f"Erro: {msg}", speed=0.003)
+                    continue
+
+                if cmd in ("back", "b"):
+                    fancy_header([f"Voltando para '{current_ctx.parent.name}'"])
+                    current_ctx = current_ctx.parent
+                    continue
+
+                # se não tratado, cai no próximo bloco
+
+            # Comandos de lista (OpenListContext)
+            if isinstance(current_ctx, OpenListContext):
+                # Tratamento de navegação da exibição atual
+                if current_ctx.current_display and current_ctx.current_display.handle_command(cmd, args):
+                    continue
+
                 if cmd.startswith("sort_"):
                     if not current_ctx.current_display:
                         typewriter_print("Nenhuma exibição ativa para ordenar. Use 'show_lines' primeiro.", speed=0.003)
                         continue
-
-                    # método base extraído do comando (ex: "rate" de "sort_rate")
                     method = cmd[len("sort_"):]
-
-                    # Detecta flag -r / --reverse nos argumentos (ex: sort_rate -r)
                     reverse_flag = False
                     if args:
-                        # permite usar -r ou --reverse em qualquer posição dos args
                         if "-r" in args or "--reverse" in args:
                             reverse_flag = True
-
-                    # Construir chave passada para apply_sort; aplicamos "-r" apenas para 'rate'
                     method_key = method
                     if method == "rate" and reverse_flag:
                         method_key = "rate -r"
-
-                    # aceitar variações suportadas
                     if method_key in ("0-9", "9-0", "a-z", "z-a", "rate", "rate -r"):
                         msg = current_ctx.current_display.apply_sort(method_key)
                         typewriter_print(msg, speed=0.003)
-                        # re-render a página 1 com nova ordenação
                         current_ctx.current_display.render_page(1)
                     else:
-                        typewriter_print("Método de sort desconhecido. Use: sort_0-9, sort_9-0, sort_a-z, sort_z-a, sort_rate [-r]", speed=0.003)
+                        typewriter_print("Método de sort desconhecido.", speed=0.003)
                     continue
 
-                # --- abrir item por posição ou nome na exibição atual: open_3 ou open_Naruto ---
-                if cmd.lower().startswith("open_") and isinstance(current_ctx, (OpenListContext, ItemContext)):
+                if cmd.startswith("open_"):
                     key = line[len("open_"):].strip()
                     if not key and args:
                         key = " ".join(args)
-                    parent_ctx = current_ctx if isinstance(current_ctx, OpenListContext) else current_ctx.parent
                     if key.isdigit():
-                        idx = int(key)
-                        item_ctx, err = parent_ctx.open_item_by_index(idx)
+                        item_ctx, err = current_ctx.open_item_by_index(int(key))
                     else:
-                        item_ctx, err = parent_ctx.open_item_by_name(key)
+                        item_ctx, err = current_ctx.open_item_by_name(key)
                     if err:
                         typewriter_print(f"Erro: {err}", speed=0.003)
                     else:
                         current_ctx = item_ctx
-                        # mostra automaticamente detalhes ao abrir
                         current_ctx.show_details()
                     continue
-
-                # --- se estamos num ItemContext, tratar comandos do item ---
-                if isinstance(current_ctx, ItemContext):
-                    # nav next/prev entre itens da exibição
-                    if cmd in ("next", "n"):
-                        nxt = current_ctx.open_adjacent(1)
-                        if nxt:
-                            current_ctx = nxt
-                            current_ctx.show_details()
-                        else:
-                            typewriter_print("Não há próximo item.", speed=0.003)
-                        continue
-                    if cmd in ("prev", "p"):
-                        prev = current_ctx.open_adjacent(-1)
-                        if prev:
-                            current_ctx = prev
-                            current_ctx.show_details()
-                        else:
-                            typewriter_print("Não há item anterior.", speed=0.003)
-                        continue
-
-                    # show details
-                    if cmd == "show_details":
-                        current_ctx.show_details()
-                        continue
-
-                    # edit field (inline): edit tags nova_tag1,nova_tag2
-                    if cmd == "edit" and args:
-                        field = args[0]
-                        newval = " ".join(args[1:]) if len(args) > 1 else ""
-                        if newval == "":
-                            typewriter_print("Uso: edit <campo> <novo_valor>  (ou só 'edit' para modo interativo)", speed=0.003)
-                            continue
-                        msg = current_ctx.edit_field(field, newval)
-                        typewriter_print(msg, speed=0.003)
-                        continue
-
-                    # modo interativo de edição
-                    if cmd == "edit":
-                        msg = current_ctx.interactive_edit()
-                        typewriter_print(msg, speed=0.003)
-                        continue
-
-                    # salvar (PUT)
-                    if cmd == "save":
-                        ok, msg = current_ctx.save()
-                        if ok:
-                            typewriter_print(msg, speed=0.003)
-                            # Atualiza a lista pai localmente (se existir) substituindo o item
-                            try:
-                                pid = current_ctx.item.get("id")
-                                parent_items = current_ctx.parent.lines
-                                for i, it in enumerate(parent_items):
-                                    if str(it.get("id")) == str(pid):
-                                        parent_items[i] = current_ctx.item
-                                        break
-                            except Exception:
-                                pass
-                        else:
-                            typewriter_print(f"Erro ao salvar: {msg}", speed=0.003)
-                        continue
-
-                    if cmd == "refresh":
-                        ok, msg = current_ctx.refresh()
-                        typewriter_print(msg if ok else f"Erro: {msg}", speed=0.003)
-                        continue
-
-                    if cmd == "delete":
-                        confirm = input("Confirmar exclusão deste item? (y/N): ").strip().lower()
-                        if confirm == "y":
-                            ok, msg = current_ctx.delete()
-                            if ok:
-                                typewriter_print("Item excluído.", speed=0.003)
-                                # após excluir, volta ao contexto da lista e recarrega linhas
-                                parent = current_ctx.parent
-                                parent.fetch_and_cache_lines()
-                                current_ctx = parent
-                            else:
-                                typewriter_print(f"Erro: {msg}", speed=0.003)
-                        else:
-                            typewriter_print("Exclusão cancelada.", speed=0.003)
-                        continue
-
-                    # voltar ao contexto da lista
-                    if cmd in ("back", "b"):
-                        fancy_header([f"Voltando para '{current_ctx.parent.name}'"])
-                        current_ctx = current_ctx.parent
-                        continue
-
-                    # se não for nenhum dos comandos acima, cair para o processamento normal de comandos     
 
                 if cmd == "show_lines":
                     filtro = " ".join(args) if args else None
                     current_ctx.show_lines(filtro)
+                    continue
 
-                elif cmd == "show_tags":
+                if cmd == "show_tags":
                     current_ctx.show_tags()
+                    continue
 
-                elif cmd.startswith("search_"):
+                if cmd.startswith("search_"):
                     termo = cmd[len("search_"):] or (args[0] if args else "")
                     if not termo:
                         typewriter_print("Uso: search_<nome> (ex.: search_Naruto)", speed=0.003)
                     else:
                         current_ctx.search_items_by_name(termo)
+                    continue
 
-                elif cmd.startswith("show_"):
+                if cmd.startswith("show_"):
                     resto_comando = cmd[5:]
                     if resto_comando:
                         tags_disponiveis = [tag.lower() for tag in extrair_tags_dos_itens(current_ctx.lines)]
@@ -1303,45 +2253,51 @@ def main():
                         current_ctx.show_por_opiniao(opiniao_commands[resto_comando])
                         continue
                     typewriter_print(f"Comando não reconhecido: {cmd}", speed=0.003)
+                    continue
 
-                elif cmd == "export_list":
+                if cmd == "export_list":
                     filename_arg = args[0] if args else None
                     ok, msg = current_ctx.export_current_display(filename_arg)
                     if ok:
                         typewriter_print(msg, speed=0.003)
                     else:
                         typewriter_print(f"Erro: {msg}", speed=0.003)
+                    continue
 
-                elif cmd == "next":
+                if cmd == "next":
                     if current_ctx.current_display:
                         current_ctx.current_display.handle_command("next", [])
                     else:
                         typewriter_print("Nenhuma exibição ativa. Use 'show_lines' primeiro.", speed=0.003)
+                    continue
 
-                elif cmd == "prev":
+                if cmd == "prev":
                     if current_ctx.current_display:
                         current_ctx.current_display.handle_command("prev", [])
                     else:
                         typewriter_print("Nenhuma exibição ativa. Use 'show_lines' primeiro.", speed=0.003)
+                    continue
 
-                elif cmd.isdigit():
+                if cmd.isdigit():
                     if current_ctx.current_display:
                         current_ctx.current_display.handle_command(cmd, [])
                     else:
                         typewriter_print("Nenhuma exibição ativa. Use 'show_lines' primeiro.", speed=0.003)
+                    continue
 
-                elif cmd in ("back", "b"):
+                if cmd in ("back", "b"):
                     fancy_header([f"Saindo do contexto '{current_ctx.name}'"])
                     current_ctx = None
+                    continue
 
-                elif cmd in ("clear", "cls"):
+                if cmd in ("clear", "cls"):
                     clear_screen()
+                    continue
 
-                elif cmd in ("exit", "quit"):
+                if cmd in ("exit", "quit"):
                     break
 
-                else:
-                    typewriter_print(f"Comando inválido em '{current_ctx.name}': {cmd}", speed=0.003)
+                typewriter_print(f"Comando inválido em '{current_ctx.name}': {cmd}", speed=0.003)
 
         except (KeyboardInterrupt, EOFError):
             print()
