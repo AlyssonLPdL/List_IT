@@ -115,6 +115,48 @@ def search_items(itens, termo):
             resultados.append(it)
     return resultados
 
+
+def enrich_created_line_from_anilist(line_id, nome, content_type, is_waiting=False):
+    """Enriquece uma linha recém-criada com imagem, sinopse e sinônimos do AniList."""
+    if is_waiting:
+        return True, None
+
+    media_type = "anime" if content_type in ["anime", "filme"] else "manga"
+    try:
+        image_resp = requests.get(
+            f"{API_BASE.rstrip('/')}/search_image",
+            params={"q": nome, "type": media_type},
+            timeout=10,
+        )
+        if image_resp.ok:
+            image_url = image_resp.json().get("image_url")
+            if image_url:
+                requests.put(
+                    f"{API_BASE.rstrip('/')}/linhas/{line_id}/imagem",
+                    json={"imagem_url": image_url},
+                    timeout=8,
+                )
+
+        details_resp = requests.get(
+            f"{API_BASE.rstrip('/')}/search_details",
+            params={"q": nome, "type": media_type},
+            timeout=10,
+        )
+        if details_resp.ok:
+            details = details_resp.json()
+            sinopse = details.get("sinopse")
+            sinonimos = details.get("sinonimos")
+            if sinopse is not None and sinonimos is not None:
+                requests.put(
+                    f"{API_BASE.rstrip('/')}/linhas/{line_id}/details",
+                    json={"sinopse": sinopse, "sinonimos": sinonimos},
+                    timeout=8,
+                )
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
 def _split_tags_field(tags_field):
     if not isinstance(tags_field, str):
         return []
@@ -1548,6 +1590,19 @@ class OpenListContext:
                 print(f"❌ Erro ao criar linha: {r.status_code} - {r.text}")
             else:
                 print("✅ Linha criada com sucesso!")
+                if not is_waiting:
+                    created = r.json()
+                    line_id = created.get("id")
+                    if line_id:
+                        print("⏳ Buscando dados do AniList para imagem, sinopse e sinônimos...")
+                        ok, err = enrich_created_line_from_anilist(
+                            line_id,
+                            nome,
+                            conteudo,
+                            is_waiting=is_waiting,
+                        )
+                        if not ok:
+                            print(f"⚠️ Não foi possível enriquecer a linha no momento: {err}")
                 # Atualiza a lista de linhas
                 self.fetch_and_cache_lines()
                 self.show_lines()
