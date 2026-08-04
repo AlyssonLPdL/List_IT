@@ -35,15 +35,11 @@ Este arquivo reúne os comandos suportados pelo `cli.py` para usar a aplicação
 - `verify_api`
   - Verifica se a API do AniList está respondendo corretamente (útil para saber se dá para migrar ou buscar dados).
 
-- `migrate_wait [id]`
-  - **Migra** todas as listas (ou uma lista específica, se passar o `id`) do banco de **espera** para o banco **principal**.
-  - Durante a migração, o sistema tenta buscar automaticamente a imagem, sinopse e sinônimos no AniList.
-  - Se o AniList não retornar dados, mantém as informações que já estavam no banco de espera.
-  - Exemplo: `migrate_wait` (migra tudo) ou `migrate_wait 1` (migra só a lista com ID 1).
-
-- `migrate_wait_dry`
-  - **Simula** a migração (dry-run) sem alterar nada, mostrando o que seria feito.
-  - Útil para conferir antes de executar a migração de verdade.
+- `migrate_wait <id>`
+  - Inicia o processo interativo de migração seletiva a partir da lista de espera com o ID informado.
+  - Exibe as linhas da lista, permitindo escolher quais migrar (IDs separados por vírgula).
+  - Depois, lista as listas principais disponíveis e pergunta para qual migrar.
+  - Os itens migrados são marcados como `migrated=1` no banco de espera e não são excluídos.
 
 - `clear_wait`
   - **Limpa** todo o banco de espera (remove todas as listas e linhas). Solicita confirmação antes de executar.
@@ -56,6 +52,14 @@ Este arquivo reúne os comandos suportados pelo `cli.py` para usar a aplicação
 
 - `exit` ou `quit`
   - Sai do CLI.
+
+- `move`
+  - Inicia o processo interativo para mover itens entre listas do banco **principal**.
+  - Primeiro, lista todas as listas principais e pede para escolher a **origem**.
+  - Em seguida, exibe os itens da lista origem com seus IDs e pergunta quais mover (IDs separados por vírgula).
+  - Depois, lista as outras listas principais (excluindo a origem) e pergunta a **destino**.
+  - Confirma a operação e executa a movimentação.
+  - Os itens são atualizados para a nova lista e permanecem com todos os dados (nome, tags, sinopse, etc.).
 
 ---
 

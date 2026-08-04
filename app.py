@@ -83,7 +83,7 @@ def get_db_connection():
 WAITING_DB = "waiting_list.db"
 
 def init_waiting_db():
-    """Cria as tabelas do banco de espera, mesma estrutura do principal."""
+    """Cria as tabelas do banco de espera, com a coluna migrated."""
     with sqlite3.connect(WAITING_DB) as conn:
         cursor = conn.cursor()
         
@@ -110,6 +110,7 @@ def init_waiting_db():
                 sinonimos TEXT,
                 sinopse TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                migrated INTEGER DEFAULT 0,   -- NOVA COLUNA
                 FOREIGN KEY (lista_id) REFERENCES listas(id)
             )
         """)
@@ -203,9 +204,9 @@ def get_waiting_linhas(lista_id):
     cursor = conn.cursor()
     cursor.execute("""
         SELECT id, lista_id, nome, tags, conteudo, status, episodio,
-               opiniao, imagem_url, last_highlight, sinopse, sinonimos
-          FROM linhas
-         WHERE lista_id = ?
+            opiniao, imagem_url, last_highlight, sinopse, sinonimos, migrated
+        FROM linhas
+        WHERE lista_id = ?
     """, (lista_id,))
     linhas = []
     for row in cursor.fetchall():
@@ -223,7 +224,8 @@ def get_waiting_linhas(lista_id):
             "imagem_url": row['imagem_url'],
             "last_highlight": row['last_highlight'],
             "sinopse": sinopse,
-            "sinonimos": sinonimos
+            "sinonimos": sinonimos,
+            "migrated": row['migrated']
         })
     conn.close()
     return jsonify(linhas)
@@ -503,6 +505,162 @@ def migrate_waiting_to_main():
         "erros": resultados["erros"],
         "detalhes": resultados["detalhes"][:20]
     })
+
+@app.route("/migrate/wait/to/main/selective", methods=["POST"])
+def migrate_wait_to_main_selective():
+    data = request.get_json()
+    wait_list_id = data.get("wait_list_id")
+    linha_ids = data.get("linha_ids", [])   # lista de IDs das linhas da espera
+    main_list_id = data.get("main_list_id")
+    
+    if not wait_list_id or not linha_ids or not main_list_id:
+        return jsonify({"error": "wait_list_id, linha_ids e main_list_id são obrigatórios"}), 400
+    
+    wait_conn = get_waiting_db_connection()
+    main_conn = get_db_connection()
+    wait_cursor = wait_conn.cursor()
+    main_cursor = main_conn.cursor()
+    
+    # Verifica se a lista principal existe
+    main_cursor.execute("SELECT id FROM listas WHERE id = ?", (main_list_id,))
+    if not main_cursor.fetchone():
+        wait_conn.close()
+        main_conn.close()
+        return jsonify({"error": "Lista principal não encontrada"}), 404
+    
+    resultados = {
+        "migrados": 0,
+        "erros": []
+    }
+    
+    for linha_id in linha_ids:
+        # Busca a linha na espera
+        wait_cursor.execute("""
+            SELECT id, nome, tags, conteudo, status, episodio, opiniao,
+                   imagem_url, sinonimos, sinopse
+              FROM linhas
+             WHERE id = ? AND lista_id = ?
+        """, (linha_id, wait_list_id))
+        linha = wait_cursor.fetchone()
+        if not linha:
+            resultados["erros"].append(f"Linha {linha_id} não encontrada na lista de espera")
+            continue
+        
+        # Verifica se já foi migrada
+        if linha.get("migrated", 0) == 1:
+            resultados["erros"].append(f"Linha {linha_id} já foi migrada anteriormente")
+            continue
+        
+        # Tenta buscar dados da AniList (opcional, mas mantemos)
+        nome_item = linha["nome"]
+        conteudo_type = linha["conteudo"]
+        media_type = "ANIME" if conteudo_type.lower() in ["anime", "filme"] else "MANGA"
+        details = fetch_media_details(nome_item, media_type)
+        
+        if details:
+            imagem_url = fetch_anime_image_url(nome_item) if media_type == "ANIME" else fetch_manga_image_url(nome_item)
+            sinonimos = details["sinonimos"]
+            sinopse = details["sinopse"]
+        else:
+            imagem_url = linha["imagem_url"] or ""
+            try:
+                sinonimos = json.loads(linha["sinonimos"]) if linha["sinonimos"] else []
+            except json.JSONDecodeError:
+                sinonimos = []
+            sinopse = linha["sinopse"] or ""
+        
+        # Insere na lista principal
+        try:
+            main_cursor.execute("""
+                INSERT INTO linhas (
+                    lista_id, nome, tags, conteudo, status, episodio, opiniao,
+                    imagem_url, sinonimos, sinopse
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                main_list_id,
+                nome_item,
+                linha["tags"],
+                conteudo_type,
+                linha["status"],
+                linha["episodio"],
+                linha["opiniao"],
+                imagem_url,
+                json.dumps(sinonimos, ensure_ascii=False),
+                sinopse
+            ))
+            main_conn.commit()
+            
+            # Marca como migrado na espera
+            wait_cursor.execute("UPDATE linhas SET migrated = 1 WHERE id = ?", (linha_id,))
+            wait_conn.commit()
+            
+            resultados["migrados"] += 1
+        except Exception as e:
+            resultados["erros"].append(f"Erro ao migrar linha {linha_id}: {str(e)}")
+    
+    wait_conn.close()
+    main_conn.close()
+    
+    # (Opcional) commits git - mantive apenas como exemplo, mas pode ser removido
+    # subprocess.run(['git', 'add', 'list_it.db'])
+    # subprocess.run(['git', 'commit', '-m', f"Migração seletiva para lista {main_list_id}"])
+    # subprocess.run(['git', 'push'])
+    
+    return jsonify(resultados)
+
+@app.route("/move/items", methods=["POST"])
+def move_items():
+    """
+    Move itens de uma lista para outra no banco principal.
+    Payload: { origem_lista_id, destino_lista_id, item_ids: [...] }
+    """
+    data = request.get_json()
+    origem = data.get("origem_lista_id")
+    destino = data.get("destino_lista_id")
+    item_ids = data.get("item_ids", [])
+
+    if not origem or not destino or not item_ids:
+        return jsonify({"error": "origem_lista_id, destino_lista_id e item_ids são obrigatórios"}), 400
+
+    if origem == destino:
+        return jsonify({"error": "Origem e destino não podem ser a mesma lista"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verifica se as listas existem
+    cursor.execute("SELECT id FROM listas WHERE id = ?", (origem,))
+    if not cursor.fetchone():
+        conn.close()
+        return jsonify({"error": "Lista de origem não encontrada"}), 404
+    cursor.execute("SELECT id FROM listas WHERE id = ?", (destino,))
+    if not cursor.fetchone():
+        conn.close()
+        return jsonify({"error": "Lista de destino não encontrada"}), 404
+
+    resultados = {"movidos": 0, "erros": []}
+    for item_id in item_ids:
+        # Verifica se o item existe e pertence à origem
+        cursor.execute("SELECT id, nome FROM linhas WHERE id = ? AND lista_id = ?", (item_id, origem))
+        row = cursor.fetchone()
+        if not row:
+            resultados["erros"].append(f"Item {item_id} não encontrado na lista de origem")
+            continue
+        # Atualiza
+        try:
+            cursor.execute("UPDATE linhas SET lista_id = ? WHERE id = ?", (destino, item_id))
+            conn.commit()
+            resultados["movidos"] += 1
+        except Exception as e:
+            resultados["erros"].append(f"Erro ao mover item {item_id}: {str(e)}")
+    conn.close()
+
+    # (Opcional) commits git
+    # subprocess.run(['git', 'add', 'list_it.db'])
+    # subprocess.run(['git', 'commit', '-m', f"Movendo itens da lista {origem} para {destino}"])
+    # subprocess.run(['git', 'push'])
+
+    return jsonify(resultados)
 
 @app.route("/wait/clear", methods=["DELETE"])
 @app.route("/wait/clear", methods=["DELETE"])

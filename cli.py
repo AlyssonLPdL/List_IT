@@ -200,20 +200,20 @@ def print_tags_table(tags, cols=3):
 def print_help_main():
     fancy_header(["COMANDOS - MENU PRINCIPAL"])
     commands = [
-        "show_lists                    - Lista todas as listas disponíveis.",
-        "show_wait_lists               - Lista todas as listas no banco de espera.",
-        "create_list <nome>            - Cria uma nova lista no banco principal.",
-        "create_wait_list <nome>       - Cria uma nova lista no banco de espera.",
+        "show_lists                   - Lista todas as listas disponíveis.",
+        "show_wait_lists              - Lista todas as listas no banco de espera.",
+        "create_list <nome>           - Cria uma nova lista no banco principal.",
+        "create_wait_list <nome>      - Cria uma nova lista no banco de espera.",
         "open <id|nome>               - Abre uma lista pelo ID ou nome (principal).",
         "open_wait <id|nome>          - Abre uma lista do banco de espera.",
         "delete_list <id|nome>        - Deleta uma lista (principal).",
-        "migrate_wait [id]             - Migra do banco de espera para o principal.",
-        "migrate_wait_dry              - Simula a migração.",
+        "migrate_wait <id>            - Migra seletivamente itens de uma lista de espera para o principal.",
         "clear_wait                   - Limpa todo o banco de espera (com confirmação).",
-        "verify_api                    - Verifica se a API do AniList está respondendo.",
-        "help | ?                      - Mostra este help.",
-        "clear | cls                   - Limpa a tela.",
-        "exit | quit                   - Sai do CLI.",
+        "verify_api                   - Verifica se a API do AniList está respondendo.",
+        "help | ?                     - Mostra este help.",
+        "clear | cls                  - Limpa a tela.",
+        "exit | quit                  - Sai do CLI.",
+        "move                         - Move itens entre listas do banco principal.",
     ]
     for line in commands:
         print(line)
@@ -309,16 +309,6 @@ def fetch_wait_lines_request(list_id):
         return None, f"Erro: {e}"
 
 def verify_anilist_api():
-    """
-    Verifica a integridade da API do AniList com uma busca real.
-    Testa:
-    - Conectividade básica
-    - Busca por título (usa "Naruto" como referência)
-    - Retorno de imagem
-    - Retorno de sinopse
-    - Retorno de sinônimos
-    - Tempo de resposta
-    """
     import time
     from datetime import datetime
     
@@ -343,20 +333,36 @@ def verify_anilist_api():
         "detalhes": []
     }
     
-    # 1) Teste de conectividade básica
+    # 1) Teste de conectividade - CORRIGIDO
     print("\n  📡 Testando conectividade...")
     try:
         start_time = time.time()
-        r = requests.get("https://graphql.anilist.co", timeout=5)
+        
+        # Query mínima para testar conectividade
+        test_query = """
+        query {
+          __typename
+        }
+        """
+        
+        r = requests.post(
+            url,
+            json={"query": test_query},
+            timeout=5,
+            headers={"Content-Type": "application/json"}
+        )
+        
         resultados["tempo_resposta"] = round((time.time() - start_time) * 1000, 2)
         resultados["status_code"] = r.status_code
         
-        if r.status_code == 200 or r.status_code == 400:
+        if r.status_code == 200:
             resultados["conectividade"] = True
             print(f"     ✅ Conectividade OK ({resultados['tempo_resposta']}ms)")
         else:
             print(f"     ⚠️ Resposta inesperada: HTTP {r.status_code}")
+            print(f"     📄 {r.text[:100]}")
             resultados["erro"] = f"HTTP {r.status_code}"
+            
     except requests.exceptions.ConnectionError:
         print("     ❌ FALHA - Sem conexão com a internet ou servidor bloqueado")
         resultados["erro"] = "Sem conexão com a internet"
@@ -790,17 +796,19 @@ class PaginatedDisplay:
             typewriter_print(f"{idx}. {item}", speed=0.002)
             return
         nome = item.get("nome") or item.get("name") or str(item.get("id", "N/A"))
+        migrated = item.get("migrated", 0)
+        prefix = "[M] " if migrated else ""
         status = item.get("status")
         status_str = f"[Status: {status}]" if status else ""
         WIDTH = 80
-        left_part = f"{idx}. {nome}"
+        left_part = f"{idx}. {prefix}{nome}"
         if status_str:
             total_len = len(left_part) + len(status_str) + 2
             if total_len > WIDTH:
-                max_name_len = WIDTH - len(status_str) - 4
+                max_name_len = WIDTH - len(status_str) - 4 - len(prefix)
                 if max_name_len < 10:
                     max_name_len = 10
-                left_part = f"{idx}. {nome[:max_name_len]}..."
+                left_part = f"{idx}. {prefix}{nome[:max_name_len]}..."
             padding = WIDTH - len(left_part) - len(status_str)
             if padding < 1:
                 padding = 1
@@ -1830,34 +1838,280 @@ def cmd_create_list(nome, is_waiting=False):
     except Exception as e:
         print(f"Erro de rede: {e}")
 
-def cmd_migrate_wait(lista_id=None, dry_run=False):
-    """Migra do banco de espera para o principal."""
-    payload = {}
-    if lista_id:
-        payload["lista_id"] = lista_id
-    if dry_run:
-        payload["dry_run"] = True
-    url = f"{API_BASE.rstrip('/')}/migrate/wait/to/main"
+def cmd_migrate_wait(wait_list_id=None):
+    """
+    Migração seletiva: exibe linhas da lista de espera, usuário escolhe quais
+    pela posição (número) e para qual lista principal.
+    """
+    if not wait_list_id:
+        print("Uso: migrate_wait <id_lista_espera>")
+        return
+
+    # 1. Buscar lista de espera
+    listas_espera, err = fetch_wait_lists_request()
+    if err:
+        print(f"Erro ao buscar listas de espera: {err}")
+        return
+    wait_list = next((l for l in listas_espera if str(l.get('id')) == str(wait_list_id)), None)
+    if not wait_list:
+        print(f"Lista de espera com ID {wait_list_id} não encontrada.")
+        return
+
+    # 2. Buscar linhas da lista de espera
+    linhas, err = fetch_wait_lines_request(wait_list_id)
+    if err:
+        print(f"Erro ao buscar linhas: {err}")
+        return
+    if not linhas:
+        print("Esta lista de espera está vazia.")
+        return
+
+    # Ordenar para exibição consistente
+    linhas_ordenadas = sorted(linhas, key=lambda x: x.get('nome', '').casefold())
+
+    # 3. Exibir linhas numeradas com indicador de migração
+    clear_screen()
+    print("=" * 80)
+    print(f"LISTA DE ESPERA: {wait_list['nome']} (ID {wait_list_id})")
+    print("=" * 80)
+    for idx, linha in enumerate(linhas_ordenadas, start=1):
+        migrado = linha.get('migrated', 0)
+        marcador = "[M] " if migrado else "    "
+        print(f"{idx:3d}. {marcador}{linha['nome']} (ID:{linha['id']})")
+    print("-" * 80)
+
+    # 4. Perguntar quais linhas migrar (por POSIÇÃO)
+    while True:
+        raw = input("Quais linhas você quer migrar? (digite os números de posição separados por vírgula, ex: 1,3,5): ").strip()
+        if not raw:
+            print("Nenhum número informado. Operação cancelada.")
+            return
+        indices = []
+        for part in raw.split(','):
+            part = part.strip()
+            if part.isdigit():
+                indices.append(int(part))
+        if not indices:
+            print("Números inválidos. Tente novamente.")
+            continue
+        # Validar intervalos
+        invalidos = [i for i in indices if i < 1 or i > len(linhas_ordenadas)]
+        if invalidos:
+            print(f"Números fora do intervalo (1..{len(linhas_ordenadas)}): {', '.join(map(str, invalidos))}")
+            continue
+        # Pegar os objetos das linhas selecionadas
+        linhas_selecionadas = [linhas_ordenadas[i-1] for i in indices]
+        # Verificar se já foram migradas
+        ja_migrados = [l for l in linhas_selecionadas if l.get('migrated', 0) == 1]
+        if ja_migrados:
+            nomes = [l['nome'] for l in ja_migrados]
+            print(f"As seguintes linhas já foram migradas anteriormente: {', '.join(nomes)}")
+            continuar = input("Deseja continuar apenas com as não migradas? (s/N): ").strip().lower()
+            if continuar != 's':
+                continue
+            # Filtrar apenas as não migradas
+            linhas_selecionadas = [l for l in linhas_selecionadas if l.get('migrated', 0) == 0]
+        if not linhas_selecionadas:
+            print("Nenhuma linha válida para migrar. Cancelando.")
+            return
+        break
+
+    # 5. Buscar listas principais
+    listas_principais, err = fetch_lists_request()
+    if err:
+        print(f"Erro ao buscar listas principais: {err}")
+        return
+    if not listas_principais:
+        print("Nenhuma lista principal disponível. Crie uma primeiro.")
+        return
+
+    # 6. Exibir listas principais numeradas
+    clear_screen()
+    print("=" * 80)
+    print("LISTAS PRINCIPAIS DISPONÍVEIS")
+    print("=" * 80)
+    for idx, lista in enumerate(listas_principais, start=1):
+        print(f"{idx:3d}. {lista['nome']} (ID:{lista['id']})")
+    print("-" * 80)
+
+    while True:
+        escolha = input("Para qual lista do banco principal você deseja migrar? (número): ").strip()
+        if escolha.isdigit():
+            idx = int(escolha) - 1
+            if 0 <= idx < len(listas_principais):
+                main_list = listas_principais[idx]
+                break
+        print("Opção inválida. Tente novamente.")
+
+    # 7. Confirmar
+    clear_screen()
+    print("=" * 80)
+    print("RESUMO DA MIGRAÇÃO SELETIVA")
+    print("=" * 80)
+    print(f"Lista de espera: {wait_list['nome']}")
+    print(f"Linhas a migrar: {', '.join(l['nome'] for l in linhas_selecionadas)}")
+    print(f"Lista destino: {main_list['nome']} (ID {main_list['id']})")
+    print("=" * 80)
+    confirm = input("Confirmar migração? (s/N): ").strip().lower()
+    if confirm != 's':
+        print("Migração cancelada.")
+        return
+
+    # 8. Chamar o endpoint seletivo
+    url = f"{API_BASE.rstrip('/')}/migrate/wait/to/main/selective"
+    payload = {
+        "wait_list_id": wait_list_id,
+        "linha_ids": [l['id'] for l in linhas_selecionadas],
+        "main_list_id": main_list['id']
+    }
     try:
-        r = requests.post(url, json=payload, timeout=120)
+        print("\n⏳ Migrando...")
+        r = requests.post(url, json=payload, timeout=60)
         if r.status_code != 200:
             print(f"Erro na migração: {r.status_code} - {r.text}")
             return
         data = r.json()
-        if dry_run:
-            print("📋 SIMULAÇÃO DE MIGRAÇÃO")
-            for det in data.get('detalhes', []):
-                print(f"  Lista: {det['lista']} -> {det['acao']}")
-            return
-        print("✅ Migração concluída!")
-        print(f"  Listas migradas: {data.get('listas_migradas', 0)}")
-        print(f"  Linhas migradas: {data.get('linhas_migradas', 0)}")
-        if data.get('linhas_com_erro', 0) > 0:
-            print(f"  ⚠️ {data['linhas_com_erro']} linhas com erro.")
-            for err in data.get('erros', []):
-                print(f"    - {err['linha']}: {err['erro']}")
+        print(f"✅ Migrados com sucesso: {data.get('migrados', 0)} itens.")
+        if data.get('erros'):
+            print("⚠️ Erros:")
+            for erro in data['erros']:
+                print(f"  - {erro}")
     except Exception as e:
-        print(f"Erro: {e}")
+        print(f"Erro de rede: {e}")
+
+def cmd_move():
+    """
+    Comando interativo para mover itens entre listas do banco principal.
+    O usuário escolhe os itens pelo número de ordem (posição) exibido na lista.
+    """
+    # Buscar listas principais
+    listas, err = fetch_lists_request()
+    if err:
+        print(f"Erro ao buscar listas: {err}")
+        return
+    if not listas:
+        print("Nenhuma lista principal disponível.")
+        return
+
+    # Exibir listas numeradas
+    clear_screen()
+    print("=" * 80)
+    print("LISTAS PRINCIPAIS DISPONÍVEIS")
+    print("=" * 80)
+    for idx, lista in enumerate(listas, start=1):
+        print(f"{idx:3d}. {lista['nome']} (ID:{lista['id']})")
+    print("-" * 80)
+
+    # Escolher lista de origem
+    while True:
+        escolha = input("Qual lista você quer usar como ORIGEM? (número): ").strip()
+        if escolha.isdigit():
+            idx = int(escolha) - 1
+            if 0 <= idx < len(listas):
+                origem = listas[idx]
+                break
+        print("Opção inválida. Tente novamente.")
+
+    # Buscar linhas da lista origem
+    linhas, err = fetch_lines_request(origem['id'])
+    if err:
+        print(f"Erro ao buscar linhas: {err}")
+        return
+    if not linhas:
+        print("Esta lista está vazia.")
+        return
+
+    # Exibir linhas numeradas (ordenadas por nome para consistência)
+    linhas_ordenadas = sorted(linhas, key=lambda x: x.get('nome', '').casefold())
+    clear_screen()
+    print("=" * 80)
+    print(f"LISTA ORIGEM: {origem['nome']} (ID {origem['id']})")
+    print("=" * 80)
+    for idx, linha in enumerate(linhas_ordenadas, start=1):
+        print(f"{idx:3d}. {linha['nome']} (ID:{linha['id']})")
+    print("-" * 80)
+
+    # Perguntar quais linhas mover (por POSIÇÃO, não ID)
+    while True:
+        raw = input("Quais itens você quer mover? (digite os números de posição separados por vírgula, ex: 1,3,5): ").strip()
+        if not raw:
+            print("Nenhum número informado. Operação cancelada.")
+            return
+        indices = []
+        for part in raw.split(','):
+            part = part.strip()
+            if part.isdigit():
+                indices.append(int(part))
+        if not indices:
+            print("Números inválidos. Tente novamente.")
+            continue
+        # Validar se todos os índices estão dentro do range
+        invalidos = [i for i in indices if i < 1 or i > len(linhas_ordenadas)]
+        if invalidos:
+            print(f"Números fora do intervalo (1..{len(linhas_ordenadas)}): {', '.join(map(str, invalidos))}")
+            continue
+        # Converter índices para IDs reais
+        ids_selecionados = [linhas_ordenadas[i-1]['id'] for i in indices]
+        break
+
+    # Escolher lista de destino (excluindo a origem)
+    listas_destino = [l for l in listas if l['id'] != origem['id']]
+    if not listas_destino:
+        print("Não há outra lista para mover. Operação cancelada.")
+        return
+
+    clear_screen()
+    print("=" * 80)
+    print("LISTAS DESTINO DISPONÍVEIS (excluindo origem)")
+    print("=" * 80)
+    for idx, lista in enumerate(listas_destino, start=1):
+        print(f"{idx:3d}. {lista['nome']} (ID:{lista['id']})")
+    print("-" * 80)
+
+    while True:
+        escolha = input("Para qual lista você deseja mover? (número): ").strip()
+        if escolha.isdigit():
+            idx = int(escolha) - 1
+            if 0 <= idx < len(listas_destino):
+                destino = listas_destino[idx]
+                break
+        print("Opção inválida. Tente novamente.")
+
+    # Confirmar
+    clear_screen()
+    print("=" * 80)
+    print("RESUMO DA MOVIMENTAÇÃO")
+    print("=" * 80)
+    print(f"Origem: {origem['nome']} (ID {origem['id']})")
+    print(f"Itens a mover (posições): {', '.join(str(i) for i in indices)}")
+    print(f"Destino: {destino['nome']} (ID {destino['id']})")
+    print("=" * 80)
+    confirm = input("Confirmar movimentação? (s/N): ").strip().lower()
+    if confirm != 's':
+        print("Movimentação cancelada.")
+        return
+
+    # Chamar endpoint
+    url = f"{API_BASE.rstrip('/')}/move/items"
+    payload = {
+        "origem_lista_id": origem['id'],
+        "destino_lista_id": destino['id'],
+        "item_ids": ids_selecionados
+    }
+    try:
+        print("\n⏳ Movendo...")
+        r = requests.post(url, json=payload, timeout=60)
+        if r.status_code != 200:
+            print(f"Erro na movimentação: {r.status_code} - {r.text}")
+            return
+        data = r.json()
+        print(f"✅ Movidos com sucesso: {data.get('movidos', 0)} itens.")
+        if data.get('erros'):
+            print("⚠️ Erros:")
+            for erro in data['erros']:
+                print(f"  - {erro}")
+    except Exception as e:
+        print(f"Erro de rede: {e}")
 
 def cmd_clear_wait():
     confirm = input("⚠️ Tem certeza que deseja limpar todo o banco de espera? (y/N): ").strip().lower()
@@ -2035,8 +2289,8 @@ def main():
                     cmd_migrate_wait(lista_id, dry_run=False)
                     continue
 
-                if cmd == "migrate_wait_dry":
-                    cmd_migrate_wait(dry_run=True)
+                if cmd == "move":
+                    cmd_move()
                     continue
 
                 if cmd == "clear_wait":
