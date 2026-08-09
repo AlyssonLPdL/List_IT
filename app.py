@@ -239,11 +239,12 @@ def add_waiting_linha():
         if field not in data:
             return jsonify({"error": f"Campo '{field}' é obrigatório"}), 400
     
+    now = datetime.now(timezone.utc).isoformat()
     conn = get_waiting_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO linhas (lista_id, nome, tags, conteudo, status, episodio, opiniao, imagem_url, sinonimos, sinopse)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO linhas (lista_id, nome, tags, conteudo, status, episodio, opiniao, imagem_url, sinonimos, sinopse, last_highlight)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         data["lista_id"],
         data["nome"],
@@ -254,12 +255,13 @@ def add_waiting_linha():
         data["opiniao"],
         data.get("imagem_url", ""),
         json.dumps(data.get("sinonimos", [])),
-        data.get("sinopse", "")
+        data.get("sinopse", ""),
+        now
     ))
     conn.commit()
     linha_id = cursor.lastrowid
     conn.close()
-    return jsonify({"id": linha_id, "lista_id": data["lista_id"], "nome": data["nome"]})
+    return jsonify({"id": linha_id, "lista_id": data["lista_id"], "nome": data["nome"], "last_highlight": now})
 
 @app.route("/wait/linhas/<int:linha_id>", methods=["PUT"])
 @app.route("/waiting/linhas/<int:linha_id>", methods=["PUT"])
@@ -1157,12 +1159,13 @@ def get_linhas(lista_id):
 @app.route("/linhas", methods=["POST"])
 def add_linha():
     data = request.json
+    now = datetime.now(timezone.utc).isoformat()
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO linhas (lista_id, nome, tags, conteudo, status, episodio, opiniao)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (data["lista_id"], data["nome"], data["tags"], data["conteudo"], data["status"], data["episodio"], data["opiniao"]))
+        INSERT INTO linhas (lista_id, nome, tags, conteudo, status, episodio, opiniao, last_highlight)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (data["lista_id"], data["nome"], data["tags"], data["conteudo"], data["status"], data["episodio"], data["opiniao"], now))
     conn.commit()
     linha_id = cursor.lastrowid
     conn.close()
@@ -1170,7 +1173,7 @@ def add_linha():
     commit_message = f"Adicionando Linha: {data['nome']} id: {linha_id}"
     subprocess.run(['git', 'commit', '-m', commit_message])
     subprocess.run(['git', 'push'])
-    return jsonify({"id": linha_id, "lista_id": data["lista_id"], "nome": data["nome"]})
+    return jsonify({"id": linha_id, "lista_id": data["lista_id"], "nome": data["nome"], "last_highlight": now})
 
 @app.route("/linhas/<int:linha_id>", methods=["PUT"])
 def update_linha(linha_id):

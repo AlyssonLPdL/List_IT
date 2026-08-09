@@ -14,6 +14,7 @@ import random
 import json
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
+import re
 
 try:
     import requests
@@ -21,8 +22,87 @@ except Exception:
     print("Dependência 'requests' não encontrada. Instale com: pip install requests")
     sys.exit(1)
 
+try:
+    import colorama
+    colorama.init(autoreset=True)
+except Exception:
+    colorama = None
+
+def strip_ansi(text):
+    """Remove códigos ANSI de uma string, inclusive sequências literais como [1;92m."""
+    if not isinstance(text, str):
+        return ""
+
+    text = re.sub(r'\x1b\[[0-9;]*m', '', text)
+    text = re.sub(r'\[(?:[0-9]{1,2}(?:;[0-9]{1,2})*)m', '', text)
+    return text
+
+ANSI_COLORS = {
+    "black": "30",
+    "red": "31",
+    "green": "32",
+    "yellow": "33",
+    "blue": "34",
+    "magenta": "35",
+    "cyan": "36",
+    "white": "37",
+    "bright_black": "90",
+    "bright_red": "91",
+    "bright_green": "92",
+    "bright_yellow": "93",
+    "bright_blue": "94",
+    "bright_magenta": "95",
+    "bright_cyan": "96",
+    "bright_white": "97"
+}
+
+ANSI_STYLES = {
+    "bright": "1",
+    "dim": "2",
+    "normal": "22"
+}
+
+
+def supports_color():
+    return hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
+
+
+def color_text(text, color=None, style=None):
+    sanitized_text = strip_ansi(str(text))
+    if not color or not supports_color():
+        return sanitized_text
+    codes = []
+    if style and style in ANSI_STYLES:
+        codes.append(ANSI_STYLES[style])
+    if color in ANSI_COLORS:
+        codes.append(ANSI_COLORS[color])
+    if not codes:
+        return sanitized_text
+    return f"\033[{';'.join(codes)}m{sanitized_text}\033[0m"
+
+
+def colored_prompt(text, color="green", style="bright"):
+    return color_text(text, color=color, style=style)
+
+
+def print_info(text, speed=0.0):
+    typewriter_print(f"ℹ️  {text}", speed=speed, color="bright_blue", style="bright")
+
+
+def print_success(text, speed=0.0):
+    typewriter_print(f"✅ {text}", speed=speed, color="bright_green", style="bright")
+
+
+def print_warning(text, speed=0.0):
+    typewriter_print(f"⚠️  {text}", speed=speed, color="bright_yellow", style="bright")
+
+
+def print_error(text, speed=0.0):
+    typewriter_print(f"❌ {text}", speed=speed, color="bright_red", style="bright")
+
+
 API_BASE = os.environ.get("API_BASE", "http://localhost:5000")
-PROMPT_MAIN = "menu> "
+PROMPT_MAIN = color_text("┌─[menu]─", **{"color": "bright_cyan", "style": "bright"}) + color_text("$ ", **{"color": "bright_yellow", "style": "bright"})
 
 OPINIAO_PRIORIDADES = {
     "Favorito": 0,
@@ -37,6 +117,20 @@ OPINIAO_PRIORIDADES = {
     "Nao Vi": 7
 }
 
+# ==================== ESTILOS DE COR ====================
+STYLE = {
+    "header": {"color": "bright_cyan", "style": "bright"},
+    "command": {"color": "bright_yellow", "style": "bright"},
+    "arg": {"color": "bright_green", "style": "bright"},
+    "number": {"color": "bright_magenta", "style": "bright"},
+    "error": {"color": "bright_red", "style": "bright"},
+    "success": {"color": "bright_green", "style": "bright"},
+    "info": {"color": "bright_blue", "style": "bright"},
+    "warning": {"color": "bright_magenta", "style": "bright"},
+    "dim": {"color": "white", "style": "dim"},
+    "highlight": {"color": "bright_yellow", "style": "bright"},
+}
+
 # -------------------------
 # Utilitários visuais/UX
 # -------------------------
@@ -47,11 +141,11 @@ def spinner_worker(text, stop_event):
     symbols = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"]
     i = 0
     while not stop_event.is_set():
-        sys.stdout.write(f"\r{text} {symbols[i % len(symbols)]}")
+        sys.stdout.write(color_text(f"\r⏳ {text} ", color="bright_cyan", style="bright") + color_text(symbols[i % len(symbols)], color="bright_yellow", style="bright"))
         sys.stdout.flush()
         time.sleep(0.12)
         i += 1
-    sys.stdout.write("\r" + " " * (len(text) + 6) + "\r")
+    sys.stdout.write("\r" + " " * (len(text) + 10) + "\r")
     sys.stdout.flush()
 
 def with_minimum_spinner(fn, text="Processando", min_seconds=0.5, *args, **kwargs):
@@ -70,7 +164,8 @@ def with_minimum_spinner(fn, text="Processando", min_seconds=0.5, *args, **kwarg
         t.join()
     return result
 
-def typewriter_print(text, speed=0.002):
+def typewriter_print(text, speed=0.002, color=None, style=None):
+    text = color_text(text, color=color, style=style)
     for ch in str(text):
         sys.stdout.write(ch)
         sys.stdout.flush()
@@ -78,12 +173,19 @@ def typewriter_print(text, speed=0.002):
     sys.stdout.write("\n")
     sys.stdout.flush()
 
-def fancy_header(lines):
+def fancy_header(lines, color="bright_cyan", border_char="═"):
     clear_screen()
-    print("=" * 80)
+    width = 80
+    top = "╔" + border_char * (width - 2) + "╗"
+    bottom = "╚" + border_char * (width - 2) + "╝"
+    print(color_text(top, color=color, style="bright"))
     for ln in lines:
-        typewriter_print(ln, speed=0.004)
-    print("=" * 80)
+        ln_str = str(ln)
+        if len(ln_str) > width - 4:
+            ln_str = ln_str[:width - 7] + "..."
+        padded = f"║ {ln_str.center(width - 4)} ║"
+        print(color_text(padded, color=color, style="bright"))
+    print(color_text(bottom, color=color, style="bright"))
 
 # -------------------------
 # Helpers: normalização
@@ -214,12 +316,11 @@ def get_all_tags_flat():
 
 
 def print_tags_table(tags, cols=3):
-    """Exibe tags em 3 colunas com numeração."""
+    """Exibe tags em 3 colunas com numeração colorida."""
     if not tags:
-        print("Nenhuma tag encontrada.")
+        print(color_text("Nenhuma tag encontrada.", **STYLE["dim"]))
         return
     
-    # Ordena as tags alfabeticamente
     sorted_tags = sorted(tags)
     rows = (len(sorted_tags) + cols - 1) // cols
     
@@ -229,9 +330,10 @@ def print_tags_table(tags, cols=3):
             idx = r + c * rows
             if idx < len(sorted_tags):
                 tag = sorted_tags[idx]
-                # Trunca tags longas para manter alinhamento
                 display_tag = tag[:18] + ".." if len(tag) > 18 else tag
-                line += f"{idx+1:3d} - {display_tag:20s}"
+                num = color_text(f"{idx+1:3d}", **STYLE["number"])
+                tag_colored = color_text(f"- {display_tag:20s}", color="bright_white", style="bright")
+                line += f"{num} {tag_colored}"
             else:
                 line += " " * 24
         print(line)
@@ -240,70 +342,79 @@ def print_tags_table(tags, cols=3):
 # Help / documentação
 # -------------------------
 def print_help_main():
-    fancy_header(["COMANDOS - MENU PRINCIPAL"])
+    fancy_header(["🚀 COMANDOS - MENU PRINCIPAL"], color="bright_cyan")
     commands = [
-        "show_lists                   - Lista todas as listas disponíveis.",
-        "show_wait_lists              - Lista todas as listas no banco de espera.",
-        "create_list <nome>           - Cria uma nova lista no banco principal.",
-        "create_wait_list <nome>      - Cria uma nova lista no banco de espera.",
-        "open <id|nome>               - Abre uma lista pelo ID ou nome (principal).",
-        "open_wait <id|nome>          - Abre uma lista do banco de espera.",
-        "delete_list <id|nome>        - Deleta uma lista (principal).",
-        "migrate_wait <id>            - Migra seletivamente itens de uma lista de espera para o principal.",
-        "clear_wait                   - Limpa todo o banco de espera (com confirmação).",
-        "verify_api                   - Verifica se a API do AniList está respondendo.",
-        "help | ?                     - Mostra este help.",
-        "clear | cls                  - Limpa a tela.",
-        "exit | quit                  - Sai do CLI.",
-        "move                         - Move itens entre listas do banco principal.",
+        ("show_lists", "Lista todas as listas disponíveis."),
+        ("show_wait_lists", "Lista todas as listas no banco de espera."),
+        ("create_list <nome>", "Cria uma nova lista no banco principal."),
+        ("create_wait_list <nome>", "Cria uma nova lista no banco de espera."),
+        ("open <id|nome>", "Abre uma lista pelo ID ou nome (principal)."),
+        ("open_wait <id|nome>", "Abre uma lista do banco de espera."),
+        ("delete_list <id|nome>", "Deleta uma lista (principal)."),
+        ("migrate_wait <id>", "Migra seletivamente itens de uma lista de espera para o principal."),
+        ("clear_wait", "Limpa todo o banco de espera (com confirmação)."),
+        ("verify_api", "Verifica se a API do AniList está respondendo."),
+        ("help | ?", "Mostra este help."),
+        ("clear | cls", "Limpa a tela."),
+        ("exit | quit", "Sai do CLI."),
+        ("move", "Move itens entre listas do banco principal."),
     ]
-    for line in commands:
-        print(line)
+    for cmd, desc in commands:
+        cmd_col = color_text(cmd.ljust(22), **STYLE["command"])
+        desc_col = color_text(desc, **STYLE["dim"])
+        print(f"  {cmd_col}  {desc_col}")
+    print()
 
 def print_help_list():
-    fancy_header(["COMANDOS - LISTA ABERTA"])
+    fancy_header(["📋 COMANDOS - LISTA ABERTA"], color="bright_green")
     commands = [
-        "show_lines [filtro]           - Exibe as linhas da lista.",
-        "show_tags                     - Mostra todas as tags disponíveis.",
-        "search_<termo>                - Busca itens pelo nome.",
-        "open <nome>|<numero>          - Abre item por nome ou posição exibida.",
-        "show_<tag>                    - Exibe itens da tag indicada.",
-        "show_anime|show_filme|show_manga|show_manhwa|show_webtoon - Filtra por conteúdo.",
-        "show_<status>                 - Filtra por status.",
-        "sort_0-9 | sort_9-0           - Ordena por ID.",
-        "sort_a-z | sort_z-a           - Ordena por nome.",
-        "sort_rate [-r]                - Ordena por opinião.",
-        "next | prev                   - Navega páginas.",
-        "<numero>                      - Vai para a página indicada.",
-        "export_list [arquivo.xlsx]    - Exporta a exibição atual para XLSX.",
-        "create_line <nome>            - Cria uma nova linha interativamente na lista atual.",
-        "back | b                      - Volta ao menu principal.",
-        "help | ?                      - Mostra este help.",
-        "clear | cls                   - Limpa a tela.",
-        "exit | quit                   - Sai do CLI.",
+        ("show_lines [filtro]", "Exibe as linhas da lista."),
+        ("show_tags", "Mostra todas as tags disponíveis."),
+        ("search_<termo>", "Busca itens pelo nome."),
+        ("open <nome>|<numero>", "Abre item por nome ou posição exibida."),
+        ("show_<tag>", "Exibe itens da tag indicada."),
+        ("show_anime|show_filme|...", "Filtra por conteúdo."),
+        ("show_<status>", "Filtra por status."),
+        ("sort_0-9 | sort_9-0", "Ordena por ID."),
+        ("sort_a-z | sort_z-a", "Ordena por nome."),
+        ("sort_rate [-r]", "Ordena por opinião."),
+        ("next | prev", "Navega páginas."),
+        ("<numero>", "Vai para a página indicada."),
+        ("export_list [arquivo.xlsx]", "Exporta a exibição atual para XLSX."),
+        ("create_line <nome>", "Cria uma nova linha interativamente na lista atual."),
+        ("back | b", "Volta ao menu principal."),
+        ("help | ?", "Mostra este help."),
+        ("clear | cls", "Limpa a tela."),
+        ("exit | quit", "Sai do CLI."),
     ]
-    for line in commands:
-        print(line)
+    for cmd, desc in commands:
+        cmd_col = color_text(cmd.ljust(24), **STYLE["command"])
+        desc_col = color_text(desc, **STYLE["dim"])
+        print(f"  {cmd_col}  {desc_col}")
+    print()
 
 def print_help_item():
-    fancy_header(["COMANDOS - ITEM ABERTO"])
+    fancy_header(["📌 COMANDOS - ITEM ABERTO"], color="bright_magenta")
     commands = [
-        "next | n                      - Abre o próximo item.",
-        "prev | p                      - Abre o item anterior.",
-        "show_details                  - Mostra detalhes completos.",
-        "edit <campo> <novo_valor>     - Edita um campo localmente.",
-        "edit                          - Modo interativo de edição.",
-        "save                          - Salva as alterações no servidor.",
-        "refresh                       - Recarrega o item do servidor.",
-        "delete                        - Exclui o item (com confirmação).",
-        "check                         - Atualiza o highlight.",
-        "back | b                      - Volta para a lista.",
-        "help | ?                      - Mostra este help.",
-        "clear | cls                   - Limpa a tela.",
-        "exit | quit                   - Sai do CLI.",
+        ("next | n", "Abre o próximo item."),
+        ("prev | p", "Abre o item anterior."),
+        ("show_details", "Mostra detalhes completos."),
+        ("edit <campo> <novo_valor>", "Edita um campo localmente."),
+        ("edit", "Modo interativo de edição."),
+        ("save", "Salva as alterações no servidor."),
+        ("refresh", "Recarrega o item do servidor."),
+        ("delete", "Exclui o item (com confirmação)."),
+        ("check", "Atualiza o highlight."),
+        ("back | b", "Volta para a lista."),
+        ("help | ?", "Mostra este help."),
+        ("clear | cls", "Limpa a tela."),
+        ("exit | quit", "Sai do CLI."),
     ]
-    for line in commands:
-        print(line)
+    for cmd, desc in commands:
+        cmd_col = color_text(cmd.ljust(18), **STYLE["command"])
+        desc_col = color_text(desc, **STYLE["dim"])
+        print(f"  {cmd_col}  {desc_col}")
+    print()
 
 # -------------------------
 # HTTP Requests
@@ -358,10 +469,10 @@ def verify_anilist_api():
     test_title = "Naruto"
     
     # Cabeçalho
-    print("\n" + "╔" + "═" * 78 + "╗")
-    print("║" + " " * 20 + "🔍 VERIFICAÇÃO DA API ANILIST" + " " * 30 + "║")
-    print("╚" + "═" * 78 + "╝")
-    print(f"  📅 {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+    print("\n" + color_text("╔" + "═" * 78 + "╗", **STYLE["header"]))
+    print(color_text("║" + " " * 20 + "🔍 VERIFICAÇÃO DA API ANILIST" + " " * 30 + "║", **STYLE["header"]))
+    print(color_text("╚" + "═" * 78 + "╝", **STYLE["header"]))
+    print(color_text(f"  📅 {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", **STYLE["dim"]))
     
     resultados = {
         "conectividade": False,
@@ -375,12 +486,11 @@ def verify_anilist_api():
         "detalhes": []
     }
     
-    # 1) Teste de conectividade - CORRIGIDO
-    print("\n  📡 Testando conectividade...")
+    # 1) Teste de conectividade
+    print(color_text("\n  📡 Testando conectividade...", **STYLE["info"]))
     try:
         start_time = time.time()
         
-        # Query mínima para testar conectividade
         test_query = """
         query {
           __typename
@@ -399,46 +509,46 @@ def verify_anilist_api():
         
         if r.status_code == 200:
             resultados["conectividade"] = True
-            print(f"     ✅ Conectividade OK ({resultados['tempo_resposta']}ms)")
+            print(color_text(f"     ✅ Conectividade OK ({resultados['tempo_resposta']}ms)", **STYLE["success"]))
         else:
-            print(f"     ⚠️ Resposta inesperada: HTTP {r.status_code}")
-            print(f"     📄 {r.text[:100]}")
+            print(color_text(f"     ⚠️ Resposta inesperada: HTTP {r.status_code}", **STYLE["warning"]))
+            print(color_text(f"     📄 {r.text[:100]}", **STYLE["dim"]))
             resultados["erro"] = f"HTTP {r.status_code}"
             
     except requests.exceptions.ConnectionError:
-        print("     ❌ FALHA - Sem conexão com a internet ou servidor bloqueado")
+        print(color_text("     ❌ FALHA - Sem conexão com a internet ou servidor bloqueado", **STYLE["error"]))
         resultados["erro"] = "Sem conexão com a internet"
     except requests.exceptions.Timeout:
-        print("     ❌ FALHA - Tempo limite excedido (timeout)")
+        print(color_text("     ❌ FALHA - Tempo limite excedido (timeout)", **STYLE["error"]))
         resultados["erro"] = "Timeout"
     except Exception as e:
-        print(f"     ❌ FALHA - {str(e)}")
+        print(color_text(f"     ❌ FALHA - {str(e)}", **STYLE["error"]))
         resultados["erro"] = str(e)
     
     # Se não houver conectividade, já exibe o relatório
     if not resultados["conectividade"]:
-        print("\n" + "╔" + "═" * 78 + "╗")
-        print("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║")
-        print("╚" + "═" * 78 + "╝")
+        print("\n" + color_text("╔" + "═" * 78 + "╗", **STYLE["header"]))
+        print(color_text("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║", **STYLE["header"]))
+        print(color_text("╚" + "═" * 78 + "╝", **STYLE["header"]))
         
-        print("\n  🔴 STATUS GERAL: ❌ API INDISPONÍVEL")
-        print(f"  🔴 Motivo: {resultados['erro']}")
-        print("  🔴 Testes passados: 0/5")
-        print(f"  🔴 Tempo de resposta: {resultados['tempo_resposta']}ms")
+        print(color_text("\n  🔴 STATUS GERAL: ❌ API INDISPONÍVEL", **STYLE["error"]))
+        print(color_text(f"  🔴 Motivo: {resultados['erro']}", **STYLE["error"]))
+        print(color_text("  🔴 Testes passados: 0/5", **STYLE["error"]))
+        print(color_text(f"  🔴 Tempo de resposta: {resultados['tempo_resposta']}ms", **STYLE["error"]))
         
-        print("\n  📋 Detalhamento:")
-        print("     ❌ Conectividade com a API")
-        print("     ❌ Busca por título")
-        print("     ❌ Retorno de imagem")
-        print("     ❌ Retorno de sinopse")
-        print("     ❌ Retorno de sinônimos")
+        print(color_text("\n  📋 Detalhamento:", **STYLE["info"]))
+        print(color_text("     ❌ Conectividade com a API", **STYLE["error"]))
+        print(color_text("     ❌ Busca por título", **STYLE["error"]))
+        print(color_text("     ❌ Retorno de imagem", **STYLE["error"]))
+        print(color_text("     ❌ Retorno de sinopse", **STYLE["error"]))
+        print(color_text("     ❌ Retorno de sinônimos", **STYLE["error"]))
         
-        print("\n  💡 RECOMENDAÇÃO:")
-        print("     ⚠️ A API do AniList está inacessível no momento.")
-        print("     📌 Use o banco de ESPERA para adicionar itens.")
-        print("     📌 Depois execute 'migrate_wait' quando a API voltar.")
-        print("     📌 Verifique sua conexão com a internet.")
-        print("\n" + "═" * 80)
+        print(color_text("\n  💡 RECOMENDAÇÃO:", **STYLE["warning"]))
+        print(color_text("     ⚠️ A API do AniList está inacessível no momento.", **STYLE["warning"]))
+        print(color_text("     📌 Use o banco de ESPERA para adicionar itens.", **STYLE["dim"]))
+        print(color_text("     📌 Depois execute 'migrate_wait' quando a API voltar.", **STYLE["dim"]))
+        print(color_text("     📌 Verifique sua conexão com a internet.", **STYLE["dim"]))
+        print("\n" + color_text("═" * 80, **STYLE["dim"]))
         return False, resultados
     
     # 2) Query de busca
@@ -458,7 +568,7 @@ def verify_anilist_api():
     }
     """
     
-    print(f"\n  🔎 Buscando por: '{test_title}'...")
+    print(color_text(f"\n  🔎 Buscando por: '{test_title}'...", **STYLE["info"]))
     
     try:
         start_time = time.time()
@@ -471,115 +581,115 @@ def verify_anilist_api():
         response_time = round((time.time() - start_time) * 1000, 2)
         
         if response.status_code != 200:
-            print(f"     ❌ Erro na busca: HTTP {response.status_code}")
-            print(f"     📄 Resposta: {response.text[:150]}...")
+            print(color_text(f"     ❌ Erro na busca: HTTP {response.status_code}", **STYLE["error"]))
+            print(color_text(f"     📄 Resposta: {response.text[:150]}...", **STYLE["dim"]))
             resultados["erro"] = f"HTTP {response.status_code} na busca"
             resultados["status_code"] = response.status_code
             
-            print("\n" + "╔" + "═" * 78 + "╗")
-            print("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║")
-            print("╚" + "═" * 78 + "╝")
+            print("\n" + color_text("╔" + "═" * 78 + "╗", **STYLE["header"]))
+            print(color_text("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║", **STYLE["header"]))
+            print(color_text("╚" + "═" * 78 + "╝", **STYLE["header"]))
             
-            print("\n  🔴 STATUS GERAL: ⚠️ API RESPONDEU MAS FALHOU NA BUSCA")
-            print(f"  🔴 Motivo: {resultados['erro']}")
-            print("  🔴 Testes passados: 1/5")
-            print(f"  🔴 Tempo de resposta: {resultados['tempo_resposta']}ms")
+            print(color_text("\n  🔴 STATUS GERAL: ⚠️ API RESPONDEU MAS FALHOU NA BUSCA", **STYLE["warning"]))
+            print(color_text(f"  🔴 Motivo: {resultados['erro']}", **STYLE["warning"]))
+            print(color_text("  🔴 Testes passados: 1/5", **STYLE["warning"]))
+            print(color_text(f"  🔴 Tempo de resposta: {resultados['tempo_resposta']}ms", **STYLE["warning"]))
             
-            print("\n  📋 Detalhamento:")
-            print("     ✅ Conectividade com a API")
-            print("     ❌ Busca por título")
-            print("     ❌ Retorno de imagem")
-            print("     ❌ Retorno de sinopse")
-            print("     ❌ Retorno de sinônimos")
+            print(color_text("\n  📋 Detalhamento:", **STYLE["info"]))
+            print(color_text("     ✅ Conectividade com a API", **STYLE["success"]))
+            print(color_text("     ❌ Busca por título", **STYLE["error"]))
+            print(color_text("     ❌ Retorno de imagem", **STYLE["error"]))
+            print(color_text("     ❌ Retorno de sinopse", **STYLE["error"]))
+            print(color_text("     ❌ Retorno de sinônimos", **STYLE["error"]))
             
-            print("\n  💡 RECOMENDAÇÃO:")
-            print("     ⚠️ A API está respondendo mas a busca falhou.")
-            print("     📌 Pode ser um problema temporário. Tente novamente em alguns minutos.")
-            print("     📌 Use o banco de ESPERA para adicionar itens agora.")
-            print("\n" + "═" * 80)
+            print(color_text("\n  💡 RECOMENDAÇÃO:", **STYLE["warning"]))
+            print(color_text("     ⚠️ A API está respondendo mas a busca falhou.", **STYLE["warning"]))
+            print(color_text("     📌 Pode ser um problema temporário. Tente novamente em alguns minutos.", **STYLE["dim"]))
+            print(color_text("     📌 Use o banco de ESPERA para adicionar itens agora.", **STYLE["dim"]))
+            print("\n" + color_text("═" * 80, **STYLE["dim"]))
             return False, resultados
         
         data = response.json()
         resultados["busca"] = True
-        print(f"     ✅ Busca realizada com sucesso ({response_time}ms)")
+        print(color_text(f"     ✅ Busca realizada com sucesso ({response_time}ms)", **STYLE["success"]))
         
     except requests.exceptions.Timeout:
-        print("     ❌ Timeout na busca")
+        print(color_text("     ❌ Timeout na busca", **STYLE["error"]))
         resultados["erro"] = "Timeout na busca"
         
-        print("\n" + "╔" + "═" * 78 + "╗")
-        print("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║")
-        print("╚" + "═" * 78 + "╝")
+        print("\n" + color_text("╔" + "═" * 78 + "╗", **STYLE["header"]))
+        print(color_text("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║", **STYLE["header"]))
+        print(color_text("╚" + "═" * 78 + "╝", **STYLE["header"]))
         
-        print("\n  🔴 STATUS GERAL: ⚠️ TIMEOUT NA BUSCA")
-        print("  🔴 Testes passados: 1/5")
-        print(f"  🔴 Tempo de resposta: {resultados['tempo_resposta']}ms")
+        print(color_text("\n  🔴 STATUS GERAL: ⚠️ TIMEOUT NA BUSCA", **STYLE["warning"]))
+        print(color_text("  🔴 Testes passados: 1/5", **STYLE["warning"]))
+        print(color_text(f"  🔴 Tempo de resposta: {resultados['tempo_resposta']}ms", **STYLE["warning"]))
         
-        print("\n  📋 Detalhamento:")
-        print("     ✅ Conectividade com a API")
-        print("     ❌ Busca por título (timeout)")
-        print("     ❌ Retorno de imagem")
-        print("     ❌ Retorno de sinopse")
-        print("     ❌ Retorno de sinônimos")
+        print(color_text("\n  📋 Detalhamento:", **STYLE["info"]))
+        print(color_text("     ✅ Conectividade com a API", **STYLE["success"]))
+        print(color_text("     ❌ Busca por título (timeout)", **STYLE["error"]))
+        print(color_text("     ❌ Retorno de imagem", **STYLE["error"]))
+        print(color_text("     ❌ Retorno de sinopse", **STYLE["error"]))
+        print(color_text("     ❌ Retorno de sinônimos", **STYLE["error"]))
         
-        print("\n  💡 RECOMENDAÇÃO:")
-        print("     ⚠️ A API está lenta. Tente novamente mais tarde.")
-        print("     📌 Use o banco de ESPERA para adicionar itens agora.")
-        print("\n" + "═" * 80)
+        print(color_text("\n  💡 RECOMENDAÇÃO:", **STYLE["warning"]))
+        print(color_text("     ⚠️ A API está lenta. Tente novamente mais tarde.", **STYLE["warning"]))
+        print(color_text("     📌 Use o banco de ESPERA para adicionar itens agora.", **STYLE["dim"]))
+        print("\n" + color_text("═" * 80, **STYLE["dim"]))
         return False, resultados
         
     except Exception as e:
-        print(f"     ❌ Erro: {e}")
+        print(color_text(f"     ❌ Erro: {e}", **STYLE["error"]))
         resultados["erro"] = str(e)
         
-        print("\n" + "╔" + "═" * 78 + "╗")
-        print("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║")
-        print("╚" + "═" * 78 + "╝")
+        print("\n" + color_text("╔" + "═" * 78 + "╗", **STYLE["header"]))
+        print(color_text("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║", **STYLE["header"]))
+        print(color_text("╚" + "═" * 78 + "╝", **STYLE["header"]))
         
-        print("\n  🔴 STATUS GERAL: ⚠️ ERRO NA BUSCA")
-        print(f"  🔴 Motivo: {resultados['erro']}")
-        print("  🔴 Testes passados: 1/5")
+        print(color_text("\n  🔴 STATUS GERAL: ⚠️ ERRO NA BUSCA", **STYLE["warning"]))
+        print(color_text(f"  🔴 Motivo: {resultados['erro']}", **STYLE["warning"]))
+        print(color_text("  🔴 Testes passados: 1/5", **STYLE["warning"]))
         
-        print("\n  📋 Detalhamento:")
-        print("     ✅ Conectividade com a API")
-        print("     ❌ Busca por título (erro)")
-        print("     ❌ Retorno de imagem")
-        print("     ❌ Retorno de sinopse")
-        print("     ❌ Retorno de sinônimos")
+        print(color_text("\n  📋 Detalhamento:", **STYLE["info"]))
+        print(color_text("     ✅ Conectividade com a API", **STYLE["success"]))
+        print(color_text("     ❌ Busca por título (erro)", **STYLE["error"]))
+        print(color_text("     ❌ Retorno de imagem", **STYLE["error"]))
+        print(color_text("     ❌ Retorno de sinopse", **STYLE["error"]))
+        print(color_text("     ❌ Retorno de sinônimos", **STYLE["error"]))
         
-        print("\n  💡 RECOMENDAÇÃO:")
-        print("     ⚠️ Ocorreu um erro inesperado.")
-        print("     📌 Use o banco de ESPERA para adicionar itens.")
-        print("\n" + "═" * 80)
+        print(color_text("\n  💡 RECOMENDAÇÃO:", **STYLE["warning"]))
+        print(color_text("     ⚠️ Ocorreu um erro inesperado.", **STYLE["warning"]))
+        print(color_text("     📌 Use o banco de ESPERA para adicionar itens.", **STYLE["dim"]))
+        print("\n" + color_text("═" * 80, **STYLE["dim"]))
         return False, resultados
     
     # 3) Analisar resultados da busca
     media = data.get("data", {}).get("Page", {}).get("media", [])
     
     if not media:
-        print("     ⚠️ Nenhum resultado encontrado")
+        print(color_text("     ⚠️ Nenhum resultado encontrado", **STYLE["warning"]))
         resultados["erro"] = "Nenhum resultado encontrado"
         
-        print("\n" + "╔" + "═" * 78 + "╗")
-        print("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║")
-        print("╚" + "═" * 78 + "╝")
+        print("\n" + color_text("╔" + "═" * 78 + "╗", **STYLE["header"]))
+        print(color_text("║" + " " * 25 + "📊 RELATÓRIO DA API" + " " * 33 + "║", **STYLE["header"]))
+        print(color_text("╚" + "═" * 78 + "╝", **STYLE["header"]))
         
-        print("\n  🔴 STATUS GERAL: ⚠️ BUSCA SEM RESULTADOS")
-        print("  🔴 Testes passados: 2/5")
-        print(f"  🔴 Tempo de resposta: {resultados['tempo_resposta']}ms")
+        print(color_text("\n  🔴 STATUS GERAL: ⚠️ BUSCA SEM RESULTADOS", **STYLE["warning"]))
+        print(color_text("  🔴 Testes passados: 2/5", **STYLE["warning"]))
+        print(color_text(f"  🔴 Tempo de resposta: {resultados['tempo_resposta']}ms", **STYLE["warning"]))
         
-        print("\n  📋 Detalhamento:")
-        print("     ✅ Conectividade com a API")
-        print("     ✅ Busca por título (mas sem resultados)")
-        print("     ❌ Retorno de imagem")
-        print("     ❌ Retorno de sinopse")
-        print("     ❌ Retorno de sinônimos")
+        print(color_text("\n  📋 Detalhamento:", **STYLE["info"]))
+        print(color_text("     ✅ Conectividade com a API", **STYLE["success"]))
+        print(color_text("     ✅ Busca por título (mas sem resultados)", **STYLE["success"]))
+        print(color_text("     ❌ Retorno de imagem", **STYLE["error"]))
+        print(color_text("     ❌ Retorno de sinopse", **STYLE["error"]))
+        print(color_text("     ❌ Retorno de sinônimos", **STYLE["error"]))
         
-        print("\n  💡 RECOMENDAÇÃO:")
-        print("     ⚠️ A API respondeu mas não encontrou o título de teste.")
-        print("     📌 Pode ser um problema nos dados da API.")
-        print("     📌 Use o banco de ESPERA para adicionar itens.")
-        print("\n" + "═" * 80)
+        print(color_text("\n  💡 RECOMENDAÇÃO:", **STYLE["warning"]))
+        print(color_text("     ⚠️ A API respondeu mas não encontrou o título de teste.", **STYLE["warning"]))
+        print(color_text("     📌 Pode ser um problema nos dados da API.", **STYLE["dim"]))
+        print(color_text("     📌 Use o banco de ESPERA para adicionar itens.", **STYLE["dim"]))
+        print("\n" + color_text("═" * 80, **STYLE["dim"]))
         return False, resultados
     
     # 4) Analisar dados do primeiro resultado
@@ -589,12 +699,12 @@ def verify_anilist_api():
     english = titulos.get("english", "")
     native = titulos.get("native", "")
     
-    print(f"\n  📋 Resultado encontrado:")
-    print(f"     📖 Título: {romaji}")
+    print(color_text(f"\n  📋 Resultado encontrado:", **STYLE["info"]))
+    print(color_text(f"     📖 Título: {romaji}", color="bright_white", style="bright"))
     if english:
-        print(f"     🌐 Inglês: {english}")
+        print(color_text(f"     🌐 Inglês: {english}", **STYLE["dim"]))
     if native:
-        print(f"     🇯🇵 Nativo: {native}")
+        print(color_text(f"     🇯🇵 Nativo: {native}", **STYLE["dim"]))
     
     # 4.1) Imagem
     cover = primeiro.get("coverImage", {})
@@ -603,49 +713,47 @@ def verify_anilist_api():
     
     if large:
         resultados["imagem"] = True
-        print(f"     🖼️ Imagem: ✅ Disponível (large)")
-        # Testa se a URL da imagem é válida
+        print(color_text(f"     🖼️ Imagem: ✅ Disponível (large)", **STYLE["success"]))
         try:
             img_check = requests.head(large, timeout=3)
             if img_check.status_code == 200:
-                print(f"        📸 URL válida (HTTP {img_check.status_code})")
+                print(color_text(f"        📸 URL válida (HTTP {img_check.status_code})", **STYLE["dim"]))
             else:
-                print(f"        ⚠️ URL retornou HTTP {img_check.status_code}")
+                print(color_text(f"        ⚠️ URL retornou HTTP {img_check.status_code}", **STYLE["warning"]))
         except:
-            print(f"        ⚠️ Não foi possível verificar a URL")
+            print(color_text(f"        ⚠️ Não foi possível verificar a URL", **STYLE["warning"]))
     elif extra:
         resultados["imagem"] = True
-        print(f"     🖼️ Imagem: ✅ Disponível (extraLarge)")
+        print(color_text(f"     🖼️ Imagem: ✅ Disponível (extraLarge)", **STYLE["success"]))
     else:
-        print(f"     🖼️ Imagem: ❌ NÃO DISPONÍVEL")
+        print(color_text(f"     🖼️ Imagem: ❌ NÃO DISPONÍVEL", **STYLE["error"]))
         resultados["detalhes"].append("Imagem não disponível")
     
     # 4.2) Sinopse
     desc = primeiro.get("description", "")
     if desc and len(desc) > 50:
         resultados["sinopse"] = True
-        print(f"     📝 Sinopse: ✅ Disponível ({len(desc)} caracteres)")
-        # Mostra preview mais limpo
+        print(color_text(f"     📝 Sinopse: ✅ Disponível ({len(desc)} caracteres)", **STYLE["success"]))
         preview = desc[:120].replace("\n", " ").strip()
-        print(f"        📄 {preview}...")
+        print(color_text(f"        📄 {preview}...", **STYLE["dim"]))
     elif desc:
         resultados["sinopse"] = True
-        print(f"     📝 Sinopse: ✅ Disponível (curta, {len(desc)} caracteres)")
+        print(color_text(f"     📝 Sinopse: ✅ Disponível (curta, {len(desc)} caracteres)", **STYLE["success"]))
     else:
-        print(f"     📝 Sinopse: ❌ NÃO DISPONÍVEL")
+        print(color_text(f"     📝 Sinopse: ❌ NÃO DISPONÍVEL", **STYLE["error"]))
         resultados["detalhes"].append("Sinopse não disponível")
     
     # 4.3) Sinônimos
     synonyms = primeiro.get("synonyms", [])
     if synonyms and len(synonyms) > 0:
         resultados["sinonimos"] = True
-        print(f"     🔤 Sinônimos: ✅ Disponível ({len(synonyms)} sinônimo(s))")
+        print(color_text(f"     🔤 Sinônimos: ✅ Disponível ({len(synonyms)} sinônimo(s))", **STYLE["success"]))
         display = ", ".join(synonyms[:3])
         if len(synonyms) > 3:
             display += f" (+{len(synonyms)-3} mais)"
-        print(f"        📌 {display}")
+        print(color_text(f"        📌 {display}", **STYLE["dim"]))
     else:
-        print(f"     🔤 Sinônimos: ❌ NÃO DISPONÍVEL")
+        print(color_text(f"     🔤 Sinônimos: ❌ NÃO DISPONÍVEL", **STYLE["error"]))
         resultados["detalhes"].append("Sinônimos não disponíveis")
     
     # 4.4) Informações extras
@@ -653,15 +761,15 @@ def verify_anilist_api():
     episodes = primeiro.get("episodes", "N/A")
     score = primeiro.get("averageScore", "N/A")
     
-    print(f"\n  📊 Informações adicionais:")
-    print(f"     📌 Status: {status}")
-    print(f"     📌 Episódios: {episodes}")
-    print(f"     📌 Score médio: {score}/100")
+    print(color_text(f"\n  📊 Informações adicionais:", **STYLE["info"]))
+    print(color_text(f"     📌 Status: {status}", **STYLE["dim"]))
+    print(color_text(f"     📌 Episódios: {episodes}", **STYLE["dim"]))
+    print(color_text(f"     📌 Score médio: {score}/100", **STYLE["dim"]))
     
     # 5) Sumário final
-    print("\n" + "╔" + "═" * 78 + "╗")
-    print("║" + " " * 28 + "📊 RELATÓRIO DA API" + " " * 33 + "║")
-    print("╚" + "═" * 78 + "╝")
+    print("\n" + color_text("╔" + "═" * 78 + "╗", **STYLE["header"]))
+    print(color_text("║" + " " * 28 + "📊 RELATÓRIO DA API" + " " * 33 + "║", **STYLE["header"]))
+    print(color_text("╚" + "═" * 78 + "╝", **STYLE["header"]))
     
     total_tests = 5
     passed = sum([
@@ -675,56 +783,59 @@ def verify_anilist_api():
     if passed == 5:
         status_emoji = "🟢"
         status_text = "COMPLETAMENTE FUNCIONAL"
+        status_color = "bright_green"
     elif passed >= 3:
         status_emoji = "🟡"
         status_text = "PARCIALMENTE FUNCIONAL"
+        status_color = "bright_yellow"
     else:
         status_emoji = "🔴"
         status_text = "COM PROBLEMAS"
+        status_color = "bright_red"
     
-    print(f"\n  {status_emoji} STATUS GERAL: {status_text}")
-    print(f"  📊 Testes passados: {passed}/{total_tests}")
-    print(f"  ⏱️ Tempo de resposta: {resultados['tempo_resposta']}ms")
+    print(color_text(f"\n  {status_emoji} STATUS GERAL: {status_text}", color=status_color, style="bright"))
+    print(color_text(f"  📊 Testes passados: {passed}/{total_tests}", **STYLE["info"]))
+    print(color_text(f"  ⏱️ Tempo de resposta: {resultados['tempo_resposta']}ms", **STYLE["info"]))
     
     if resultados.get("status_code"):
-        print(f"  📡 HTTP Status: {resultados['status_code']}")
+        print(color_text(f"  📡 HTTP Status: {resultados['status_code']}", **STYLE["info"]))
     
-    print("\n  📋 Detalhamento:")
-    print(f"     {'✅' if resultados['conectividade'] else '❌'} Conectividade com a API")
-    print(f"     {'✅' if resultados['busca'] else '❌'} Busca por título")
-    print(f"     {'✅' if resultados['imagem'] else '❌'} Retorno de imagem")
-    print(f"     {'✅' if resultados['sinopse'] else '❌'} Retorno de sinopse")
-    print(f"     {'✅' if resultados['sinonimos'] else '❌'} Retorno de sinônimos")
+    print(color_text("\n  📋 Detalhamento:", **STYLE["info"]))
+    print(color_text(f"     {'✅' if resultados['conectividade'] else '❌'} Conectividade com a API", **STYLE["success"] if resultados['conectividade'] else STYLE["error"]))
+    print(color_text(f"     {'✅' if resultados['busca'] else '❌'} Busca por título", **STYLE["success"] if resultados['busca'] else STYLE["error"]))
+    print(color_text(f"     {'✅' if resultados['imagem'] else '❌'} Retorno de imagem", **STYLE["success"] if resultados['imagem'] else STYLE["error"]))
+    print(color_text(f"     {'✅' if resultados['sinopse'] else '❌'} Retorno de sinopse", **STYLE["success"] if resultados['sinopse'] else STYLE["error"]))
+    print(color_text(f"     {'✅' if resultados['sinonimos'] else '❌'} Retorno de sinônimos", **STYLE["success"] if resultados['sinonimos'] else STYLE["error"]))
     
     if resultados["detalhes"]:
-        print("\n  📌 Observações:")
+        print(color_text("\n  📌 Observações:", **STYLE["warning"]))
         for det in resultados["detalhes"]:
-            print(f"     ⚠️ {det}")
+            print(color_text(f"     ⚠️ {det}", **STYLE["warning"]))
     
     # 6) Recomendações
-    print("\n  💡 RECOMENDAÇÃO:")
+    print(color_text("\n  💡 RECOMENDAÇÃO:", **STYLE["highlight"]))
     if passed == 5:
-        print("     ✅ Tudo funcionando perfeitamente!")
-        print("     ✅ Pode usar o banco PRINCIPAL normalmente.")
-        print("     ✅ As imagens, sinopse e sinônimos estão disponíveis.")
+        print(color_text("     ✅ Tudo funcionando perfeitamente!", **STYLE["success"]))
+        print(color_text("     ✅ Pode usar o banco PRINCIPAL normalmente.", **STYLE["success"]))
+        print(color_text("     ✅ As imagens, sinopse e sinônimos estão disponíveis.", **STYLE["success"]))
     elif passed >= 3:
-        print("     ⚠️ API está funcionando parcialmente.")
-        print("     📌 Alguns dados podem não estar disponíveis.")
-        print("     📌 Use o banco PRINCIPAL com cautela.")
+        print(color_text("     ⚠️ API está funcionando parcialmente.", **STYLE["warning"]))
+        print(color_text("     📌 Alguns dados podem não estar disponíveis.", **STYLE["dim"]))
+        print(color_text("     📌 Use o banco PRINCIPAL com cautela.", **STYLE["dim"]))
         if not resultados["imagem"]:
-            print("     📌 Imagens não disponíveis. Considere adicionar manualmente.")
+            print(color_text("     📌 Imagens não disponíveis. Considere adicionar manualmente.", **STYLE["dim"]))
         if not resultados["sinopse"]:
-            print("     📌 Sinopse não disponível.")
+            print(color_text("     📌 Sinopse não disponível.", **STYLE["dim"]))
         if not resultados["sinonimos"]:
-            print("     📌 Sinônimos não disponíveis.")
+            print(color_text("     📌 Sinônimos não disponíveis.", **STYLE["dim"]))
     else:
-        print("     🔴 API com problemas ou indisponível.")
-        print("     📌 Use o banco de ESPERA para adicionar itens.")
-        print("     📌 Execute 'migrate_wait' quando a API normalizar.")
+        print(color_text("     🔴 API com problemas ou indisponível.", **STYLE["error"]))
+        print(color_text("     📌 Use o banco de ESPERA para adicionar itens.", **STYLE["dim"]))
+        print(color_text("     📌 Execute 'migrate_wait' quando a API normalizar.", **STYLE["dim"]))
         if resultados.get("erro"):
-            print(f"     📌 Motivo: {resultados['erro']}")
+            print(color_text(f"     📌 Motivo: {resultados['erro']}", **STYLE["dim"]))
     
-    print("\n" + "═" * 80)
+    print("\n" + color_text("═" * 80, **STYLE["dim"]))
     
     return passed >= 3, resultados
 
@@ -759,7 +870,7 @@ class PaginatedDisplay:
         prompt_default = 5
         while True:
             try:
-                raw = input(f"Quantos itens por página? [1-15] (enter={prompt_default}): ").strip()
+                raw = input(color_text(f"Quantos itens por página? [1-15] (enter={prompt_default}): ", **STYLE["info"])).strip()
             except (KeyboardInterrupt, EOFError):
                 print()
                 raw = ""
@@ -769,12 +880,12 @@ class PaginatedDisplay:
             try:
                 chosen = int(raw)
             except Exception:
-                print("Entrada inválida — informe um número entre 1 e 15.")
+                print(color_text("Entrada inválida — informe um número entre 1 e 15.", **STYLE["error"]))
                 continue
             if 1 <= chosen <= 15:
                 break
             else:
-                print("Valor fora do intervalo. Informe entre 1 e 15.")
+                print(color_text("Valor fora do intervalo. Informe entre 1 e 15.", **STYLE["error"]))
         return chosen
 
     def render_page(self, page_num=None):
@@ -800,64 +911,108 @@ class PaginatedDisplay:
             f"         {self.title}",
             f"         Página {self.current_page} de {self.total_pages}  (itens/pg: {self.items_per_page})",
             "════════════════════════════════════════════════════════════════════════════════",
-        ])
+        ], color="bright_cyan")
 
         if not page_items:
-            typewriter_print("(nenhum item encontrado nesta seleção)", speed=0.004)
+            print(color_text("(nenhum item encontrado nesta seleção)", color="bright_yellow", style="bright"))
         else:
             for idx, item in enumerate(page_items, start=start_idx + 1):
                 self._pretty_print_item(idx, item)
 
-        print("-" * 80)
-        typewriter_print(self._compact_page_display(), speed=0.003)
-        typewriter_print("Navegue com 'next', 'prev' ou digite o número da página. Use 'back' para voltar.", speed=0.003)
-        typewriter_print(f"Total: {len(self.items)} itens. (mostrando {self.items_per_page} por página)", speed=0.003)
-        print("=" * 80)
+        print(color_text("-" * 80, **STYLE["dim"]))
+        print(color_text(self._compact_page_display(), **STYLE["highlight"]))
+        print(color_text("Navegue com 'next', 'prev' ou digite o número da página. Use 'back' para voltar.", **STYLE["dim"]))
+        print(color_text(f"Total: {len(self.items)} itens. (mostrando {self.items_per_page} por página)", **STYLE["dim"]))
+        print(color_text("=" * 80, **STYLE["dim"]))
 
     def _compact_page_display(self):
         if self.total_pages <= 12:
             parts = []
             for p in range(1, self.total_pages + 1):
-                parts.append(f"[{p}]" if p == self.current_page else str(p))
+                if p == self.current_page:
+                    parts.append(color_text(f"[{p}]", **STYLE["highlight"]))
+                else:
+                    parts.append(color_text(str(p), **STYLE["dim"]))
             return " ".join(parts)
         parts = []
-        parts.append("1" if self.current_page != 1 else "[1]")
+        parts.append(color_text("1", **STYLE["highlight"]) if self.current_page == 1 else color_text("1", **STYLE["dim"]))
         if self.current_page > 4:
-            parts.append("...")
+            parts.append(color_text("...", **STYLE["dim"]))
         start = max(2, self.current_page - 2)
         end = min(self.total_pages - 1, self.current_page + 2)
         for p in range(start, end + 1):
-            parts.append(f"[{p}]" if p == self.current_page else str(p))
+            if p == self.current_page:
+                parts.append(color_text(f"[{p}]", **STYLE["highlight"]))
+            else:
+                parts.append(color_text(str(p), **STYLE["dim"]))
         if self.current_page < self.total_pages - 3:
-            parts.append("...")
-        parts.append(str(self.total_pages) if self.current_page != self.total_pages else f"[{self.total_pages}]")
+            parts.append(color_text("...", **STYLE["dim"]))
+        if self.current_page == self.total_pages:
+            parts.append(color_text(f"[{self.total_pages}]", **STYLE["highlight"]))
+        else:
+            parts.append(color_text(str(self.total_pages), **STYLE["dim"]))
         return " ".join(parts)
 
     def _pretty_print_item(self, idx, item):
         if not isinstance(item, dict):
-            typewriter_print(f"{idx}. {item}", speed=0.002)
+            print(f"{idx}. {item}")
             return
+        
+        WIDTH = 80
+        MAX_NAME_LEN = 50
+        
         nome = item.get("nome") or item.get("name") or str(item.get("id", "N/A"))
         migrated = item.get("migrated", 0)
-        prefix = "[M] " if migrated else ""
-        status = item.get("status")
-        status_str = f"[Status: {status}]" if status else ""
-        WIDTH = 80
-        left_part = f"{idx}. {prefix}{nome}"
-        if status_str:
-            total_len = len(left_part) + len(status_str) + 2
-            if total_len > WIDTH:
-                max_name_len = WIDTH - len(status_str) - 4 - len(prefix)
-                if max_name_len < 10:
-                    max_name_len = 10
-                left_part = f"{idx}. {prefix}{nome[:max_name_len]}..."
-            padding = WIDTH - len(left_part) - len(status_str)
-            if padding < 1:
-                padding = 1
-            line = f"{left_part}{' ' * padding}{status_str}"
+        
+        # ====== TRATA O NOME (corta se passar do limite) ======
+        if len(nome) > MAX_NAME_LEN:
+            nome_display = nome[:MAX_NAME_LEN - 3] + "..."
         else:
-            line = left_part.ljust(WIDTH)
-        typewriter_print(line, speed=0.002)
+            nome_display = nome
+        
+        # ====== CORES ======
+        idx_str = color_text(f"{idx:3d}.", **STYLE["number"])
+        
+        conteudo = item.get("conteudo", "").lower()
+        if conteudo in ["anime", "filme"]:
+            name_color = "bright_cyan"
+        elif conteudo in ["manga", "manhwa", "webtoon"]:
+            name_color = "bright_green"
+        else:
+            name_color = "white"
+        
+        nome_str = color_text(nome_display, color=name_color, style="bright")
+        prefix = color_text("[M] ", **STYLE["warning"]) if migrated else ""
+        
+        # ====== STATUS (SÓ ELE) ======
+        status = item.get("status")
+        status_str = ""
+        if status:
+            status_color = "bright_yellow"
+            if status.lower() in ["concluido", "finished"]:
+                status_color = "bright_green"
+            elif status.lower() in ["dropado", "cancelado"]:
+                status_color = "bright_red"
+            status_str = color_text(f"[{status}]", color=status_color, style="bright")
+        
+        # ====== MONTAGEM COM ALINHAMENTO ======
+        # Parte esquerda (sem cores para cálculo)
+        left_raw = f"{idx:3d}. {prefix}{nome_display}" if migrated else f"{idx:3d}. {nome_display}"
+        
+        # Parte direita (sem cores para cálculo)
+        right_raw = f"  {status}" if status else ""
+        
+        # Padding
+        padding = max(1, WIDTH - len(left_raw) - len(right_raw))
+        
+        # Linha final
+        if status:
+            line = f"{idx_str} {prefix}{nome_str}" + " " * padding + status_str
+        else:
+            line = f"{idx_str} {prefix}{nome_str}"
+        
+        sys.stdout.write(line + "\n")
+        sys.stdout.flush()
 
     def handle_command(self, cmd, args):
         cmd = str(cmd).strip().lower()
@@ -1287,14 +1442,14 @@ class OpenListContext:
         if filename_arg:
             filename = filename_arg.strip()
         else:
-            raw = input(f"Nome do arquivo (enter={default_fname}): ").strip()
+            raw = input(color_text(f"Nome do arquivo (enter={default_fname}): ", **STYLE["info"])).strip()
             filename = raw or default_fname
         if not filename.lower().endswith(".xlsx"):
             filename = filename + ".xlsx"
 
         def ask_opt(prompt, default=True):
             yn = "Y/n" if default else "y/N"
-            raw = input(f"{prompt} [{yn}]: ").strip().lower()
+            raw = input(color_text(f"{prompt} [{yn}]: ", **STYLE["info"])).strip().lower()
             if raw == "":
                 return default
             return raw[0] == "y"
@@ -1399,7 +1554,7 @@ class OpenListContext:
 
             current += 1
             pct = int((current / total) * 100)
-            sys.stdout.write(f"\rExportando... {current}/{total} ({pct}%)")
+            sys.stdout.write(color_text(f"\rExportando... {current}/{total} ({pct}%)", **STYLE["info"]))
             sys.stdout.flush()
 
         wb.save(filename)
@@ -1407,7 +1562,7 @@ class OpenListContext:
         return True, f"Arquivo salvo: {os.path.abspath(filename)}"
 
     # ============================================================
-    # Criação interativa de linha (CORRIGIDA)
+    # Criação interativa de linha (CORRIGIDA E ESTILIZADA)
     # ============================================================
 
     def interactive_create_line(self, nome, is_waiting=False):
@@ -1420,20 +1575,16 @@ class OpenListContext:
         all_tags = get_all_tags_flat()
         
         # 2) Exibir tags em colunas (5 colunas)
-        clear_screen()
-        print("=" * 80)
-        print(f"CRIANDO NOVA LINHA: {nome}")
-        print("=" * 80)
-        print("\n📋 TAGS DISPONÍVEIS (do sistema):")
-        print("-" * 80)
+        fancy_header([f"📝 CRIANDO NOVA LINHA: {nome}"], color="bright_yellow")
+        print(color_text("\n📋 TAGS DISPONÍVEIS (do sistema):", **STYLE["info"]))
+        print(color_text("-" * 80, **STYLE["dim"]))
         
         # Pergunta tags
         print_tags_table(all_tags)
-        print("-" * 80)
-        tag_choice = input("Quais tags essa linha vai ter? (digite os números separados por vírgula, ou deixe em branco): ").strip()
+        print(color_text("-" * 80, **STYLE["dim"]))
+        tag_choice = input(color_text("Quais tags essa linha vai ter? (digite os números separados por vírgula, ou deixe em branco): ", **STYLE["info"])).strip()
         selected_tags = []
         if tag_choice:
-            # Processa números
             sorted_tags = sorted(all_tags)
             for part in tag_choice.split(','):
                 part = part.strip()
@@ -1442,20 +1593,17 @@ class OpenListContext:
                     if 0 <= idx < len(sorted_tags):
                         selected_tags.append(sorted_tags[idx])
                     else:
-                        print(f"⚠️ Número {part} inválido (fora do range). Ignorando.")
+                        print(color_text(f"⚠️ Número {part} inválido (fora do range). Ignorando.", **STYLE["warning"]))
             if selected_tags:
-                print(f"✅ Tags selecionadas: {', '.join(selected_tags)}")
+                print(color_text(f"✅ Tags selecionadas: {', '.join(selected_tags)}", **STYLE["success"]))
             else:
-                print("ℹ️ Nenhuma tag válida selecionada.")
+                print(color_text("ℹ️ Nenhuma tag válida selecionada.", **STYLE["dim"]))
         
         tags_str = ", ".join(selected_tags) if selected_tags else ""
-        input("\nPressione ENTER para continuar...")
+        input(color_text("\nPressione ENTER para continuar...", **STYLE["dim"]))
 
         # 3) Tipo de mídia
-        clear_screen()
-        print("=" * 80)
-        print(f"TIPO DE MÍDIA para '{nome}'")
-        print("=" * 80)
+        fancy_header([f"🎬 TIPO DE MÍDIA para '{nome}'"], color="bright_cyan")
         media_options = [
             ("Anime", "anime"),
             ("Filme", "filme"),
@@ -1464,22 +1612,18 @@ class OpenListContext:
             ("Webtoon", "webtoon")
         ]
         for i, (label, _) in enumerate(media_options, 1):
-            print(f"{i} - {label}")
+            print(color_text(f"{i} - {label}", color="bright_white", style="bright"))
         while True:
-            choice = input("Escolha o tipo (número): ").strip()
+            choice = input(color_text("Escolha o tipo (número): ", **STYLE["info"])).strip()
             if choice.isdigit():
                 idx = int(choice) - 1
                 if 0 <= idx < len(media_options):
                     conteudo = media_options[idx][1]
                     break
-            print("Opção inválida. Tente novamente.")
+            print(color_text("Opção inválida. Tente novamente.", **STYLE["error"]))
 
         # 4) Status (baseado no tipo)
-        clear_screen()
-        print("=" * 80)
-        print(f"STATUS para '{nome}'")
-        print("=" * 80)
-        # Define opções baseadas no conteúdo
+        fancy_header([f"📊 STATUS para '{nome}'"], color="bright_magenta")
         if conteudo in ["anime", "filme"]:
             status_options = [
                 ("Assistindo", "assistindo"),
@@ -1488,7 +1632,7 @@ class OpenListContext:
                 ("Cancelado", "cancelado"),
                 ("Dropado", "dropado")
             ]
-        else:  # manga, manhwa, webtoon
+        else:
             status_options = [
                 ("Lendo", "lendo"),
                 ("Concluído", "concluido"),
@@ -1497,22 +1641,19 @@ class OpenListContext:
                 ("Dropado", "dropado")
             ]
         for i, (label, _) in enumerate(status_options, 1):
-            print(f"{i} - {label}")
+            print(color_text(f"{i} - {label}", color="bright_white", style="bright"))
         while True:
-            choice = input("Escolha o status (número): ").strip()
+            choice = input(color_text("Escolha o status (número): ", **STYLE["info"])).strip()
             if choice.isdigit():
                 idx = int(choice) - 1
                 if 0 <= idx < len(status_options):
                     status = status_options[idx][1]
                     break
-            print("Opção inválida. Tente novamente.")
+            print(color_text("Opção inválida. Tente novamente.", **STYLE["error"]))
 
         # 5) Episódio/Capítulo
-        clear_screen()
-        print("=" * 80)
-        print(f"EPISÓDIO/CAPÍTULO para '{nome}'")
-        print("=" * 80)
-        episodio_input = input("Em qual episódio/capítulo você parou? (deixe em branco se não aplicável): ").strip()
+        fancy_header([f"📖 EPISÓDIO/CAPÍTULO para '{nome}'"], color="bright_green")
+        episodio_input = input(color_text("Em qual episódio/capítulo você parou? (deixe em branco se não aplicável): ", **STYLE["info"])).strip()
         episodio = None
         if episodio_input:
             try:
@@ -1521,14 +1662,11 @@ class OpenListContext:
                 try:
                     episodio = float(episodio_input)
                 except ValueError:
-                    print("⚠️ Valor inválido. Será salvo como vazio.")
+                    print(color_text("⚠️ Valor inválido. Será salvo como vazio.", **STYLE["warning"]))
                     episodio = None
 
         # 6) Opinião
-        clear_screen()
-        print("=" * 80)
-        print(f"OPINIÃO sobre '{nome}'")
-        print("=" * 80)
+        fancy_header([f"⭐ OPINIÃO sobre '{nome}'"], color="bright_yellow")
         opiniao_options = [
             ("Favorito", "Favorito"),
             ("Muito Bom", "Muito Bom"),
@@ -1540,31 +1678,28 @@ class OpenListContext:
             ("Não Vi", "Não Vi")
         ]
         for i, (label, _) in enumerate(opiniao_options, 1):
-            print(f"{i} - {label}")
+            print(color_text(f"{i} - {label}", color="bright_white", style="bright"))
         while True:
-            choice = input("Escolha a opinião (número): ").strip()
+            choice = input(color_text("Escolha a opinião (número): ", **STYLE["info"])).strip()
             if choice.isdigit():
                 idx = int(choice) - 1
                 if 0 <= idx < len(opiniao_options):
                     opiniao = opiniao_options[idx][1]
                     break
-            print("Opção inválida. Tente novamente.")
+            print(color_text("Opção inválida. Tente novamente.", **STYLE["error"]))
 
         # 7) Confirmar e enviar
-        clear_screen()
-        print("=" * 80)
-        print("RESUMO DA CRIAÇÃO")
-        print("=" * 80)
-        print(f"📌 Nome: {nome}")
-        print(f"🏷️ Tags: {tags_str or '(nenhuma)'}")
-        print(f"📺 Tipo: {conteudo}")
-        print(f"📊 Status: {status}")
-        print(f"📖 Episódio/Cap: {episodio if episodio is not None else '(não informado)'}")
-        print(f"⭐ Opinião: {opiniao}")
-        print("=" * 80)
-        confirm = input("Criar esta linha? (s/N): ").strip().lower()
+        fancy_header(["📋 RESUMO DA CRIAÇÃO"], color="bright_cyan")
+        print(color_text(f"📌 Nome: {nome}", color="bright_white", style="bright"))
+        print(color_text(f"🏷️ Tags: {tags_str or '(nenhuma)'}", **STYLE["dim"]))
+        print(color_text(f"📺 Tipo: {conteudo}", color="bright_cyan", style="bright"))
+        print(color_text(f"📊 Status: {status}", **STYLE["info"]))
+        print(color_text(f"📖 Episódio/Cap: {episodio if episodio is not None else '(não informado)'}", **STYLE["dim"]))
+        print(color_text(f"⭐ Opinião: {opiniao}", color="bright_yellow", style="bright"))
+        print(color_text("=" * 80, **STYLE["dim"]))
+        confirm = input(color_text("Criar esta linha? (s/N): ", **STYLE["highlight"])).strip().lower()
         if confirm != 's':
-            print("❌ Criação cancelada.")
+            print(color_text("❌ Criação cancelada.", **STYLE["error"]))
             return
 
         # 8) Enviar para o servidor
@@ -1584,17 +1719,17 @@ class OpenListContext:
             url = f"{API_BASE.rstrip('/')}/linhas"
 
         try:
-            print("\n⏳ Enviando para o servidor...")
+            print(color_text("\n⏳ Enviando para o servidor...", **STYLE["info"]))
             r = requests.post(url, json=payload, timeout=8)
             if r.status_code >= 400:
-                print(f"❌ Erro ao criar linha: {r.status_code} - {r.text}")
+                print(color_text(f"❌ Erro ao criar linha: {r.status_code} - {r.text}", **STYLE["error"]))
             else:
-                print("✅ Linha criada com sucesso!")
+                print(color_text("✅ Linha criada com sucesso!", **STYLE["success"]))
                 if not is_waiting:
                     created = r.json()
                     line_id = created.get("id")
                     if line_id:
-                        print("⏳ Buscando dados do AniList para imagem, sinopse e sinônimos...")
+                        print(color_text("⏳ Buscando dados do AniList para imagem, sinopse e sinônimos...", **STYLE["info"]))
                         ok, err = enrich_created_line_from_anilist(
                             line_id,
                             nome,
@@ -1602,19 +1737,17 @@ class OpenListContext:
                             is_waiting=is_waiting,
                         )
                         if not ok:
-                            print(f"⚠️ Não foi possível enriquecer a linha no momento: {err}")
-                # Atualiza a lista de linhas
+                            print(color_text(f"⚠️ Não foi possível enriquecer a linha no momento: {err}", **STYLE["warning"]))
                 self.fetch_and_cache_lines()
                 self.show_lines()
         except Exception as e:
-            print(f"❌ Erro de rede: {e}")
+            print(color_text(f"❌ Erro de rede: {e}", **STYLE["error"]))
 
     def _print_tags_table(self, tags):
         """Exibe tags em 3 colunas com numeração."""
         if not tags:
-            print("Nenhuma tag encontrada no sistema.")
+            print(color_text("Nenhuma tag encontrada no sistema.", **STYLE["dim"]))
             return
-        # Divide em 3 colunas
         cols = 3
         rows = (len(tags) + cols - 1) // cols
         for r in range(rows):
@@ -1624,7 +1757,8 @@ class OpenListContext:
                 if idx < len(tags):
                     tag = tags[idx]
                     display_tag = tag[:18] + ".." if len(tag) > 18 else tag
-                    line += f"{idx+1:2d} - {display_tag:20s}"
+                    num = color_text(f"{idx+1:2d}", **STYLE["number"])
+                    line += f"{num} - {display_tag:20s}"
                 else:
                     line += " " * 24
             print(line)
@@ -1639,21 +1773,102 @@ class ItemContext:
 
     def show_details(self):
         i = self.item
-        lines = [
-            f"DETALHES DO ITEM — posição na exibição: {self.index_in_view}",
-            f"ID: {i.get('id')}",
-            f"Nome: {i.get('nome')}",
-            f"Conteúdo: {i.get('conteudo')}",
-            f"Status: {i.get('status')}",
-            f"Opinião: {i.get('opiniao')}",
-            f"Episódio / Capítulo: {i.get('episodio')}",
-            f"Tags: {i.get('tags')}",
-            f"Sinônimos: {i.get('sinonimos')}",
-            f"Imagem URL: {i.get('imagem_url') or i.get('image') or ''}",
-            "Sinopse:",
-            (i.get('sinopse') or "").strip()
-        ]
-        fancy_header(["="*72, *lines, "="*72])
+        clear_screen()
+        
+        # Cores suaves
+        label_color = "bright_black"  # Cinza claro para os rótulos
+        value_color = "white"         # Branco para os valores
+        header_color = "bright_cyan"  # Ciano suave para o cabeçalho
+        
+        # ====== CABEÇALHO ======
+        print(color_text("═" * 80, color="bright_black", style="dim"))
+        print(color_text(f"  📌 ITEM #{self.index_in_view}  |  ID: {i.get('id')}", color=header_color, style="bright"))
+        print(color_text("═" * 80, color="bright_black", style="dim"))
+        
+        # ====== LINHA 1: Nome ======
+        print(f"  {color_text('Nome:', color=label_color)}  {color_text(i.get('nome') or 'N/A', color=value_color, style='bright')}")
+        
+        # ====== LINHA 2: Conteúdo + Status + Opinião ======
+        conteudo = i.get('conteudo') or 'N/A'
+        status = i.get('status') or 'N/A'
+        opiniao = i.get('opiniao') or 'N/A'
+        
+        # Cor do conteúdo
+        conteudo_color = "bright_cyan" if conteudo.lower() in ["anime", "filme"] else "bright_green"
+        
+        # Cor do status
+        status_color = "bright_green" if status.lower() in ["concluido", "finished"] else "bright_yellow"
+        if status.lower() in ["dropado", "cancelado"]:
+            status_color = "bright_red"
+        
+        # Cor da opinião
+        opiniao_color = "white"
+        if opiniao == "Favorito":
+            opiniao_color = "bright_magenta"
+        elif opiniao in ["Muito Bom", "Recomendo"]:
+            opiniao_color = "bright_green"
+        
+        print(f"  {color_text('Conteúdo:', color=label_color)}  {color_text(conteudo, color=conteudo_color, style='bright')}  |  {color_text('Status:', color=label_color)}  {color_text(status, color=status_color, style='bright')}  |  {color_text('Opinião:', color=label_color)}  {color_text(opiniao, color=opiniao_color, style='bright')}")
+        
+        # ====== LINHA 3: Episódio/Capítulo ======
+        episodio = i.get('episodio')
+        episodio_str = str(episodio) if episodio is not None else 'N/A'
+        print(f"  {color_text('Episódio/Capítulo:', color=label_color)}  {color_text(episodio_str, color=value_color, style='bright')}")
+        
+        # ====== LINHA 4: Tags ======
+        tags = i.get('tags') or ''
+        if tags:
+            # Colore cada tag individualmente
+            tag_list = [t.strip() for t in tags.split(',') if t.strip()]
+            colored_tags = []
+            for tag in tag_list:
+                # Cores aleatórias mas suaves para tags
+                tag_colors = ["bright_cyan", "bright_green", "bright_yellow", "bright_magenta", "bright_blue"]
+                tag_color = tag_colors[hash(tag) % len(tag_colors)]
+                colored_tags.append(color_text(tag, color=tag_color, style="bright"))
+            tags_display = "  ".join(colored_tags)
+        else:
+            tags_display = color_text("(nenhuma)", color="bright_black")
+        
+        print(f"  {color_text('Tags:', color=label_color)}  {tags_display}")
+        
+        # ====== LINHA 5: Sinônimos ======
+        sinonimos = i.get('sinonimos')
+        if sinonimos:
+            if isinstance(sinonimos, list):
+                sinonimos_str = "  ".join(sinonimos)
+            else:
+                sinonimos_str = str(sinonimos)
+        else:
+            sinonimos_str = color_text("(nenhum)", color="bright_black")
+        print(f"  {color_text('Sinônimos:', color=label_color)}  {color_text(sinonimos_str, color=value_color)}")
+        
+        # ====== LINHA 6: Imagem URL ======
+        imagem = i.get('imagem_url') or i.get('image') or ''
+        if imagem:
+            # Mostra a URL encurtada visualmente mas mantém o texto completo
+            display_url = imagem if len(imagem) < 70 else imagem[:67] + "..."
+            print(f"  {color_text('Imagem:', color=label_color)}  {color_text(display_url, color='bright_blue')}")
+        else:
+            print(f"  {color_text('Imagem:', color=label_color)}  {color_text('(nenhuma)', color='bright_black')}")
+        
+        # ====== LINHA 7: Sinopse ======
+        sinopse = i.get('sinopse') or ''
+        print(f"  {color_text('Sinopse:', color=label_color)}")
+        if sinopse:
+            # Quebra a sinopse em linhas de 76 caracteres
+            lines = []
+            for j in range(0, len(sinopse), 76):
+                lines.append(f"    {sinopse[j:j+76]}")
+            for line in lines:
+                print(color_text(line, color=value_color))
+        else:
+            print(f"    {color_text('(sem sinopse)', color='bright_black')}")
+        
+        # ====== RODAPÉ ======
+        print(color_text("═" * 80, color="bright_black", style="dim"))
+        print(color_text("  Comandos: next | prev | edit | save | refresh | delete | check | back", color="bright_black", style="dim"))
+        print(color_text("═" * 80, color="bright_black", style="dim"))
 
     def edit_field(self, field, new_value):
         field = field.strip().lower()
@@ -1675,10 +1890,10 @@ class ItemContext:
 
     def interactive_edit(self):
         editable = ["nome","conteudo","status","episodio","opiniao","tags","sinopse","imagem_url","sinonimos"]
-        print("Modo interativo — deixe em branco para manter o valor atual.")
+        print(color_text("Modo interativo — deixe em branco para manter o valor atual.", **STYLE["info"]))
         for f in editable:
             cur = self.item.get(f, "")
-            raw = input(f"{f} (atual: {cur}) => ").rstrip("\n")
+            raw = input(color_text(f"{f} (atual: {cur}) => ", **STYLE["info"])).rstrip("\n")
             if raw != "":
                 if f == "sinonimos" and ";" in raw:
                     self.item[f] = [s.strip() for s in raw.split(";") if s.strip()]
@@ -1797,7 +2012,7 @@ def cmd_open_list(raw_name, is_waiting=False):
             min_seconds=0.6
         )
     if err:
-        fancy_header([f"Erro: {err}"])
+        fancy_header([f"❌ Erro: {err}"], color="bright_red")
         return None
     match = None
     partial_matches = []
@@ -1819,18 +2034,18 @@ def cmd_open_list(raw_name, is_waiting=False):
             match = partial_matches[0]
         elif len(partial_matches) > 1:
             nomes = [item.get('nome') or str(item.get('id')) for item in partial_matches[:5]]
-            fancy_header([f"Várias listas correspondem a '{key}': {', '.join(nomes)}"])
+            fancy_header([f"⚠️ Várias listas correspondem a '{key}': {', '.join(nomes)}"], color="bright_yellow")
             return None
     if not match:
-        fancy_header([f"Não encontrei a lista '{key}'."])
+        fancy_header([f"❌ Não encontrei a lista '{key}'.", "Use 'show_lists' para ver todas."], color="bright_red")
         return None
     ctx = OpenListContext(match, is_waiting=is_waiting)
     ok, fetch_err = ctx.fetch_and_cache_lines()
     if not ok:
-        fancy_header([f"❌ Erro ao carregar linhas: {fetch_err}"])
+        fancy_header([f"❌ Erro ao carregar linhas: {fetch_err}"], color="bright_red")
         return None
     fancy_header([f"✅ LISTA '{match.get('nome') or match.get('id')}' ABERTA" +
-                  (" (ESPERA)" if is_waiting else "")])
+                  (" (ESPERA)" if is_waiting else "")], color="bright_green")
     return ctx
 
 def cmd_delete_list(raw_name):
@@ -1838,7 +2053,7 @@ def cmd_delete_list(raw_name):
     key_norm = _norm_command_name(key)
     (listas, err) = with_minimum_spinner(lambda: fetch_lists_request(), text=f"Procurando lista '{key}'...", min_seconds=0.6)
     if err:
-        print(f"Erro ao buscar listas: {err}")
+        print_error(f"Erro ao buscar listas: {err}")
         return False
     match = None
     partial_matches = []
@@ -1856,28 +2071,28 @@ def cmd_delete_list(raw_name):
         if len(partial_matches) == 1:
             match = partial_matches[0]
         elif partial_matches:
-            print("Várias correspondências encontradas:")
+            print_warning("Várias correspondências encontradas:")
             for it in partial_matches:
-                print(f" - {it.get('id')} : {it.get('nome')}")
-            print("Seja mais específico.")
+                print(color_text(f" - {it.get('id')} : {it.get('nome')}", **STYLE["dim"]))
+            print(color_text("Seja mais específico.", **STYLE["info"]))
             return False
         else:
-            print("Lista não encontrada.")
+            print_error("Lista não encontrada.")
             return False
-    confirm = input(f"Tem certeza que deseja deletar a lista '{match.get('nome')}' (ID {match.get('id')})? [y/N]: ").strip().lower()
+    confirm = input(color_text(f"⚠️ Tem certeza que deseja deletar a lista '{match.get('nome')}' (ID {match.get('id')})? [y/N]: ", **STYLE["warning"])).strip().lower()
     if confirm != 'y':
-        print("Operação cancelada.")
+        print_info("Operação cancelada.")
         return False
     url = f"{API_BASE.rstrip('/')}/listas/{match.get('id')}"
     try:
         r = requests.delete(url, timeout=8)
         if r.status_code >= 400:
-            print(f"Erro ao deletar lista: HTTP {r.status_code} - {getattr(r, 'text', '')}")
+            print_error(f"Erro ao deletar lista: HTTP {r.status_code} - {getattr(r, 'text', '')}")
             return False
-        print(f"Lista '{match.get('nome')}' deletada com sucesso.")
+        print_success(f"Lista '{match.get('nome')}' deletada com sucesso.")
         return True
     except requests.exceptions.RequestException as e:
-        print(f"Erro de requisição: {e}")
+        print_error(f"Erro de requisição: {e}")
         return False
 
 def cmd_create_list(nome, is_waiting=False):
@@ -1886,12 +2101,12 @@ def cmd_create_list(nome, is_waiting=False):
     try:
         r = requests.post(url, json={"nome": nome}, timeout=6)
         if r.status_code >= 400:
-            print(f"Erro ao criar lista: {r.status_code} - {r.text}")
+            print_error(f"Erro ao criar lista: {r.status_code} - {r.text}")
         else:
             data = r.json()
-            print(f"Lista '{nome}' criada com sucesso (ID: {data.get('id')})")
+            print_success(f"Lista '{nome}' criada com sucesso (ID: {data.get('id')})")
     except Exception as e:
-        print(f"Erro de rede: {e}")
+        print_error(f"Erro de rede: {e}")
 
 def cmd_migrate_wait(wait_list_id=None):
     """
@@ -1899,47 +2114,44 @@ def cmd_migrate_wait(wait_list_id=None):
     pela posição (número) e para qual lista principal.
     """
     if not wait_list_id:
-        print("Uso: migrate_wait <id_lista_espera>")
+        print_error("Uso: migrate_wait <id_lista_espera>")
         return
 
     # 1. Buscar lista de espera
     listas_espera, err = fetch_wait_lists_request()
     if err:
-        print(f"Erro ao buscar listas de espera: {err}")
+        print_error(f"Erro ao buscar listas de espera: {err}")
         return
     wait_list = next((l for l in listas_espera if str(l.get('id')) == str(wait_list_id)), None)
     if not wait_list:
-        print(f"Lista de espera com ID {wait_list_id} não encontrada.")
+        print_error(f"Lista de espera com ID {wait_list_id} não encontrada.")
         return
 
     # 2. Buscar linhas da lista de espera
     linhas, err = fetch_wait_lines_request(wait_list_id)
     if err:
-        print(f"Erro ao buscar linhas: {err}")
+        print_error(f"Erro ao buscar linhas: {err}")
         return
     if not linhas:
-        print("Esta lista de espera está vazia.")
+        print_info("Esta lista de espera está vazia.")
         return
 
-    # Ordenar para exibição consistente
     linhas_ordenadas = sorted(linhas, key=lambda x: x.get('nome', '').casefold())
 
     # 3. Exibir linhas numeradas com indicador de migração
-    clear_screen()
-    print("=" * 80)
-    print(f"LISTA DE ESPERA: {wait_list['nome']} (ID {wait_list_id})")
-    print("=" * 80)
+    fancy_header([f"📋 LISTA DE ESPERA: {wait_list['nome']} (ID {wait_list_id})"], color="bright_cyan")
     for idx, linha in enumerate(linhas_ordenadas, start=1):
         migrado = linha.get('migrated', 0)
-        marcador = "[M] " if migrado else "    "
-        print(f"{idx:3d}. {marcador}{linha['nome']} (ID:{linha['id']})")
-    print("-" * 80)
+        marcador = color_text("[M] ", **STYLE["warning"]) if migrado else "    "
+        id_colored = color_text(f"(ID:{linha['id']})", **STYLE["dim"])
+        print(f"{color_text(str(idx).rjust(3), **STYLE['number'])}. {marcador}{color_text(linha['nome'], color='bright_white', style='bright')} {id_colored}")
+    print(color_text("-" * 80, **STYLE["dim"]))
 
     # 4. Perguntar quais linhas migrar (por POSIÇÃO)
     while True:
-        raw = input("Quais linhas você quer migrar? (digite os números de posição separados por vírgula, ex: 1,3,5): ").strip()
+        raw = input(color_text("Quais linhas você quer migrar? (digite os números de posição separados por vírgula, ex: 1,3,5): ", **STYLE["info"])).strip()
         if not raw:
-            print("Nenhum número informado. Operação cancelada.")
+            print_info("Nenhum número informado. Operação cancelada.")
             return
         indices = []
         for part in raw.split(','):
@@ -1947,69 +2159,60 @@ def cmd_migrate_wait(wait_list_id=None):
             if part.isdigit():
                 indices.append(int(part))
         if not indices:
-            print("Números inválidos. Tente novamente.")
+            print_error("Números inválidos. Tente novamente.")
             continue
-        # Validar intervalos
         invalidos = [i for i in indices if i < 1 or i > len(linhas_ordenadas)]
         if invalidos:
-            print(f"Números fora do intervalo (1..{len(linhas_ordenadas)}): {', '.join(map(str, invalidos))}")
+            print_error(f"Números fora do intervalo (1..{len(linhas_ordenadas)}): {', '.join(map(str, invalidos))}")
             continue
-        # Pegar os objetos das linhas selecionadas
         linhas_selecionadas = [linhas_ordenadas[i-1] for i in indices]
-        # Verificar se já foram migradas
         ja_migrados = [l for l in linhas_selecionadas if l.get('migrated', 0) == 1]
         if ja_migrados:
             nomes = [l['nome'] for l in ja_migrados]
-            print(f"As seguintes linhas já foram migradas anteriormente: {', '.join(nomes)}")
-            continuar = input("Deseja continuar apenas com as não migradas? (s/N): ").strip().lower()
+            print_warning(f"As seguintes linhas já foram migradas anteriormente: {', '.join(nomes)}")
+            continuar = input(color_text("Deseja continuar apenas com as não migradas? (s/N): ", **STYLE["warning"])).strip().lower()
             if continuar != 's':
                 continue
-            # Filtrar apenas as não migradas
             linhas_selecionadas = [l for l in linhas_selecionadas if l.get('migrated', 0) == 0]
         if not linhas_selecionadas:
-            print("Nenhuma linha válida para migrar. Cancelando.")
+            print_info("Nenhuma linha válida para migrar. Cancelando.")
             return
         break
 
     # 5. Buscar listas principais
     listas_principais, err = fetch_lists_request()
     if err:
-        print(f"Erro ao buscar listas principais: {err}")
+        print_error(f"Erro ao buscar listas principais: {err}")
         return
     if not listas_principais:
-        print("Nenhuma lista principal disponível. Crie uma primeiro.")
+        print_info("Nenhuma lista principal disponível. Crie uma primeiro.")
         return
 
     # 6. Exibir listas principais numeradas
-    clear_screen()
-    print("=" * 80)
-    print("LISTAS PRINCIPAIS DISPONÍVEIS")
-    print("=" * 80)
+    fancy_header(["📋 LISTAS PRINCIPAIS DISPONÍVEIS"], color="bright_green")
     for idx, lista in enumerate(listas_principais, start=1):
-        print(f"{idx:3d}. {lista['nome']} (ID:{lista['id']})")
-    print("-" * 80)
+        id_colored = color_text(f"(ID:{lista['id']})", **STYLE["dim"])
+        print(f"{color_text(str(idx).rjust(3), **STYLE['number'])}. {color_text(lista['nome'], color='bright_white', style='bright')} {id_colored}")
+    print(color_text("-" * 80, **STYLE["dim"]))
 
     while True:
-        escolha = input("Para qual lista do banco principal você deseja migrar? (número): ").strip()
+        escolha = input(color_text("Para qual lista do banco principal você deseja migrar? (número): ", **STYLE["info"])).strip()
         if escolha.isdigit():
             idx = int(escolha) - 1
             if 0 <= idx < len(listas_principais):
                 main_list = listas_principais[idx]
                 break
-        print("Opção inválida. Tente novamente.")
+        print_error("Opção inválida. Tente novamente.")
 
     # 7. Confirmar
-    clear_screen()
-    print("=" * 80)
-    print("RESUMO DA MIGRAÇÃO SELETIVA")
-    print("=" * 80)
-    print(f"Lista de espera: {wait_list['nome']}")
-    print(f"Linhas a migrar: {', '.join(l['nome'] for l in linhas_selecionadas)}")
-    print(f"Lista destino: {main_list['nome']} (ID {main_list['id']})")
-    print("=" * 80)
-    confirm = input("Confirmar migração? (s/N): ").strip().lower()
+    fancy_header(["📋 RESUMO DA MIGRAÇÃO SELETIVA"], color="bright_cyan")
+    print(color_text(f"📌 Lista de espera: {wait_list['nome']}", color="bright_white", style="bright"))
+    print(color_text(f"📌 Linhas a migrar: {', '.join(l['nome'] for l in linhas_selecionadas)}", **STYLE["info"]))
+    print(color_text(f"📌 Lista destino: {main_list['nome']} (ID {main_list['id']})", color="bright_green", style="bright"))
+    print(color_text("=" * 80, **STYLE["dim"]))
+    confirm = input(color_text("Confirmar migração? (s/N): ", **STYLE["highlight"])).strip().lower()
     if confirm != 's':
-        print("Migração cancelada.")
+        print_info("Migração cancelada.")
         return
 
     # 8. Chamar o endpoint seletivo
@@ -2020,77 +2223,67 @@ def cmd_migrate_wait(wait_list_id=None):
         "main_list_id": main_list['id']
     }
     try:
-        print("\n⏳ Migrando...")
+        print(color_text("\n⏳ Migrando...", **STYLE["info"]))
         r = requests.post(url, json=payload, timeout=60)
         if r.status_code != 200:
-            print(f"Erro na migração: {r.status_code} - {r.text}")
+            print_error(f"Erro na migração: {r.status_code} - {r.text}")
             return
         data = r.json()
-        print(f"✅ Migrados com sucesso: {data.get('migrados', 0)} itens.")
+        print_success(f"Migrados com sucesso: {data.get('migrados', 0)} itens.")
         if data.get('erros'):
-            print("⚠️ Erros:")
+            print_warning("Erros:")
             for erro in data['erros']:
-                print(f"  - {erro}")
+                print(color_text(f"  - {erro}", **STYLE["dim"]))
     except Exception as e:
-        print(f"Erro de rede: {e}")
+        print_error(f"Erro de rede: {e}")
 
 def cmd_move():
     """
     Comando interativo para mover itens entre listas do banco principal.
     O usuário escolhe os itens pelo número de ordem (posição) exibido na lista.
     """
-    # Buscar listas principais
     listas, err = fetch_lists_request()
     if err:
-        print(f"Erro ao buscar listas: {err}")
+        print_error(f"Erro ao buscar listas: {err}")
         return
     if not listas:
-        print("Nenhuma lista principal disponível.")
+        print_info("Nenhuma lista principal disponível.")
         return
 
-    # Exibir listas numeradas
-    clear_screen()
-    print("=" * 80)
-    print("LISTAS PRINCIPAIS DISPONÍVEIS")
-    print("=" * 80)
+    fancy_header(["📋 LISTAS PRINCIPAIS DISPONÍVEIS"], color="bright_green")
     for idx, lista in enumerate(listas, start=1):
-        print(f"{idx:3d}. {lista['nome']} (ID:{lista['id']})")
-    print("-" * 80)
+        id_colored = color_text(f"(ID:{lista['id']})", **STYLE["dim"])
+        print(f"{color_text(str(idx).rjust(3), **STYLE['number'])}. {color_text(lista['nome'], color='bright_white', style='bright')} {id_colored}")
+    print(color_text("-" * 80, **STYLE["dim"]))
 
-    # Escolher lista de origem
     while True:
-        escolha = input("Qual lista você quer usar como ORIGEM? (número): ").strip()
+        escolha = input(color_text("Qual lista você quer usar como ORIGEM? (número): ", **STYLE["info"])).strip()
         if escolha.isdigit():
             idx = int(escolha) - 1
             if 0 <= idx < len(listas):
                 origem = listas[idx]
                 break
-        print("Opção inválida. Tente novamente.")
+        print_error("Opção inválida. Tente novamente.")
 
-    # Buscar linhas da lista origem
     linhas, err = fetch_lines_request(origem['id'])
     if err:
-        print(f"Erro ao buscar linhas: {err}")
+        print_error(f"Erro ao buscar linhas: {err}")
         return
     if not linhas:
-        print("Esta lista está vazia.")
+        print_info("Esta lista está vazia.")
         return
 
-    # Exibir linhas numeradas (ordenadas por nome para consistência)
     linhas_ordenadas = sorted(linhas, key=lambda x: x.get('nome', '').casefold())
-    clear_screen()
-    print("=" * 80)
-    print(f"LISTA ORIGEM: {origem['nome']} (ID {origem['id']})")
-    print("=" * 80)
+    fancy_header([f"📋 LISTA ORIGEM: {origem['nome']} (ID {origem['id']})"], color="bright_cyan")
     for idx, linha in enumerate(linhas_ordenadas, start=1):
-        print(f"{idx:3d}. {linha['nome']} (ID:{linha['id']})")
-    print("-" * 80)
+        id_colored = color_text(f"(ID:{linha['id']})", **STYLE["dim"])
+        print(f"{color_text(str(idx).rjust(3), **STYLE['number'])}. {color_text(linha['nome'], color='bright_white', style='bright')} {id_colored}")
+    print(color_text("-" * 80, **STYLE["dim"]))
 
-    # Perguntar quais linhas mover (por POSIÇÃO, não ID)
     while True:
-        raw = input("Quais itens você quer mover? (digite os números de posição separados por vírgula, ex: 1,3,5): ").strip()
+        raw = input(color_text("Quais itens você quer mover? (digite os números de posição separados por vírgula, ex: 1,3,5): ", **STYLE["info"])).strip()
         if not raw:
-            print("Nenhum número informado. Operação cancelada.")
+            print_info("Nenhum número informado. Operação cancelada.")
             return
         indices = []
         for part in raw.split(','):
@@ -2098,55 +2291,45 @@ def cmd_move():
             if part.isdigit():
                 indices.append(int(part))
         if not indices:
-            print("Números inválidos. Tente novamente.")
+            print_error("Números inválidos. Tente novamente.")
             continue
-        # Validar se todos os índices estão dentro do range
         invalidos = [i for i in indices if i < 1 or i > len(linhas_ordenadas)]
         if invalidos:
-            print(f"Números fora do intervalo (1..{len(linhas_ordenadas)}): {', '.join(map(str, invalidos))}")
+            print_error(f"Números fora do intervalo (1..{len(linhas_ordenadas)}): {', '.join(map(str, invalidos))}")
             continue
-        # Converter índices para IDs reais
         ids_selecionados = [linhas_ordenadas[i-1]['id'] for i in indices]
         break
 
-    # Escolher lista de destino (excluindo a origem)
     listas_destino = [l for l in listas if l['id'] != origem['id']]
     if not listas_destino:
-        print("Não há outra lista para mover. Operação cancelada.")
+        print_info("Não há outra lista para mover. Operação cancelada.")
         return
 
-    clear_screen()
-    print("=" * 80)
-    print("LISTAS DESTINO DISPONÍVEIS (excluindo origem)")
-    print("=" * 80)
+    fancy_header(["📋 LISTAS DESTINO DISPONÍVEIS (excluindo origem)"], color="bright_green")
     for idx, lista in enumerate(listas_destino, start=1):
-        print(f"{idx:3d}. {lista['nome']} (ID:{lista['id']})")
-    print("-" * 80)
+        id_colored = color_text(f"(ID:{lista['id']})", **STYLE["dim"])
+        print(f"{color_text(str(idx).rjust(3), **STYLE['number'])}. {color_text(lista['nome'], color='bright_white', style='bright')} {id_colored}")
+    print(color_text("-" * 80, **STYLE["dim"]))
 
     while True:
-        escolha = input("Para qual lista você deseja mover? (número): ").strip()
+        escolha = input(color_text("Para qual lista você deseja mover? (número): ", **STYLE["info"])).strip()
         if escolha.isdigit():
             idx = int(escolha) - 1
             if 0 <= idx < len(listas_destino):
                 destino = listas_destino[idx]
                 break
-        print("Opção inválida. Tente novamente.")
+        print_error("Opção inválida. Tente novamente.")
 
-    # Confirmar
-    clear_screen()
-    print("=" * 80)
-    print("RESUMO DA MOVIMENTAÇÃO")
-    print("=" * 80)
-    print(f"Origem: {origem['nome']} (ID {origem['id']})")
-    print(f"Itens a mover (posições): {', '.join(str(i) for i in indices)}")
-    print(f"Destino: {destino['nome']} (ID {destino['id']})")
-    print("=" * 80)
-    confirm = input("Confirmar movimentação? (s/N): ").strip().lower()
+    fancy_header(["📋 RESUMO DA MOVIMENTAÇÃO"], color="bright_cyan")
+    print(color_text(f"📌 Origem: {origem['nome']} (ID {origem['id']})", color="bright_white", style="bright"))
+    print(color_text(f"📌 Itens a mover (posições): {', '.join(str(i) for i in indices)}", **STYLE["info"]))
+    print(color_text(f"📌 Destino: {destino['nome']} (ID {destino['id']})", color="bright_green", style="bright"))
+    print(color_text("=" * 80, **STYLE["dim"]))
+    confirm = input(color_text("Confirmar movimentação? (s/N): ", **STYLE["highlight"])).strip().lower()
     if confirm != 's':
-        print("Movimentação cancelada.")
+        print_info("Movimentação cancelada.")
         return
 
-    # Chamar endpoint
     url = f"{API_BASE.rstrip('/')}/move/items"
     payload = {
         "origem_lista_id": origem['id'],
@@ -2154,34 +2337,56 @@ def cmd_move():
         "item_ids": ids_selecionados
     }
     try:
-        print("\n⏳ Movendo...")
+        print(color_text("\n⏳ Movendo...", **STYLE["info"]))
         r = requests.post(url, json=payload, timeout=60)
         if r.status_code != 200:
-            print(f"Erro na movimentação: {r.status_code} - {r.text}")
+            print_error(f"Erro na movimentação: {r.status_code} - {r.text}")
             return
         data = r.json()
-        print(f"✅ Movidos com sucesso: {data.get('movidos', 0)} itens.")
+        print_success(f"Movidos com sucesso: {data.get('movidos', 0)} itens.")
         if data.get('erros'):
-            print("⚠️ Erros:")
+            print_warning("Erros:")
             for erro in data['erros']:
-                print(f"  - {erro}")
+                print(color_text(f"  - {erro}", **STYLE["dim"]))
     except Exception as e:
-        print(f"Erro de rede: {e}")
+        print_error(f"Erro de rede: {e}")
+
+def print_welcome_banner():
+    ascii_art = r"""
+   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ 
+  ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+  ▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀▀▀ 
+  ▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          ▐░▌          
+  ▐░█▄▄▄▄▄▄▄▄▄ ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          ▐░▌          
+  ▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          ▐░▌          
+   ▀▀▀▀▀▀▀▀▀█░▌▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          ▐░▌          
+            ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌▐░▌          ▐░▌          
+   ▄▄▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄▄▄ 
+  ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
+   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀ 
+    """
+    lines = ascii_art.split('\n')
+    for line in lines:
+        if line.strip():
+            print(color_text(line, color="bright_cyan", style="bright"))
+    print(color_text("⚡ Bem-vindo ao List-IT CLI - Gerenciador de Listas Interativo ⚡", color="bright_yellow", style="bright"))
+    print(color_text("   Digite 'help' para ver os comandos disponíveis.", **STYLE["dim"]))
+    print()
 
 def cmd_clear_wait():
-    confirm = input("⚠️ Tem certeza que deseja limpar todo o banco de espera? (y/N): ").strip().lower()
+    confirm = input(color_text("⚠️ Tem certeza que deseja limpar todo o banco de espera? (y/N): ", **STYLE["warning"])).strip().lower()
     if confirm == "y":
         url = f"{API_BASE.rstrip('/')}/wait/clear?confirm=true"
         try:
             r = requests.delete(url, timeout=10)
             if r.status_code == 200:
-                print("Banco de espera limpo com sucesso.")
+                print_success("Banco de espera limpo com sucesso.")
             else:
-                print(f"Erro: {r.status_code}")
+                print_error(f"Erro: {r.status_code}")
         except Exception as e:
-            print(f"Erro: {e}")
+            print_error(f"Erro: {e}")
     else:
-        print("Operação cancelada.")
+        print_info("Operação cancelada.")
 
 # DEPOIS - Parser mais robusto
 
@@ -2194,15 +2399,12 @@ def parse_command(line):
     if not line:
         return None, []
     
-    # Se o comando começa com create_line, open, etc, trata de forma especial
-    # Primeiro, identifica o comando (primeira palavra)
     parts = line.split(' ', 1)
     cmd = parts[0].lower()
     
     if len(parts) == 1:
         return cmd, []
     
-    # Para o resto, tenta parsear respeitando aspas
     args_str = parts[1]
     args = []
     current = ''
@@ -2247,12 +2449,13 @@ def parse_command(line):
 # Loop principal
 # -------------------------
 def main():
+    
     current_ctx = None
-    fancy_header(["BEM VINDO AO CLI INTERATIVO"])
+    print_welcome_banner()
     while True:
         try:
             if current_ctx:
-                prompt = f"{current_ctx.name}> "
+                prompt = color_text(f"┌─[{current_ctx.name}]─", **STYLE["header"]) + color_text("$ ", **STYLE["command"])
             else:
                 prompt = PROMPT_MAIN
             line = input(prompt).strip()
@@ -2273,9 +2476,9 @@ def main():
             if not current_ctx:
                 if cmd == "show_lists":
                     (listas, err) = with_minimum_spinner(lambda: fetch_lists_request(), text="Buscando listas...", min_seconds=0.6)
-                    fancy_header(["LISTAS DISPONÍVEIS"])
+                    fancy_header(["📋 LISTAS DISPONÍVEIS"], color="bright_cyan")
                     if err:
-                        typewriter_print(f"Erro: {err}", speed=0.002)
+                        print_error(f"Erro: {err}")
                     else:
                         display = PaginatedDisplay(listas or [], "LISTAS DISPONÍVEIS", items_per_page=None)
                         display.render_page()
@@ -2283,9 +2486,9 @@ def main():
 
                 if cmd == "show_wait_lists":
                     (listas, err) = with_minimum_spinner(lambda: fetch_wait_lists_request(), text="Buscando listas de espera...", min_seconds=0.6)
-                    fancy_header(["LISTAS DE ESPERA"])
+                    fancy_header(["📋 LISTAS DE ESPERA"], color="bright_magenta")
                     if err:
-                        typewriter_print(f"Erro: {err}", speed=0.002)
+                        print_error(f"Erro: {err}")
                     else:
                         display = PaginatedDisplay(listas or [], "LISTAS DE ESPERA", items_per_page=None)
                         display.render_page()
@@ -2293,7 +2496,7 @@ def main():
 
                 if cmd == "create_list":
                     if not args:
-                        print("Uso: create_list <nome>")
+                        print_error("Uso: create_list <nome>")
                         continue
                     nome = " ".join(args)
                     cmd_create_list(nome, is_waiting=False)
@@ -2301,7 +2504,7 @@ def main():
 
                 if cmd == "create_wait_list":
                     if not args:
-                        print("Uso: create_wait_list <nome>")
+                        print_error("Uso: create_wait_list <nome>")
                         continue
                     nome = " ".join(args)
                     cmd_create_list(nome, is_waiting=True)
@@ -2309,7 +2512,7 @@ def main():
 
                 if cmd == "delete_list":
                     if not args:
-                        print("Uso: delete_list <id|nome>")
+                        print_error("Uso: delete_list <id|nome>")
                         continue
                     key = " ".join(args)
                     cmd_delete_list(key)
@@ -2317,7 +2520,7 @@ def main():
 
                 if cmd == "open":
                     if not args:
-                        print("Uso: open <id|nome>")
+                        print_error("Uso: open <id|nome>")
                         continue
                     listkey = " ".join(args)
                     ctx = cmd_open_list(listkey, is_waiting=False)
@@ -2327,7 +2530,7 @@ def main():
 
                 if cmd == "open_wait":
                     if not args:
-                        print("Uso: open_wait <id|nome>")
+                        print_error("Uso: open_wait <id|nome>")
                         continue
                     listkey = " ".join(args)
                     ctx = cmd_open_list(listkey, is_waiting=True)
@@ -2341,7 +2544,7 @@ def main():
 
                 if cmd == "migrate_wait":
                     lista_id = args[0] if args else None
-                    cmd_migrate_wait(lista_id, dry_run=False)
+                    cmd_migrate_wait(lista_id)
                     continue
 
                 if cmd == "move":
@@ -2357,9 +2560,10 @@ def main():
                     continue
 
                 if cmd in ("exit", "quit"):
+                    print(color_text("👋 Saindo... Até logo!", **STYLE["dim"]))
                     break
 
-                typewriter_print(f"Comando inválido: {cmd}", speed=0.003)
+                print_error(f"Comando inválido: {cmd}")
                 continue
 
             # --- Contexto de lista ou item ---
@@ -2367,25 +2571,25 @@ def main():
             # Comandos de criação de linha (dentro do contexto)
             if cmd == "create_line":
                 if not args:
-                    print("Uso: create_line <nome>")
+                    print_error("Uso: create_line <nome>")
                     continue
                 nome = " ".join(args)
                 if isinstance(current_ctx, OpenListContext):
                     current_ctx.interactive_create_line(nome, is_waiting=current_ctx.is_waiting)
                 else:
-                    print("Este comando só pode ser usado dentro de uma lista aberta.")
+                    print_error("Este comando só pode ser usado dentro de uma lista aberta.")
                 continue
 
             if cmd == "create_wait_line":
                 if not args:
-                    print("Uso: create_wait_line <nome>")
+                    print_error("Uso: create_wait_line <nome>")
                     continue
                 nome = " ".join(args)
                 if isinstance(current_ctx, OpenListContext):
-                    print("Use create_line; a lista atual já define se será criado no banco principal ou de espera.")
+                    print_info("Use create_line; a lista atual já define se será criado no banco principal ou de espera.")
                     current_ctx.interactive_create_line(nome, is_waiting=current_ctx.is_waiting)
                 else:
-                    print("Este comando só pode ser usado dentro de uma lista aberta.")
+                    print_error("Este comando só pode ser usado dentro de uma lista aberta.")
                 continue
 
             # Se estamos dentro de um ItemContext, tratar comandos específicos
@@ -2397,7 +2601,7 @@ def main():
                         current_ctx = nxt
                         current_ctx.show_details()
                     else:
-                        typewriter_print("Não há próximo item.", speed=0.003)
+                        print_info("Não há próximo item.")
                     continue
                 if cmd in ("prev", "p"):
                     prev = current_ctx.open_adjacent(-1)
@@ -2405,7 +2609,7 @@ def main():
                         current_ctx = prev
                         current_ctx.show_details()
                     else:
-                        typewriter_print("Não há item anterior.", speed=0.003)
+                        print_info("Não há item anterior.")
                     continue
 
                 if cmd == "show_details":
@@ -2416,21 +2620,21 @@ def main():
                     field = args[0]
                     newval = " ".join(args[1:]) if len(args) > 1 else ""
                     if newval == "":
-                        typewriter_print("Uso: edit <campo> <novo_valor>  (ou só 'edit' para modo interativo)", speed=0.003)
+                        print_info("Uso: edit <campo> <novo_valor>  (ou só 'edit' para modo interativo)")
                         continue
                     msg = current_ctx.edit_field(field, newval)
-                    typewriter_print(msg, speed=0.003)
+                    typewriter_print(msg, speed=0.003, **STYLE["info"])
                     continue
 
                 if cmd == "edit":
                     msg = current_ctx.interactive_edit()
-                    typewriter_print(msg, speed=0.003)
+                    typewriter_print(msg, speed=0.003, **STYLE["info"])
                     continue
 
                 if cmd == "save":
                     ok, msg = current_ctx.save()
                     if ok:
-                        typewriter_print(msg, speed=0.003)
+                        print_success(msg)
                         try:
                             pid = current_ctx.item.get("id")
                             parent_items = current_ctx.parent.lines
@@ -2441,39 +2645,42 @@ def main():
                         except Exception:
                             pass
                     else:
-                        typewriter_print(f"Erro ao salvar: {msg}", speed=0.003)
+                        print_error(f"Erro ao salvar: {msg}")
                     continue
 
                 if cmd == "refresh":
                     ok, msg = current_ctx.refresh()
-                    typewriter_print(msg if ok else f"Erro: {msg}", speed=0.003)
+                    if ok:
+                        print_success(msg)
+                    else:
+                        print_error(f"Erro: {msg}")
                     continue
 
                 if cmd == "delete":
-                    confirm = input("Confirmar exclusão deste item? (y/N): ").strip().lower()
+                    confirm = input(color_text("Confirmar exclusão deste item? (y/N): ", **STYLE["warning"])).strip().lower()
                     if confirm == "y":
                         ok, msg = current_ctx.delete()
                         if ok:
-                            typewriter_print("Item excluído.", speed=0.003)
+                            print_success("Item excluído.")
                             parent = current_ctx.parent
                             parent.fetch_and_cache_lines()
                             current_ctx = parent
                         else:
-                            typewriter_print(f"Erro: {msg}", speed=0.003)
+                            print_error(f"Erro: {msg}")
                     else:
-                        typewriter_print("Exclusão cancelada.", speed=0.003)
+                        print_info("Exclusão cancelada.")
                     continue
 
                 if cmd == "check":
                     ok, msg = current_ctx.check()
                     if ok:
-                        typewriter_print(msg, speed=0.003)
+                        print_success(msg)
                     else:
-                        typewriter_print(f"Erro: {msg}", speed=0.003)
+                        print_error(f"Erro: {msg}")
                     continue
 
                 if cmd in ("back", "b"):
-                    fancy_header([f"Voltando para '{current_ctx.parent.name}'"])
+                    fancy_header([f"⬅️ Voltando para '{current_ctx.parent.name}'"], color="bright_cyan")
                     current_ctx = current_ctx.parent
                     continue
 
@@ -2487,7 +2694,7 @@ def main():
 
                 if cmd.startswith("sort_"):
                     if not current_ctx.current_display:
-                        typewriter_print("Nenhuma exibição ativa para ordenar. Use 'show_lines' primeiro.", speed=0.003)
+                        print_info("Nenhuma exibição ativa para ordenar. Use 'show_lines' primeiro.")
                         continue
                     method = cmd[len("sort_"):]
                     reverse_flag = False
@@ -2499,10 +2706,10 @@ def main():
                         method_key = "rate -r"
                     if method_key in ("0-9", "9-0", "a-z", "z-a", "rate", "rate -r"):
                         msg = current_ctx.current_display.apply_sort(method_key)
-                        typewriter_print(msg, speed=0.003)
+                        print_info(msg)
                         current_ctx.current_display.render_page(1)
                     else:
-                        typewriter_print("Método de sort desconhecido.", speed=0.003)
+                        print_error("Método de sort desconhecido.")
                     continue
 
                 if cmd.startswith("open_"):
@@ -2514,7 +2721,24 @@ def main():
                     else:
                         item_ctx, err = current_ctx.open_item_by_name(key)
                     if err:
-                        typewriter_print(f"Erro: {err}", speed=0.003)
+                        print_error(f"Erro: {err}")
+                    else:
+                        current_ctx = item_ctx
+                        current_ctx.show_details()
+                    continue
+
+                # Suporte a 'open <id|nome>' dentro do contexto de lista
+                if cmd == "open":
+                    if not args:
+                        print_info("Uso: open <id|nome>")
+                        continue
+                    key = " ".join(args)
+                    if key.isdigit():
+                        item_ctx, err = current_ctx.open_item_by_index(int(key))
+                    else:
+                        item_ctx, err = current_ctx.open_item_by_name(key)
+                    if err:
+                        print_error(f"Erro: {err}")
                     else:
                         current_ctx = item_ctx
                         current_ctx.show_details()
@@ -2532,7 +2756,7 @@ def main():
                 if cmd.startswith("search_"):
                     termo = cmd[len("search_"):] or (args[0] if args else "")
                     if not termo:
-                        typewriter_print("Uso: search_<nome> (ex.: search_Naruto)", speed=0.003)
+                        print_info("Uso: search_<nome> (ex.: search_Naruto)")
                     else:
                         current_ctx.search_items_by_name(termo)
                     continue
@@ -2561,41 +2785,41 @@ def main():
                     if resto_comando in opiniao_commands:
                         current_ctx.show_por_opiniao(opiniao_commands[resto_comando])
                         continue
-                    typewriter_print(f"Comando não reconhecido: {cmd}", speed=0.003)
+                    print_error(f"Comando não reconhecido: {cmd}")
                     continue
 
                 if cmd == "export_list":
                     filename_arg = args[0] if args else None
                     ok, msg = current_ctx.export_current_display(filename_arg)
                     if ok:
-                        typewriter_print(msg, speed=0.003)
+                        print_success(msg)
                     else:
-                        typewriter_print(f"Erro: {msg}", speed=0.003)
+                        print_error(f"Erro: {msg}")
                     continue
 
                 if cmd == "next":
                     if current_ctx.current_display:
                         current_ctx.current_display.handle_command("next", [])
                     else:
-                        typewriter_print("Nenhuma exibição ativa. Use 'show_lines' primeiro.", speed=0.003)
+                        print_info("Nenhuma exibição ativa. Use 'show_lines' primeiro.")
                     continue
 
                 if cmd == "prev":
                     if current_ctx.current_display:
                         current_ctx.current_display.handle_command("prev", [])
                     else:
-                        typewriter_print("Nenhuma exibição ativa. Use 'show_lines' primeiro.", speed=0.003)
+                        print_info("Nenhuma exibição ativa. Use 'show_lines' primeiro.")
                     continue
 
                 if cmd.isdigit():
                     if current_ctx.current_display:
                         current_ctx.current_display.handle_command(cmd, [])
                     else:
-                        typewriter_print("Nenhuma exibição ativa. Use 'show_lines' primeiro.", speed=0.003)
+                        print_info("Nenhuma exibição ativa. Use 'show_lines' primeiro.")
                     continue
 
                 if cmd in ("back", "b"):
-                    fancy_header([f"Saindo do contexto '{current_ctx.name}'"])
+                    fancy_header([f"⬅️ Saindo do contexto '{current_ctx.name}'"], color="bright_cyan")
                     current_ctx = None
                     continue
 
@@ -2604,12 +2828,14 @@ def main():
                     continue
 
                 if cmd in ("exit", "quit"):
+                    print(color_text("👋 Saindo... Até logo!", **STYLE["dim"]))
                     break
 
-                typewriter_print(f"Comando inválido em '{current_ctx.name}': {cmd}", speed=0.003)
+                print_error(f"Comando inválido em '{current_ctx.name}': {cmd}")
 
         except (KeyboardInterrupt, EOFError):
             print()
+            print(color_text("👋 Saindo... Até logo!", **STYLE["dim"]))
             break
 
 if __name__ == "__main__":
