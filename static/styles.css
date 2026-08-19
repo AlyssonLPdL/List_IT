@@ -457,7 +457,7 @@ input:checked + .slider:before {
   display: flex;
   flex-direction: column;
   height: fit-content;
-  max-height: 645px;
+  max-height: calc(100vh - 305px);
 }
 .highlights-section h3 {
   margin-top: 0;

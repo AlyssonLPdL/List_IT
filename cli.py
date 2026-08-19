@@ -1847,7 +1847,7 @@ class ItemContext:
         imagem = i.get('imagem_url') or i.get('image') or ''
         if imagem:
             # Mostra a URL encurtada visualmente mas mantém o texto completo
-            display_url = imagem if len(imagem) < 70 else imagem[:67] + "..."
+            display_url = imagem
             print(f"  {color_text('Imagem:', color=label_color)}  {color_text(display_url, color='bright_blue')}")
         else:
             print(f"  {color_text('Imagem:', color=label_color)}  {color_text('(nenhuma)', color='bright_black')}")

@@ -9,11 +9,146 @@ from deep_translator import GoogleTranslator
 import traceback
 import time
 from flask_caching import Cache
+import threading
+import os
+import sys
 
 app = Flask(__name__)
 
 index_tracker = {}
 index_tracker_manga = {}
+
+_git_lock = threading.Lock()
+
+def safe_git_commit(message, max_retries=2):
+    """Executa git add/commit/push com lock e retry."""
+    with _git_lock:
+        for attempt in range(max_retries):
+            try:
+                # Verifica se já existe lock
+                if os.path.exists('.git/index.lock'):
+                    try:
+                        os.remove('.git/index.lock')
+                        time.sleep(0.3)
+                    except:
+                        pass
+                
+                # Verifica se há mudanças para commitar
+                status_result = subprocess.run(
+                    ['git', 'status', '--porcelain', 'list_it.db'],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=5,
+                    text=True
+                )
+                
+                # Se não há mudanças, não faz nada
+                if not status_result.stdout.strip():
+                    return True
+                
+                # Git add com silêncio
+                subprocess.run(
+                    ['git', 'add', 'list_it.db'],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=10
+                )
+                
+                # Git commit
+                result = subprocess.run(
+                    ['git', 'commit', '-m', message],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=10,
+                    text=True
+                )
+                
+                if "nothing to commit" in result.stdout.lower():
+                    print_success(f"✅ Git: {message}")
+                    return True
+                
+                if result.returncode != 0:
+                    if attempt < max_retries - 1:
+                        time.sleep(0.5)
+                        continue
+                    return False
+                
+                # Git push (com menor timeout)
+                push_result = subprocess.run(
+                    ['git', 'push'],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=15,
+                    text=True
+                )
+                
+                if "cannot lock ref" in push_result.stderr or "failed to push" in push_result.stderr:
+                    if attempt < max_retries - 1:
+                        subprocess.run(['git', 'fetch', 'origin'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+                        subprocess.run(['git', 'reset', '--hard', 'origin/main'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+                        time.sleep(0.5)
+                        continue
+                    return False
+                
+                if push_result.returncode == 0:
+                    return True
+                else:
+                    if attempt < max_retries - 1:
+                        time.sleep(1)
+                        continue
+                    return False
+                    
+            except subprocess.TimeoutExpired:
+                if attempt < max_retries - 1:
+                    time.sleep(0.5)
+                    continue
+                return False
+            except Exception:
+                if attempt < max_retries - 1:
+                    time.sleep(0.5)
+                    continue
+                return False
+        
+        return False
+
+# ===== LOGS ESTILIZADOS (para terminal) =====
+try:
+    import colorama
+    colorama.init(autoreset=True)
+except ImportError:
+    colorama = None
+
+def _color_text(text, color=None, style=None):
+    if not colorama or not hasattr(sys.stdout, 'isatty') or not sys.stdout.isatty():
+        return str(text)
+    colors = {
+        "black": "30", "red": "31", "green": "32", "yellow": "33",
+        "blue": "34", "magenta": "35", "cyan": "36", "white": "37",
+        "bright_black": "90", "bright_red": "91", "bright_green": "92",
+        "bright_yellow": "93", "bright_blue": "94", "bright_magenta": "95",
+        "bright_cyan": "96", "bright_white": "97"
+    }
+    styles = {"bright": "1", "dim": "2", "normal": "22"}
+    codes = []
+    if style and style in styles:
+        codes.append(styles[style])
+    if color and color in colors:
+        codes.append(colors[color])
+    if not codes:
+        return str(text)
+    return f"\033[{';'.join(codes)}m{text}\033[0m"
+
+def print_info(text):
+    print(_color_text(f"ℹ️  {text}", color="bright_blue", style="bright"))
+
+def print_success(text):
+    print(_color_text(f"✅ {text}", color="bright_green", style="bright"))
+
+def print_warning(text):
+    print(_color_text(f"⚠️  {text}", color="bright_yellow", style="bright"))
+
+def print_error(text):
+    print(_color_text(f"❌ {text}", color="bright_red", style="bright"))
 
 def init_db():
     """Cria as tabelas do banco de dados SQLite, caso não existam."""
@@ -67,7 +202,6 @@ def init_db():
         """)
         
         conn.commit()
-    print("[INIT] Banco de dados inicializado com suporte a sequências.")
 
 init_db()
 
@@ -135,7 +269,6 @@ def init_waiting_db():
         """)
         
         conn.commit()
-    print("[WAITING] Banco de espera inicializado.")
 
 init_waiting_db()
 
@@ -412,9 +545,7 @@ def migrate_waiting_to_main():
             main_lista_id = main_cursor.lastrowid
             main_conn.commit()
             
-            subprocess.run(['git', 'add', 'list_it.db'])
-            subprocess.run(['git', 'commit', '-m', f"Migrando lista: {wait_list_nome}"])
-            subprocess.run(['git', 'push'])
+            safe_git_commit(f"Criando Lista: {wait_list_nome} id: {main_lista_id}")
         else:
             main_lista_id = existing["id"]
         
@@ -465,9 +596,7 @@ def migrate_waiting_to_main():
                 ))
                 main_conn.commit()
                 
-                subprocess.run(['git', 'add', 'list_it.db'])
-                subprocess.run(['git', 'commit', '-m', f"Migrando linha: {nome_item}"])
-                subprocess.run(['git', 'push'])
+                safe_git_commit(f"Migrando linha: {nome_item}")
                 
                 resultados["linhas_migradas"] += 1
                 resultados["detalhes"].append({
@@ -487,7 +616,7 @@ def migrate_waiting_to_main():
                     "lista": wait_list_nome,
                     "erro": str(e)
                 })
-                print(f"[MIGRATE] Erro ao migrar linha {wl['nome']}: {e}")
+                print_error(f"Erro ao migrar linha '{wl['nome']}': {e}")
         
         wait_cursor.execute("SELECT COUNT(*) FROM linhas WHERE lista_id = ?", (wait_list_id,))
         count = wait_cursor.fetchone()[0]
@@ -725,10 +854,8 @@ def add_lista():
     conn.commit()
     lista_id = cursor.lastrowid
     conn.close()
-    subprocess.run(['git', 'add', 'list_it.db'])
     commit_message = f"Criando Lista: {data['nome']} id: {lista_id}"
-    subprocess.run(['git', 'commit', '-m', commit_message])
-    subprocess.run(['git', 'push'])
+    safe_git_commit(commit_message)
     return jsonify({"id": lista_id, "nome": data["nome"]})
 
 @app.route("/listas/<int:lista_id>", methods=["DELETE"])
@@ -746,10 +873,7 @@ def delete_lista(lista_id):
         cursor.execute("DELETE FROM listas WHERE id = ?", (lista_id,))
         conn.commit()
         conn.close()
-        subprocess.run(['git', 'add', 'list_it.db'])
-        commit_message = f"Removendo Lista: {nome} id: {lista_id}"
-        subprocess.run(['git', 'commit', '-m', commit_message])
-        subprocess.run(['git', 'push'])
+        safe_git_commit(f"Removendo Lista: {nome} id: {lista_id}")
         return jsonify({"message": "Lista excluída com sucesso."})
     except Exception as e:
         print(f"[DELETE_LISTA] Erro: {e}")
@@ -771,7 +895,7 @@ def fetch_anime_image_url(query):
     clean_query = re.sub(r'[^\w\s]', '', clean_query)
     variables = {'search': clean_query}
     try:
-        print(f"[ANISEARCH] Buscando imagem do anime para: '{clean_query}'")
+        print_info(f"Buscando imagem do anime: '{clean_query}'")
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
@@ -788,13 +912,13 @@ def fetch_anime_image_url(query):
                 image_url = media[chosen_index]['coverImage']['large'].strip()
                 return image_url
             else:
-                print(f"[ANISEARCH] Nenhum anime encontrado para: '{clean_query}'")
+                print_warning(f"Nenhum anime encontrado para '{clean_query}'")
         elif response.status_code == 403:
             print(f"[ANISEARCH] 403 Forbidden.")
         else:
-            print(f"[ANISEARCH] Erro: {response.status_code}")
+            print_error(f"Erro na busca de imagem: HTTP {response.status_code}")
     except Exception as e:
-        print(f"[ANISEARCH] Exceção: {e}")
+        print_error(f"Exceção na busca de imagem: {e}")
     return 'https://via.placeholder.com/300x450.png?text=Sem+Capa'
 
 def fetch_manga_image_url(query):
@@ -866,10 +990,7 @@ def update_linha_imagem(linha_id):
         conn.commit()
         cursor.execute("SELECT nome FROM linhas WHERE id = ?", (linha_id,))
         nome = cursor.fetchone()[0]
-        subprocess.run(['git', 'add', 'list_it.db'])
-        commit_message = f"Atualizando Imagem da Linha: {nome} id: {linha_id}"
-        subprocess.run(['git', 'commit', '-m', commit_message])
-        subprocess.run(['git', 'push'])
+        safe_git_commit(f"Atualizando Imagem da Linha: {nome} id: {linha_id}")
         conn.close()
         return jsonify({"message": "Imagem atualizada com sucesso!", "imagem_url": imagem_url})
     except Exception as e:
@@ -894,10 +1015,8 @@ def refresh_images():
     conn.commit()
     conn.close()
     if atualizados > 0:
-        subprocess.run(['git', 'add', 'list_it.db'])
         commit_message = f"Refresh de imagens: {atualizados} imagens atualizadas"
-        subprocess.run(['git', 'commit', '-m', commit_message])
-        subprocess.run(['git', 'push'])
+        safe_git_commit(commit_message)
     return jsonify({'mensagem': f'{atualizados} imagens atualizadas com sucesso.'})
 
 @app.route('/update_image_url', methods=['POST'])
@@ -914,10 +1033,7 @@ def update_image_url():
     nome = cursor.fetchone()[0]
     conn.commit()
     conn.close()
-    subprocess.run(['git', 'add', 'list_it.db'])
-    commit_message = f"Atualizando URL da Imagem: {nome} id: {linha_id}"
-    subprocess.run(['git', 'commit', '-m', commit_message])
-    subprocess.run(['git', 'push'])
+    safe_git_commit(f"Atualizando URL da Imagem: {nome} id: {linha_id}")
     return jsonify({'mensagem': 'Imagem atualizada com sucesso.'})
 
 def fetch_media_details(query, media_type="ANIME", retries=3):
@@ -1077,7 +1193,7 @@ def translate():
 
 @app.route("/refresh_details", methods=["POST"])
 def refresh_all_details():
-    print("🚀 Iniciando refresh de detalhes...")
+    print_info("Iniciando refresh de detalhes...")
     conn = sqlite3.connect("list_it.db")
     cur = conn.cursor()
     cur.execute("""
@@ -1087,11 +1203,11 @@ def refresh_all_details():
     """)
     to_update = cur.fetchall()
     conn.close()
-    print(f"🔍 Encontrados {len(to_update)} itens para atualizar.")
+    print_info(f"Encontrados {len(to_update)} itens para atualizar.")
     updated = 0
     for idx, (linha_id, nome, conteudo) in enumerate(to_update, 1):
         media_type = "anime" if conteudo.lower() in ["anime", "filme"] else "manga"
-        print(f"\n📦 ({idx}/{len(to_update)}) Buscando detalhes para '{nome}' ({media_type})...")
+        print_info(f"Buscando detalhes para '{nome}' ({media_type})...")
         det = fetch_media_details(nome, media_type.upper())
         if det:
             has_data = det["romaji"] or det["english"] or det["sinonimos"] or det["sinopse"]
@@ -1111,16 +1227,16 @@ def refresh_all_details():
                     ))
                     conn.commit()
                     conn.close()
-                    print(f"✅ Linha {linha_id} atualizada com detalhes.")
+                    print_success(f"Linha {linha_id} atualizada com detalhes.")
                     updated += 1
                 except Exception as e:
-                    print(f"❌ Erro ao atualizar linha_id={linha_id}: {e}")
+                    print_error(f"Erro ao atualizar linha {linha_id}: {e}")
             else:
-                print(f"⚠️ Nenhum detalhe relevante encontrado, não atualizado.")
+                print_warning("Nenhum detalhe relevante encontrado, não atualizado.")
         else:
-            print(f"⚠️ Nenhum dado encontrado na AniList.")
+            print_warning("Nenhum dado encontrado na AniList.")
         time.sleep(2)
-    print(f"\n🏁 Finalizado! Total atualizados: {updated} de {len(to_update)}")
+    print_success(f"Refresh finalizado: {updated} de {len(to_update)} itens atualizados.")
     return jsonify({"updated": updated})
 
 @app.route("/linhas/<int:lista_id>", methods=["GET"])
@@ -1169,10 +1285,7 @@ def add_linha():
     conn.commit()
     linha_id = cursor.lastrowid
     conn.close()
-    subprocess.run(['git', 'add', 'list_it.db'])
-    commit_message = f"Adicionando Linha: {data['nome']} id: {linha_id}"
-    subprocess.run(['git', 'commit', '-m', commit_message])
-    subprocess.run(['git', 'push'])
+    safe_git_commit(f"Adicionando Linha: {data['nome']} id: {linha_id}")
     return jsonify({"id": linha_id, "lista_id": data["lista_id"], "nome": data["nome"], "last_highlight": now})
 
 @app.route("/linhas/<int:linha_id>", methods=["PUT"])
@@ -1215,10 +1328,7 @@ def update_linha(linha_id):
             WHERE id = ?
         """, (nome, conteudo, status, episodio, opiniao, tags, linha_id))
         conn.commit()
-        subprocess.run(['git', 'add', 'list_it.db'])
-        commit_message = f"Atualizando Linha: {nome} id: {linha_id}"
-        subprocess.run(['git', 'commit', '-m', commit_message])
-        subprocess.run(['git', 'push'])
+        safe_git_commit(f"Atualizando Linha: {nome} id: {linha_id}")
         conn.close()
         return jsonify({"message": "Linha atualizada com sucesso!"})
     except Exception as e:
@@ -1234,10 +1344,7 @@ def delete_linha(linha_id):
     cursor.execute("DELETE FROM linhas WHERE id = ?", (linha_id,))
     conn.commit()
     conn.close()
-    subprocess.run(['git', 'add', 'list_it.db'])
-    commit_message = f"Removendo Linha: {nome} id: {linha_id}"
-    subprocess.run(['git', 'commit', '-m', commit_message])
-    subprocess.run(['git', 'push'])
+    safe_git_commit(f"Removendo Linha: {nome} id: {linha_id}")
     return jsonify({"message": "Linha excluída com sucesso!"})
 
 @app.route('/to_highlight/<int:lista_id>')
@@ -1269,10 +1376,7 @@ def mark_highlighted(linha_id):
     nome = cursor.fetchone()[0]
     conn.commit()
     conn.close()
-    subprocess.run(['git', 'add', 'list_it.db'])
-    commit_message = f"Marcando highlight na Linha: {nome} id: {linha_id}"
-    subprocess.run(['git', 'commit', '-m', commit_message])
-    subprocess.run(['git', 'push'])
+    safe_git_commit(f"Marcando highlight na Linha: {nome} id: {linha_id}")
     return jsonify({'mensagem': 'Highlight atualizado.'})
 
 # ============================================================
@@ -1294,10 +1398,7 @@ def criar_sequencia():
         )
         sequencia_id = cursor.lastrowid
         conn.commit()
-        subprocess.run(['git', 'add', 'list_it.db'])
-        commit_message = f"Criando Sequência: {nome} id: {sequencia_id}"
-        subprocess.run(['git', 'commit', '-m', commit_message])
-        subprocess.run(['git', 'push'])
+        safe_git_commit(f"Criando Sequência: {nome} id: {sequencia_id}")
     return jsonify({
         "id": sequencia_id,
         "nome": nome,
@@ -1340,10 +1441,7 @@ def adicionar_item_sequencia(sequencia_id):
             VALUES (?, ?, ?)
         """, (sequencia_id, linha_id, nova_ordem))
         conn.commit()
-        subprocess.run(['git', 'add', 'list_it.db'])
-        commit_message = f"Adicionando {item_nome} à sequência {seq_nome} na ordem {nova_ordem}"
-        subprocess.run(['git', 'commit', '-m', commit_message])
-        subprocess.run(['git', 'push'])
+        safe_git_commit(f"Adicionando {item_nome} à sequência {seq_nome} na ordem {nova_ordem}")
     return jsonify({
         "mensagem": "Item adicionado à sequência com sucesso",
         "sequencia_id": sequencia_id,
@@ -1420,10 +1518,7 @@ def remover_item_sequencia(sequencia_id, linha_id):
                 WHERE sequencia_id = ? AND linha_id = ?
             """, (sequencia_id, linha_id))
             conn.commit()
-            subprocess.run(['git', 'add', 'list_it.db'])
-            commit_message = f"Removendo {item_nome} da sequência {seq_nome}"
-            subprocess.run(['git', 'commit', '-m', commit_message])
-            subprocess.run(['git', 'push'])
+            safe_git_commit(f"Removendo {item_nome} da sequência {seq_nome}")
         return jsonify({
             "mensagem": "Item removido da sequência com sucesso",
             "sequencia_id": sequencia_id,
@@ -1461,10 +1556,7 @@ def atualizar_ordem_sequencia(sequencia_id):
             conn.commit()
             cursor.execute("SELECT nome FROM sequencias WHERE id = ?", (sequencia_id,))
             seq_nome = cursor.fetchone()[0]
-            subprocess.run(['git', 'add', 'list_it.db'])
-            commit_message = f"Atualizando ordem na sequência {seq_nome}"
-            subprocess.run(['git', 'commit', '-m', commit_message])
-            subprocess.run(['git', 'push'])
+            safe_git_commit(f"Atualizando ordem na sequência {seq_nome}")
         return jsonify({
             "mensagem": "Ordem da sequência atualizada com sucesso",
             "total_itens_atualizados": len(data)
@@ -1484,10 +1576,7 @@ def deletar_sequencia(sequencia_id):
             seq_nome = seq_nome[0]
             cursor.execute("DELETE FROM sequencias WHERE id = ?", (sequencia_id,))
             conn.commit()
-            subprocess.run(['git', 'add', 'list_it.db'])
-            commit_message = f"Removendo sequência {seq_nome}"
-            subprocess.run(['git', 'commit', '-m', commit_message])
-            subprocess.run(['git', 'push'])
+            safe_git_commit(f"Removendo sequência {seq_nome}")
         return jsonify({
             "mensagem": "Sequência deletada com sucesso",
             "sequencia_id": sequencia_id,
@@ -1525,4 +1614,7 @@ def obter_sequencias_do_item(linha_id):
         return jsonify({"erro": f"Erro ao buscar sequências: {str(e)}"}), 500
 
 if __name__ == "__main__":
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.WARNING)
     app.run(debug=True)
