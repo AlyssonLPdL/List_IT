@@ -751,7 +751,18 @@ input:checked + .slider:before {
   border: 1px solid var(--color-sidebar-bg);
   font-weight: 600;
 }
-
+#test-image-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+#test-image-btn:hover {
+    background: #5a6268;
+}
 .pesquisa {
   display: flex;
   align-items: center;
@@ -1630,6 +1641,116 @@ legend {
   animation: spin 1s linear infinite;
   display: inline-block;
 }
+/* ===== MODAL DE TESTE DE IMAGEM ===== */
+#image-test-modal .modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+#image-test-modal .modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+#image-test-modal .modal-content::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary, #f1f1f1);
+    border-radius: 4px;
+}
+
+#image-test-modal .modal-content::-webkit-scrollbar-thumb {
+    background: #4a6fc5;
+    border-radius: 4px;
+}
+
+#image-test-modal .modal-content::-webkit-scrollbar-thumb:hover {
+    background: #365a9e;
+}
+
+#test-image-form input:focus,
+#test-image-form select:focus {
+    outline: none;
+    border-color: #4a6fc5 !important;
+    box-shadow: 0 0 0 3px rgba(74, 111, 197, 0.2);
+}
+
+#test-image-form .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(74, 111, 197, 0.4);
+}
+
+#test-image-form .btn:active {
+    transform: translateY(0);
+}
+
+/* Resultado das imagens */
+.image-result-item {
+    position: relative;
+    transition: transform 0.3s, box-shadow 0.3s;
+    cursor: pointer;
+}
+
+.image-result-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+
+.image-result-item .image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    border-radius: 8px;
+}
+
+.image-result-item:hover .image-overlay {
+    opacity: 1;
+}
+
+.image-result-item .image-overlay i {
+    color: white;
+    font-size: 24px;
+    background: rgba(255,255,255,0.2);
+    padding: 12px;
+    border-radius: 50%;
+    transition: background 0.3s;
+}
+
+.image-result-item .image-overlay i:hover {
+    background: rgba(255,255,255,0.4);
+}
+
+/* Estilos para o tema escuro */
+.dark-theme #image-test-modal .modal-content {
+    background: var(--color-bg-dark, #1a1a2e);
+    border-color: #333;
+}
+
+.dark-theme #test-image-form input,
+.dark-theme #test-image-form select {
+    background: #2a2a3e;
+    border-color: #444;
+    color: #eee;
+}
+
+.dark-theme #test-image-result {
+    background: #1e1e32;
+}
+
+.dark-theme #test-image-result .image-result-item {
+    background: #2a2a3e;
+    border-color: #444;
+}
+
+.dark-theme #test-image-result .image-result-item:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
 /* =======================================
   TAG STYLES (ESTILIZAÇÃO DAS CLASSES DE TAGS)
 ======================================= */
@@ -2195,6 +2316,11 @@ progress {
     font-size: 16px;
     opacity: 0.8;
     font-weight: bold;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 /* Responsividade */

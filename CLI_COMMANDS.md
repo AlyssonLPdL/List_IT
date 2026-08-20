@@ -90,6 +90,13 @@ Ao abrir uma lista (seja ela do banco principal ou de espera), você pode usar e
 - `show_tags`
   - Mostra todas as tags disponíveis na lista.
 
+- `test_api_img <nome>`
+  - Busca imagens na API AniList para o título informado.
+  - Pergunta se é Anime ou Manga.
+  - Exibe até 5 URLs de capas encontradas (se houver).
+  - Útil para verificar se a API tem imagens antes de criar uma linha.
+  - Exemplo: `test_api_img Naruto`
+
 - `search_<termo>`
   - Busca itens pelo nome dentro da lista aberta.
   - Exemplo: `search_Naruto`

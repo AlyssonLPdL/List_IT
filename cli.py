@@ -371,6 +371,7 @@ def print_help_list():
         ("show_lines [filtro]", "Exibe as linhas da lista."),
         ("show_tags", "Mostra todas as tags disponíveis."),
         ("search_<termo>", "Busca itens pelo nome."),
+        ("test_api_img <nome>", "Busca imagens na API AniList para um título (exibe URLs)."),
         ("open <nome>|<numero>", "Abre item por nome ou posição exibida."),
         ("show_<tag>", "Exibe itens da tag indicada."),
         ("show_anime|show_filme|...", "Filtra por conteúdo."),
@@ -1763,6 +1764,71 @@ class OpenListContext:
                     line += " " * 24
             print(line)
 
+    def test_api_image(self, nome):
+        """Busca imagens para um título via API AniList e exibe os links."""
+        if not nome or not nome.strip():
+            print_error("Digite um nome para buscar.")
+            return
+
+        # Determina o tipo baseado no contexto? Vamos perguntar.
+        print(color_text("📸 Buscando imagens para:", **STYLE["info"]))
+        print(color_text(f"   Título: {nome}", color="bright_white", style="bright"))
+
+        # Pergunta o tipo de mídia
+        media_options = [
+            ("Anime", "anime"),
+            ("Manga", "manga"),
+        ]
+        print(color_text("\nEscolha o tipo de mídia:", **STYLE["info"]))
+        for i, (label, _) in enumerate(media_options, 1):
+            print(color_text(f"{i} - {label}", color="bright_white", style="bright"))
+        while True:
+            choice = input(color_text("Número (1-2): ", **STYLE["info"])).strip()
+            if choice.isdigit():
+                idx = int(choice) - 1
+                if 0 <= idx < len(media_options):
+                    media_type = media_options[idx][1]
+                    break
+            print_error("Opção inválida. Digite 1 para Anime ou 2 para Manga.")
+
+        # Chamar a API
+        url = f"{API_BASE.rstrip('/')}/search_images"
+        params = {"q": nome, "type": media_type}
+        try:
+            resp = requests.get(url, params=params, timeout=10)
+            if resp.status_code != 200:
+                print_error(f"Erro na API: {resp.status_code} - {resp.text}")
+                return
+
+            data = resp.json()
+            if data.get("error"):
+                print_error(f"Erro: {data['error']}")
+                return
+
+            image_urls = data.get("image_urls", [])
+            if not image_urls:
+                print_warning(f"Nenhuma imagem encontrada para '{nome}' ({media_type}).")
+                return
+
+            # Exibir resultados
+            fancy_header([f"📸 IMAGENS ENCONTRADAS - {nome} ({media_type.upper()})"], color="bright_cyan")
+            print(color_text(f"  Total: {len(image_urls)} imagem(ens)", **STYLE["info"]))
+            print(color_text("-" * 80, **STYLE["dim"]))
+
+            for idx, url in enumerate(image_urls, 1):
+                # Exibe número e URL com cor
+                num = color_text(f"{idx:2d}.", **STYLE["number"])
+                link = color_text(url, color="bright_blue")
+                print(f"  {num} {link}")
+
+            print(color_text("-" * 80, **STYLE["dim"]))
+            print(color_text("  Use a URL desejada ao criar/editar a linha (campo imagem_url).", **STYLE["dim"]))
+
+        except requests.exceptions.RequestException as e:
+            print_error(f"Erro de rede: {e}")
+        except Exception as e:
+            print_error(f"Erro inesperado: {e}")
+
 class ItemContext:
     def __init__(self, parent_ctx, item, idx_in_view):
         self.parent = parent_ctx
@@ -2578,6 +2644,14 @@ def main():
                     current_ctx.interactive_create_line(nome, is_waiting=current_ctx.is_waiting)
                 else:
                     print_error("Este comando só pode ser usado dentro de uma lista aberta.")
+                continue
+
+            if cmd == "test_api_img":
+                if not args:
+                    print_error("Uso: test_api_img <nome>")
+                    continue
+                nome = " ".join(args)
+                current_ctx.test_api_image(nome)
                 continue
 
             if cmd == "create_wait_line":

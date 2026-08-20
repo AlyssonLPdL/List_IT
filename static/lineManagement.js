@@ -11,6 +11,7 @@ import { showHighlights } from './highlights.js';
 import { getSequenceButtons, refreshSequenceDisplay, showAddToSequenceModal } from './sequenceManagement.js';
 import { updateSelectedTags, showAllTags } from './tagsSystem.js';
 import { generateTemplateHTML, showTemplatePreview } from './exportFunctions.js';
+import { showImageTestModal, initImageTestModal } from './modalEvents.js';
 
 // ---------------------------- GERENCIAMENTO DE LINHAS ----------------------------
 /**
@@ -92,6 +93,7 @@ async function processarFilaItens(itens) {
 
 // Função para exibir detalhes da lista e suas linhas
 async function showListDetails(lista) {
+    initImageTestModal();
     state.currentList = lista;
 
     const response = await fetch(`/linhas/${lista.id}`);
@@ -199,6 +201,25 @@ async function showListDetails(lista) {
             </div>
             </div>
         `;
+
+    const header = document.querySelector('.list-header');
+    if (header) {
+        const title = header.querySelector('.list-title');
+        if (title) {
+            const oldBtn = header.querySelector('#test-image-btn');
+            if (oldBtn) oldBtn.remove();
+
+            const testBtn = document.createElement('button');
+            testBtn.id = 'test-image-btn';
+            testBtn.className = 'btn';
+            testBtn.textContent = 'Testar Imagem';
+            testBtn.style.marginLeft = '10px';
+            title.parentNode.insertBefore(testBtn, title.nextSibling);
+
+            // Adiciona evento para abrir o modal
+            testBtn.addEventListener('click', showImageTestModal);
+        }
+    }
 
     let currentOrder = 'az';
 

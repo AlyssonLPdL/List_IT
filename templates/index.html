@@ -163,6 +163,76 @@
       </div>
     </div>
 
+    <!-- Modal para testar imagem - Design melhorado -->
+    <div id="image-test-modal" class="modal hidden">
+      <div class="modal-content" style="max-width: 800px; width: 90%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--color-border, #e0e0e0); padding-bottom: 15px;">
+          <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-image" style="color: #4a6fc5;"></i>
+            Testar Busca de Imagem
+          </h2>
+          <span class="close-btn" id="close-image-test-modal" style="font-size: 28px; cursor: pointer; color: #999; transition: color 0.3s;">&times;</span>
+        </div>
+        
+        <form id="image-test-form" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px;">
+          <div style="flex: 2; min-width: 200px;">
+            <label for="test-image-name" style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: var(--color-text, #333);">
+              <i class="fas fa-search" style="margin-right: 5px;"></i> Título
+            </label>
+            <input 
+              type="text" 
+              id="test-image-name" 
+              placeholder="Digite o nome do anime/mangá..." 
+              required
+              style="width: 100%; padding: 10px 14px; border: 2px solid var(--color-border, #ddd); border-radius: 8px; font-size: 14px; background: var(--color-input-bg, #fff); color: var(--color-text, #333); transition: border-color 0.3s;"
+            >
+          </div>
+          
+          <div style="flex: 1; min-width: 140px;">
+            <label for="test-image-type" style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: var(--color-text, #333);">
+              <i class="fas fa-tag" style="margin-right: 5px;"></i> Tipo
+            </label>
+            <select 
+              id="test-image-type" 
+              style="width: 100%; padding: 10px 14px; border: 2px solid var(--color-border, #ddd); border-radius: 8px; font-size: 14px; background: var(--color-input-bg, #fff); color: var(--color-text, #333); cursor: pointer;"
+            >
+              <option value="anime">📺 Anime</option>
+              <option value="manga">📚 Manga</option>
+            </select>
+          </div>
+          
+          <div style="flex: 0 0 auto;">
+            <button 
+              type="submit" 
+              class="btn" 
+              style="padding: 10px 30px; background: linear-gradient(135deg, #4a6fc5, #6c8ef0); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; white-space: nowrap;"
+            >
+              <i class="fas fa-rocket" style="margin-right: 8px;"></i> Buscar
+            </button>
+          </div>
+        </form>
+        
+        <div id="test-image-result" style="
+          margin-top: 10px; 
+          padding: 15px; 
+          border-radius: 10px; 
+          background: var(--color-bg-secondary, #f8f9fa);
+          min-height: 100px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 15px;
+          justify-content: center;
+          align-items: flex-start;
+        ">
+          <!-- Resultados aparecerão aqui -->
+          <div style="color: #999; text-align: center; padding: 30px; width: 100%;">
+            <i class="fas fa-image" style="font-size: 40px; margin-bottom: 10px; display: block; opacity: 0.3;"></i>
+            <p>Busque por um título para ver as imagens disponíveis</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal para nome do arquivo de exportação -->
     <!-- Modal de Exportação -->
     <div id="export-modal" class="modal hidden">

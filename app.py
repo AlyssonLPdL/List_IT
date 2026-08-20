@@ -921,6 +921,86 @@ def fetch_anime_image_url(query):
         print_error(f"Exceção na busca de imagem: {e}")
     return 'https://via.placeholder.com/300x450.png?text=Sem+Capa'
 
+@app.route('/search_images', methods=['GET'])
+def search_images():
+    """Retorna até 5 imagens para o título pesquisado."""
+    query = request.args.get('q', '').strip()
+    content_type = request.args.get('type', 'anime').lower()
+    
+    if not query:
+        return jsonify({'error': 'Query parameter is required'}), 400
+    
+    url = "https://graphql.anilist.co"
+    media_type = "ANIME" if content_type == 'anime' else "MANGA"
+    
+    graphql_query = """
+        query($search: String) {
+            Page(page: 1, perPage: 5) {
+                media(search: $search, type: %s) {
+                    title { romaji english }
+                    coverImage { large }
+                }
+            }
+        }
+    """ % media_type
+    
+    clean_query = query.strip().replace('-', ' ').replace('_', ' ')
+    clean_query = re.sub(r'[^\w\s]', '', clean_query)
+    variables = {'search': clean_query}
+    
+    try:
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'List_IT/1.0 (+https://github.com)'
+        }
+        response = requests.post(
+            url,
+            json={'query': graphql_query, 'variables': variables},
+            headers=headers,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            media_list = data['data']['Page']['media']
+            
+            if media_list:
+                # Extrai todas as URLs de imagem
+                image_urls = []
+                for media in media_list:
+                    img_url = media['coverImage']['large'].strip()
+                    if img_url and img_url not in image_urls:
+                        image_urls.append(img_url)
+                
+                return jsonify({
+                    'image_urls': image_urls,
+                    'total': len(image_urls),
+                    'query': query
+                })
+            else:
+                return jsonify({
+                    'image_urls': [],
+                    'total': 0,
+                    'query': query,
+                    'message': 'Nenhum resultado encontrado'
+                })
+        else:
+            return jsonify({
+                'image_urls': [],
+                'total': 0,
+                'query': query,
+                'error': f'Erro na API: {response.status_code}'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'image_urls': [],
+            'total': 0,
+            'query': query,
+            'error': str(e)
+        }), 500
+
 def fetch_manga_image_url(query):
     url = "https://graphql.anilist.co"
     query_graphql = """
