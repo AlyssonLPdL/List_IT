@@ -1,6 +1,7 @@
 # padronizador_tags.py
 import sqlite3
 import re
+from collections import Counter
 
 def normalizar_texto(texto):
     """Remove acentos e converte para minúsculas para comparação"""
@@ -9,6 +10,134 @@ def normalizar_texto(texto):
         return ""
     texto = unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('ASCII')
     return texto.lower().strip()
+
+def capitalizar_primeira_letra(texto):
+    """Capitaliza apenas a primeira letra do texto"""
+    if not texto:
+        return ""
+    texto = texto.strip()
+    return texto[0].upper() + texto[1:] if len(texto) > 0 else ""
+
+def padronizar_status_conteudo():
+    """Padroniza status e conteúdo no banco de dados"""
+    
+    # Conjuntos corretos
+    CONTENT_TYPES = {"Anime", "Filme", "Manga", "Manhwa", "Webtoon"}
+    STATUS_SET = {"Concluido", "Vendo", "Cancelado", "Dropado", "Lendo", "Assistir", "Conheço", "Assistindo"}
+    
+    # Mapeamento de correções para Conteúdo
+    mapeamento_conteudo = {
+        "anime": "Anime",
+        "filme": "Filme",
+        "manga": "Manga",
+        "manhwa": "Manhwa",
+        "webtoon": "Webtoon",
+        "webtoom": "Webtoon",  # erro comum
+        "manhua": "Manhwa",    # muitos confundem
+    }
+    
+    # Mapeamento de correções para Status
+    mapeamento_status = {
+        "concluido": "Concluido",
+        "concluído": "Concluido",
+        "finalizado": "Concluido",
+        "completo": "Concluido",
+        "vendo": "Vendo",
+        "assistindo": "Assistindo",
+        "assistir": "Assistir",
+        "cancelado": "Cancelado",
+        "dropado": "Dropado",
+        "droppado": "Dropado",
+        "lendo": "Lendo",
+        "conheço": "Conheço",
+        "conheco": "Conheço",
+    }
+    
+    conn = sqlite3.connect('list_it.db')
+    cursor = conn.cursor()
+    
+    # Verifica se as colunas existem
+    cursor.execute("PRAGMA table_info(linhas)")
+    colunas = [coluna[1] for coluna in cursor.fetchall()]
+    
+    alteracoes = {"conteudo": 0, "status": 0}
+    linhas_alteradas = 0
+    
+    # Processa Conteúdo
+    if 'conteudo' in colunas:
+        print("\n📝 Corrigindo Conteúdo...")
+        cursor.execute("SELECT id, conteudo FROM linhas WHERE conteudo IS NOT NULL AND conteudo != ''")
+        linhas = cursor.fetchall()
+        
+        for linha_id, conteudo_original in linhas:
+            if not conteudo_original:
+                continue
+                
+            conteudo_limpo = conteudo_original.strip()
+            conteudo_normalizado = normalizar_texto(conteudo_limpo)
+            
+            # Verifica se já está correto
+            if conteudo_limpo in CONTENT_TYPES:
+                continue
+                
+            # Tenta corrigir
+            if conteudo_normalizado in mapeamento_conteudo:
+                conteudo_corrigido = mapeamento_conteudo[conteudo_normalizado]
+                cursor.execute("UPDATE linhas SET conteudo = ? WHERE id = ?", (conteudo_corrigido, linha_id))
+                alteracoes["conteudo"] += 1
+                linhas_alteradas += 1
+                print(f"   🔄 Conteúdo '{conteudo_original}' → '{conteudo_corrigido}' (ID: {linha_id})")
+            elif conteudo_normalizado:
+                # Capitaliza se não encontrou no mapeamento
+                conteudo_capitalizado = capitalizar_primeira_letra(conteudo_limpo)
+                if conteudo_capitalizado != conteudo_limpo:
+                    cursor.execute("UPDATE linhas SET conteudo = ? WHERE id = ?", (conteudo_capitalizado, linha_id))
+                    alteracoes["conteudo"] += 1
+                    linhas_alteradas += 1
+                    print(f"   🔄 Conteúdo '{conteudo_original}' → '{conteudo_capitalizado}' (ID: {linha_id})")
+    
+    # Processa Status
+    if 'status' in colunas:
+        print("\n📝 Corrigindo Status...")
+        cursor.execute("SELECT id, status FROM linhas WHERE status IS NOT NULL AND status != ''")
+        linhas = cursor.fetchall()
+        
+        for linha_id, status_original in linhas:
+            if not status_original:
+                continue
+                
+            status_limpo = status_original.strip()
+            status_normalizado = normalizar_texto(status_limpo)
+            
+            # Verifica se já está correto
+            if status_limpo in STATUS_SET:
+                continue
+                
+            # Tenta corrigir
+            if status_normalizado in mapeamento_status:
+                status_corrigido = mapeamento_status[status_normalizado]
+                cursor.execute("UPDATE linhas SET status = ? WHERE id = ?", (status_corrigido, linha_id))
+                alteracoes["status"] += 1
+                linhas_alteradas += 1
+                print(f"   🔄 Status '{status_original}' → '{status_corrigido}' (ID: {linha_id})")
+            elif status_normalizado:
+                # Capitaliza se não encontrou no mapeamento
+                status_capitalizado = capitalizar_primeira_letra(status_limpo)
+                if status_capitalizado != status_limpo:
+                    cursor.execute("UPDATE linhas SET status = ? WHERE id = ?", (status_capitalizado, linha_id))
+                    alteracoes["status"] += 1
+                    linhas_alteradas += 1
+                    print(f"   🔄 Status '{status_original}' → '{status_capitalizado}' (ID: {linha_id})")
+    
+    conn.commit()
+    conn.close()
+    
+    print(f"\n📊 Resumo alterações:")
+    print(f"  Conteúdo corrigidos: {alteracoes['conteudo']}")
+    print(f"  Status corrigidos: {alteracoes['status']}")
+    print(f"  Total de linhas alteradas: {linhas_alteradas}")
+    
+    return alteracoes, linhas_alteradas
 
 def padronizar_tags():
     """Padroniza as tags no banco de dados baseado nas tags corretas fornecidas"""
@@ -164,7 +293,6 @@ def padronizar_tags():
         "kemonomimi": "Kemonomimi",
         "animal ears": "Kemonomimi",
         "goat": "Goat",
-        "goat": "Goat"
     }
     
     # Conecta ao banco
@@ -208,8 +336,14 @@ def padronizar_tags():
                 total_corrigidas += 1
                 print(f"   🔄 '{tag_limpa}' → '{tag_corrigida}'")
             else:
-                # Se não encontrou correção, mantém a original
-                tags_corrigidas.append(tag_limpa)
+                # Se não encontrou correção, capitaliza a primeira letra
+                tag_capitalizada = capitalizar_primeira_letra(tag_limpa)
+                if tag_capitalizada != tag_limpa:
+                    tags_corrigidas.append(tag_capitalizada)
+                    total_corrigidas += 1
+                    print(f"   🔄 '{tag_limpa}' → '{tag_capitalizada}' (capitalizada)")
+                else:
+                    tags_corrigidas.append(tag_limpa)
         
         # Remove duplicatas mantendo a ordem
         tags_final = []
@@ -229,54 +363,93 @@ def padronizar_tags():
     conn.commit()
     conn.close()
     
-    print(f"\n🎯 Padronização concluída!")
+    print(f"\n🎯 Padronização de tags concluída!")
     print(f"📊 Total de tags corrigidas: {total_corrigidas}")
     print(f"📊 Total de linhas alteradas: {linhas_alteradas}")
     
     return total_corrigidas, linhas_alteradas
 
-def mostrar_estatisticas_tags():
-    """Mostra estatísticas das tags atuais no banco"""
+def mostrar_estatisticas_completas():
+    """Mostra estatísticas completas do banco"""
     
     conn = sqlite3.connect('list_it.db')
     cursor = conn.cursor()
     
+    # Estatísticas de Tags
     cursor.execute("SELECT tags FROM linhas WHERE tags IS NOT NULL AND tags != ''")
-    linhas = cursor.fetchall()
+    linhas_tags = cursor.fetchall()
     
     todas_tags = []
-    for tags_string, in linhas:
+    for tags_string, in linhas_tags:
         if tags_string:
             tags = [tag.strip() for tag in tags_string.split(',')]
             todas_tags.extend(tags)
     
-    from collections import Counter
-    contador = Counter(todas_tags)
+    contador_tags = Counter(todas_tags)
     
-    print(f"\n📈 Estatísticas das Tags:")
-    print(f"Total de tags únicas: {len(contador)}")
-    print(f"Total de ocorrências: {len(todas_tags)}")
+    print(f"\n📊 ESTATÍSTICAS DAS TAGS:")
+    print(f"  Total de tags únicas: {len(contador_tags)}")
+    print(f"  Total de ocorrências: {len(todas_tags)}")
     
-    print(f"\n🏷️ Tags mais comuns:")
-    for tag, count in contador.most_common(20):
-        print(f"  {tag}: {count}")
+    print(f"\n  🏷️ Tags mais comuns:")
+    for tag, count in contador_tags.most_common(20):
+        print(f"    {tag}: {count}")
+    
+    # Estatísticas de Conteúdo
+    cursor.execute("PRAGMA table_info(linhas)")
+    colunas = [coluna[1] for coluna in cursor.fetchall()]
+    
+    if 'conteudo' in colunas:
+        cursor.execute("SELECT conteudo FROM linhas WHERE conteudo IS NOT NULL AND conteudo != ''")
+        conteudos = [row[0] for row in cursor.fetchall()]
+        contador_conteudo = Counter(conteudos)
+        
+        print(f"\n📊 ESTATÍSTICAS DE CONTEÚDO:")
+        for tipo, count in contador_conteudo.most_common():
+            print(f"  {tipo}: {count}")
+    
+    # Estatísticas de Status
+    if 'status' in colunas:
+        cursor.execute("SELECT status FROM linhas WHERE status IS NOT NULL AND status != ''")
+        statuses = [row[0] for row in cursor.fetchall()]
+        contador_status = Counter(statuses)
+        
+        print(f"\n📊 ESTATÍSTICAS DE STATUS:")
+        for status, count in contador_status.most_common():
+            print(f"  {status}: {count}")
     
     conn.close()
 
 if __name__ == "__main__":
-    print("🚀 Iniciando padronização de tags...")
+    print("🚀 Iniciando padronização completa...")
     
     # Mostra estatísticas antes
     print("\n--- ANTES DA PADRONIZAÇÃO ---")
-    mostrar_estatisticas_tags()
+    mostrar_estatisticas_completas()
     
-    # Executa a padronização
-    total_corrigidas, linhas_alteradas = padronizar_tags()
+    # Executa a padronização de status e conteúdo
+    print("\n" + "="*50)
+    print("ETAPA 1: Padronizando Status e Conteúdo")
+    print("="*50)
+    alteracoes, linhas_alteradas_sc = padronizar_status_conteudo()
+    
+    # Executa a padronização de tags
+    print("\n" + "="*50)
+    print("ETAPA 2: Padronizando Tags")
+    print("="*50)
+    total_corrigidas, linhas_alteradas_tags = padronizar_tags()
     
     # Mostra estatísticas depois
-    print("\n--- DEPOIS DA PADRONIZAÇÃO ---")
-    mostrar_estatisticas_tags()
+    print("\n" + "="*50)
+    print("--- DEPOIS DA PADRONIZAÇÃO ---")
+    mostrar_estatisticas_completas()
     
-    print(f"\n✅ Processo finalizado!")
-    print(f"🎯 Tags corrigidas: {total_corrigidas}")
-    print(f"📊 Linhas alteradas: {linhas_alteradas}")
+    print("\n" + "="*50)
+    print("✅ PROCESSO FINALIZADO!")
+    print("="*50)
+    print(f"📊 Resumo total:")
+    print(f"  Status corrigidos: {alteracoes['status']}")
+    print(f"  Conteúdo corrigidos: {alteracoes['conteudo']}")
+    print(f"  Tags corrigidas: {total_corrigidas}")
+    print(f"  Linhas alteradas (Status/Conteúdo): {linhas_alteradas_sc}")
+    print(f"  Linhas alteradas (Tags): {linhas_alteradas_tags}")

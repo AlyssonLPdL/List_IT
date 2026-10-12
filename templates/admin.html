@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Itens — Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body class="admin-body">
+    <div class="admin-app">
+
+        <!-- ========= TOPBAR ========= -->
+        <header class="admin-topbar">
+            <div class="topbar-left">
+                <div class="logo"><i class="fas fa-layer-group"></i></div>
+                <h1>Gerenciamento de Itens</h1>
+            </div>
+
+            <div class="topbar-center">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="global-search" placeholder="Buscar por nome, sinônimo ou tag...">
+                    <kbd>Ctrl K</kbd>
+                </div>
+            </div>
+
+            <div class="topbar-right">
+                <button class="icon-btn" id="btn-refresh" title="Recarregar"><i class="fas fa-sync-alt"></i></button>
+                <button class="icon-btn" id="btn-dup" title="Encontrar duplicados"><i class="fas fa-clone"></i></button>
+                <button class="icon-btn" id="btn-theme" title="Tema"><i class="fas fa-moon"></i></button>
+                <a class="icon-btn" href="/" title="Voltar"><i class="fas fa-arrow-left"></i></a>
+            </div>
+        </header>
+
+        <!-- ========= SIDEBAR ========= -->
+        <aside class="admin-sidebar" id="sidebar">
+            <div class="sidebar-head">
+                <h3>Filtros</h3>
+                <button class="link-btn" id="btn-clear-filters">Limpar</button>
+            </div>
+            <div class="sidebar-body" id="filters-container"><!-- preenchido via JS --></div>
+        </aside>
+
+        <!-- ========= MAIN ========= -->
+        <main class="admin-main">
+            <section class="stats-bar" id="stats-bar"><!-- preenchido via JS --></section>
+
+            <section class="toolbar">
+                <div class="toolbar-left">
+                    <button class="btn ghost" id="btn-select-all"><i class="far fa-square"></i> Selecionar tudo</button>
+                    <button class="btn ghost" id="btn-clear-sel"><i class="fas fa-times"></i> Limpar</button>
+                    <span class="count-info" id="count-info">0 itens</span>
+                </div>
+                <div class="toolbar-right">
+                    <select id="sort-select" class="select">
+                        <option value="name-asc">Nome (A-Z)</option>
+                        <option value="name-desc">Nome (Z-A)</option>
+                        <option value="ep-desc">Episódio (maior)</option>
+                        <option value="ep-asc">Episódio (menor)</option>
+                        <option value="opinion">Opinião</option>
+                        <option value="recent">Adicionados recentemente</option>
+                        <option value="list">Lista</option>
+                    </select>
+                    <div class="view-toggle">
+                        <button data-view="grid" class="active"><i class="fas fa-th-large"></i></button>
+                        <button data-view="list"><i class="fas fa-list"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="items-wrap" id="items-wrap">
+                <div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+            </section>
+        </main>
+
+        <!-- ========= BULK BAR ========= -->
+        <div class="bulk-bar hidden" id="bulk-bar">
+            <div class="bulk-count"><i class="fas fa-check-square"></i> <span id="bulk-count-text">0</span> selecionados</div>
+            <div class="bulk-actions">
+                <button data-op="tags-add"><i class="fas fa-tag"></i> + Tags</button>
+                <button data-op="tags-remove"><i class="fas fa-tag"></i> − Tags</button>
+                <button data-op="status"><i class="fas fa-signal"></i> Status</button>
+                <button data-op="opiniao"><i class="fas fa-star"></i> Opinião</button>
+                <button data-op="conteudo"><i class="fas fa-book"></i> Tipo</button>
+                <button data-op="episodio"><i class="fas fa-hashtag"></i> Episódio</button>
+                <button data-op="move"><i class="fas fa-folder-tree"></i> Mover</button>
+                <button data-op="seq-add"><i class="fas fa-project-diagram"></i> + Sequência</button>
+                <button data-op="seq-rm"><i class="fas fa-unlink"></i> − Sequência</button>
+                <button data-op="refresh"><i class="fas fa-cloud-download-alt"></i> Refresh</button>
+                <button data-op="export"><i class="fas fa-file-export"></i> JSON</button>
+                <button data-op="delete" class="danger"><i class="fas fa-trash"></i> Excluir</button>
+            </div>
+        </div>
+
+        <!-- ========= MODAL ========= -->
+        <div class="modal-overlay hidden" id="modal-overlay">
+            <div class="modal-panel" id="modal-panel"></div>
+        </div>
+
+        <!-- ========= TOAST ========= -->
+        <div class="toast-stack" id="toast-stack"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='admin.js') }}"></script>
+</body>
+</html>

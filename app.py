@@ -150,6 +150,61 @@ def print_warning(text):
 def print_error(text):
     print(_color_text(f"❌ {text}", color="bright_red", style="bright"))
 
+def ensure_columns(db_path, table, columns):
+    """
+    Garante que as colunas existam em uma tabela.
+    columns = [("created_at", "TIMESTAMP"), ("foo", "TEXT DEFAULT ''"), ...]
+    """
+    with sqlite3.connect(db_path) as conn:
+        cur = conn.cursor()
+        cur.execute(f"PRAGMA table_info({table})")
+        existing = {row[1] for row in cur.fetchall()}
+        for col_name, col_type in columns:
+            if col_name not in existing:
+                try:
+                    cur.execute(f"ALTER TABLE {table} ADD COLUMN {col_name} {col_type}")
+                    print_success(f"Migração: coluna '{col_name}' adicionada em {table} ({db_path})")
+                except sqlite3.OperationalError as e:
+                    print_error(f"Erro ao adicionar coluna '{col_name}': {e}")
+        conn.commit()
+
+# --- Migrações do banco principal ---
+ensure_columns("list_it.db", "linhas", [
+    ("alias", "TEXT"),
+    ("tags", "TEXT"),
+    ("episodio", "INTEGER"),
+    ("imagem_url", "TEXT"),
+    ("last_highlight", "TEXT"),
+    ("sinonimos", "TEXT"),
+    ("sinopse", "TEXT"),
+    ("created_at", "TIMESTAMP"),
+])
+
+# --- Migrações do banco de espera ---
+ensure_columns("waiting_list.db", "linhas", [
+    ("alias", "TEXT"),
+    ("tags", "TEXT"),
+    ("episodio", "INTEGER"),
+    ("imagem_url", "TEXT"),
+    ("last_highlight", "TEXT"),
+    ("sinonimos", "TEXT"),
+    ("sinopse", "TEXT"),
+    ("created_at", "TIMESTAMP"),
+    ("migrated", "INTEGER DEFAULT 0"),
+])
+
+# Preenche created_at se estiver NULL (usa last_highlight como fallback, ou now)
+try:
+    with sqlite3.connect("list_it.db") as conn:
+        conn.execute("""
+            UPDATE linhas
+               SET created_at = COALESCE(last_highlight, CURRENT_TIMESTAMP)
+             WHERE created_at IS NULL
+        """)
+        conn.commit()
+except Exception as e:
+    print_warning(f"Não foi possível preencher created_at: {e}")
+
 def init_db():
     """Cria as tabelas do banco de dados SQLite, caso não existam."""
     with sqlite3.connect("list_it.db") as conn:
@@ -1431,7 +1486,7 @@ def delete_linha(linha_id):
 def to_highlight(lista_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=20)).isoformat()
     cursor.execute("""
         SELECT id, nome, imagem_url, tags, conteudo, status, episodio, opiniao, sinopse, sinonimos, last_highlight
         FROM linhas
@@ -1692,6 +1747,224 @@ def obter_sequencias_do_item(linha_id):
         })
     except sqlite3.Error as e:
         return jsonify({"erro": f"Erro ao buscar sequências: {str(e)}"}), 500
+
+# ============================================================
+# ADMIN — Gerenciamento de Itens em Massa
+# ============================================================
+
+@app.route("/admin")
+def admin_page():
+    return render_template("admin.html")
+
+
+@app.route("/admin/data", methods=["GET"])
+def admin_data():
+    """Retorna todos os itens com TODAS as informações + listas + sequências."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Detecta quais colunas existem de fato
+    cursor.execute("PRAGMA table_info(linhas)")
+    existing_cols = {row[1] for row in cursor.fetchall()}
+
+    def col(name, fallback="NULL"):
+        return name if name in existing_cols else f"{fallback} AS {name}"
+
+    query = f"""
+        SELECT l.id, l.lista_id, l.nome,
+               {col('tags')},
+               {col('conteudo')},
+               {col('status')},
+               {col('episodio')},
+               {col('opiniao')},
+               {col('imagem_url')},
+               {col('last_highlight')},
+               {col('sinopse')},
+               {col('sinonimos')},
+               {col('created_at', "''")},
+               li.nome AS lista_nome
+          FROM linhas l
+          LEFT JOIN listas li ON li.id = l.lista_id
+         ORDER BY li.nome, l.nome
+    """
+    cursor.execute(query)
+
+    items = []
+    for row in cursor.fetchall():
+        try:
+            sin = json.loads(row["sinonimos"]) if row["sinonimos"] else []
+        except (json.JSONDecodeError, TypeError):
+            sin = []
+        items.append({
+            "id": row["id"],
+            "lista_id": row["lista_id"],
+            "lista_nome": row["lista_nome"] or "—",
+            "nome": row["nome"],
+            "tags": row["tags"] or "",
+            "conteudo": row["conteudo"],
+            "status": row["status"],
+            "episodio": row["episodio"],
+            "opiniao": row["opiniao"],
+            "imagem_url": row["imagem_url"] or "",
+            "last_highlight": row["last_highlight"],
+            "sinopse": row["sinopse"] or "",
+            "sinonimos": sin,
+            "created_at": row["created_at"] or "",
+            "sequencias": [],
+        })
+
+    # sequências por item
+    cursor.execute("""
+        SELECT si.linha_id, s.id AS seq_id, s.nome AS seq_nome, si.ordem
+          FROM sequencia_itens si
+          JOIN sequencias s ON s.id = si.sequencia_id
+    """)
+    seq_map = {}
+    for row in cursor.fetchall():
+        seq_map.setdefault(row["linha_id"], []).append({
+            "id": row["seq_id"], "nome": row["seq_nome"], "ordem": row["ordem"],
+        })
+    for it in items:
+        it["sequencias"] = seq_map.get(it["id"], [])
+
+    cursor.execute("SELECT id, nome FROM listas ORDER BY nome")
+    listas = [{"id": r[0], "nome": r[1]} for r in cursor.fetchall()]
+
+    cursor.execute("SELECT id, nome FROM sequencias ORDER BY nome")
+    sequencias = [{"id": r[0], "nome": r[1]} for r in cursor.fetchall()]
+
+    conn.close()
+    return jsonify({"items": items, "listas": listas, "sequencias": sequencias})
+
+@app.route("/admin/bulk-update", methods=["POST"])
+def admin_bulk_update():
+    """
+    Aplica operações em massa.
+    Payload:
+    {
+      "item_ids": [1,2,3],
+      "operations": [
+        {"type":"add_tags","value":["Tag1"]},
+        {"type":"remove_tags","value":["Tag2"]},
+        {"type":"set_tags","value":["A","B"]},
+        {"type":"set_status","value":"Vendo"},
+        {"type":"set_opiniao","value":"Bom"},
+        {"type":"set_conteudo","value":"Anime"},
+        {"type":"set_episodio","value":12},
+        {"type":"increment_episodio","value":1},
+        {"type":"move_to_lista","value":5},
+        {"type":"add_to_sequence","value":3},
+        {"type":"remove_from_sequence","value":3},
+        {"type":"refresh_media"},   // busca imagem + sinopse + sinônimos
+        {"type":"delete"}
+      ]
+    }
+    """
+    data = request.get_json() or {}
+    item_ids = data.get("item_ids") or []
+    operations = data.get("operations") or []
+
+    if not item_ids or not operations:
+        return jsonify({"error": "item_ids e operations são obrigatórios"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    result = {"updated": 0, "errors": [], "operations_applied": 0}
+
+    for item_id in item_ids:
+        cursor.execute("""
+            SELECT id, nome, tags, status, opiniao, conteudo, episodio, lista_id
+              FROM linhas WHERE id = ?
+        """, (item_id,))
+        row = cursor.fetchone()
+        if not row:
+            result["errors"].append(f"Item {item_id} não encontrado")
+            continue
+
+        nome = row["nome"]
+        tags_set = set(t.strip() for t in (row["tags"] or "").split(",") if t.strip())
+        status = row["status"]
+        opiniao = row["opiniao"]
+        conteudo = row["conteudo"]
+        episodio = row["episodio"]
+        lista_id = row["lista_id"]
+
+        try:
+            do_delete = False
+            for op in operations:
+                t = op.get("type")
+                v = op.get("value")
+
+                if t == "add_tags":
+                    for tag in (v or []):
+                        tag = str(tag).strip()
+                        if tag: tags_set.add(tag)
+                elif t == "remove_tags":
+                    for tag in (v or []):
+                        tags_set.discard(str(tag).strip())
+                elif t == "set_tags":
+                    tags_set = {str(x).strip() for x in (v or []) if str(x).strip()}
+                elif t == "set_status":
+                    status = v
+                elif t == "set_opiniao":
+                    opiniao = v
+                elif t == "set_conteudo":
+                    conteudo = v
+                elif t == "set_episodio":
+                    episodio = v
+                elif t == "increment_episodio":
+                    try: episodio = int(episodio or 0) + int(v or 0)
+                    except (TypeError, ValueError): pass
+                elif t == "move_to_lista":
+                    lista_id = v
+                elif t == "add_to_sequence":
+                    cursor.execute("SELECT COALESCE(MAX(ordem),0) FROM sequencia_itens WHERE sequencia_id = ?", (v,))
+                    nxt = (cursor.fetchone()[0] or 0) + 1
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO sequencia_itens (sequencia_id, linha_id, ordem)
+                        VALUES (?, ?, ?)
+                    """, (v, item_id, nxt))
+                elif t == "remove_from_sequence":
+                    cursor.execute("DELETE FROM sequencia_itens WHERE sequencia_id=? AND linha_id=?", (v, item_id))
+                elif t == "refresh_media":
+                    media_type = "ANIME" if (conteudo or "").lower() in ["anime", "filme"] else "MANGA"
+                    det = fetch_media_details(nome, media_type)
+                    img = fetch_anime_image_url(nome) if media_type == "ANIME" else fetch_manga_image_url(nome)
+                    if img and "placeholder" not in img:
+                        cursor.execute("UPDATE linhas SET imagem_url=? WHERE id=?", (img, item_id))
+                    if det:
+                        cursor.execute(
+                            "UPDATE linhas SET sinonimos=?, sinopse=? WHERE id=?",
+                            (json.dumps(det["sinonimos"], ensure_ascii=False), det["sinopse"], item_id)
+                        )
+                elif t == "delete":
+                    do_delete = True
+
+            if do_delete:
+                cursor.execute("DELETE FROM linhas WHERE id=?", (item_id,))
+            else:
+                cursor.execute("""
+                    UPDATE linhas
+                       SET tags=?, status=?, opiniao=?, conteudo=?, episodio=?, lista_id=?
+                     WHERE id=?
+                """, (", ".join(sorted(tags_set)), status, opiniao, conteudo, episodio, lista_id, item_id))
+
+            conn.commit()
+            result["updated"] += 1
+            result["operations_applied"] += len(operations)
+        except Exception as e:
+            conn.rollback()
+            result["errors"].append(f"Item {item_id} ({nome}): {e}")
+
+    conn.close()
+
+    try:
+        safe_git_commit(f"Admin bulk: {len(operations)} op(s) em {result['updated']} item(ns)")
+    except Exception:
+        pass
+
+    return jsonify(result)
 
 if __name__ == "__main__":
     import logging

@@ -1189,8 +1189,8 @@ def parse_search_expression(expr_str):
             "content_types": set(),
             "opiniao_cmp": None
         }
-    CONTENT_TYPES = {"anime", "filme", "manga", "manhwa", "webtoon"}
-    STATUS_SET = {"concluido", "vendo", "cancelado", "dropado", "lendo", "assistir", "conheço", "assistindo", "finished"}
+    CONTENT_TYPES = {"Anime", "Filme", "Manga", "Manhwa", "Webtoon"}
+    STATUS_SET = {"Concluido", "Vendo", "Cancelado", "Dropado", "Lendo", "Assistir", "Conheço", "Assistindo"}
     tokens = shlex.split(expr_str)
     required_tags = set()
     excluded_tags = set()
