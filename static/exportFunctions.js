@@ -599,10 +599,11 @@ function generateTemplateHTML(item, forcedType = null) {
 // ---------------------------- EXPORTAÇÃO ----------------------------
 async function exportItemAsImage(item, forcedType = null) {
     const loader = document.getElementById('imageCreatorLoader');
+    let exportCard = null;
     if (loader) loader.style.display = 'flex';
 
     try {
-        // Limpar export-card antigo completamente
+        // Remove o card auxiliar de detalhes, sem interferir em outras exportações.
         const oldExportCard = document.getElementById('export-card');
         if (oldExportCard) {
             oldExportCard.remove();
@@ -615,10 +616,8 @@ async function exportItemAsImage(item, forcedType = null) {
             'manga': { width: 800, height: 490 }
         };
         const { width: exportWidth, height: exportHeight } = exportSizes[exportType] || { width: 850, height: 490 };
-
         // Criar novo elemento sempre
-        const exportCard = document.createElement('div');
-        exportCard.id = 'export-card';
+        exportCard = document.createElement('div');
         document.body.appendChild(exportCard);
 
         exportCard.style.position = 'fixed';
@@ -718,7 +717,6 @@ async function exportItemAsImage(item, forcedType = null) {
         console.error('Erro na exportação com html-to-image:', error);
         alert('Erro ao exportar imagem: ' + error.message);
     } finally {
-        const exportCard = document.getElementById('export-card');
         if (exportCard) {
             exportCard.remove();
         }

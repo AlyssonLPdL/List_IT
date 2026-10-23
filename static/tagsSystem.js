@@ -26,7 +26,7 @@ const tagCategories = {
         "Shounen", "Shoujo-ai", "Mahou Shoujo", "Yuri", "Gender bender"
     ],
     "Adulto": [
-        "Ecchi", "Nudez", "Sexo", "Incesto", "NTR", "Harem", "Nudez Nippleless"
+        "Ecchi", "Nudez", "Sexo", "Incesto", "NTR", "Harem", "Nudez Nippleless", "Hentai"
     ],
 };
 

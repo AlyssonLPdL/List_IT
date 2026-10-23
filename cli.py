@@ -302,7 +302,7 @@ TAG_CATEGORIES = {
         "Shounen", "Shoujo-ai", "Mahou Shoujo", "Yuri", "Gender bender"
     ],
     "Adulto": [
-        "Ecchi", "Nudez", "Sexo", "Incesto", "NTR", "Harem", "Nudez Nippleless"
+        "Ecchi", "Nudez", "Sexo", "Incesto", "NTR", "Harem", "Nudez Nippleless", "Hentai"
     ],
 }
 
@@ -1627,19 +1627,19 @@ class OpenListContext:
         fancy_header([f"📊 STATUS para '{nome}'"], color="bright_magenta")
         if conteudo in ["anime", "filme"]:
             status_options = [
-                ("Assistindo", "assistindo"),
-                ("Concluído", "concluido"),
-                ("Assistir", "assistir"),
-                ("Cancelado", "cancelado"),
-                ("Dropado", "dropado")
+                ("Assistindo", "Assistindo"),
+                ("Concluído", "Concluído"),
+                ("Assistir", "Assistir"),
+                ("Cancelado", "Cancelado"),
+                ("Dropado", "Dropado")
             ]
         else:
             status_options = [
-                ("Lendo", "lendo"),
-                ("Concluído", "concluido"),
-                ("Ler", "ler"),
-                ("Cancelado", "cancelado"),
-                ("Dropado", "dropado")
+                ("Lendo", "Lendo"),
+                ("Concluído", "Concluído"),
+                ("Ler", "Ler"),
+                ("Cancelado", "Cancelado"),
+                ("Dropado", "Dropado")
             ]
         for i, (label, _) in enumerate(status_options, 1):
             print(color_text(f"{i} - {label}", color="bright_white", style="bright"))

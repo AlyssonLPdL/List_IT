@@ -1,5 +1,5 @@
 import {
-    state, mainContent, mainInfoContent, lineForm, modalInfo, modalPhoto, sequenceModal, lineModal
+    state, mainContent, itemInfoContent, mainInfoContent, lineForm, modalInfo, modalPhoto, sequenceModal, lineModal
 } from './constants.js';
 import { exportItemAsImage } from './exportFunctions.js';
 import { initResizeObserver } from './utils.js';
@@ -19,6 +19,76 @@ import { showImageTestModal, initImageTestModal } from './modalEvents.js';
      *  - Se faltar imagem, busca e dá PUT /linhas/:id/imagem
      *  - Se faltar sinopse ou menos de 3 sinônimos, GET /search_details e PUT /linhas/:id/details
      */
+
+// ===== SORT STATE (module-level) =====
+let currentOrder = 'az';
+
+function sortLines(linhas, order) {
+    if (order === 'az') {
+        return [...linhas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+    }
+    if (order === 'za') {
+        return [...linhas].sort((a, b) => b.nome.localeCompare(a.nome, 'pt-BR', { sensitivity: 'base' }));
+    }
+    if (order === 'ep') {
+        return [...linhas].sort((a, b) => (parseInt(a.episodio) || 0) - (parseInt(b.episodio) || 0));
+    }
+    if (order === 'ep-desc') {
+        return [...linhas].sort((a, b) => (parseInt(b.episodio) || 0) - (parseInt(a.episodio) || 0));
+    }
+    if (order === 'opinion') {
+        return [...linhas].sort((a, b) => {
+            function getPriority(item) {
+                const classe = getClasseExtra(item);
+                const opiniao = (item.opiniao || '').trim();
+                if (classe === 'BestLove' && (item.tags || '').includes('Goat')) return 0;
+                if (classe === 'BestLove') return 1;
+                if (classe === 'Goat') return 2;
+                if (classe === 'Love' && opiniao === "Favorito") return 3;
+                const opiniaoOrder = ["Favorito","Muito Bom","Recomendo","Bom","Mediano","Ruim","Horrivel","Não vi"];
+                const idx = opiniaoOrder.indexOf(opiniao);
+                return idx === -1 ? 99 : (4 + idx);
+            }
+            return getPriority(a) - getPriority(b);
+        });
+    }
+    return linhas;
+}
+
+// ===== TAGS SEARCH (module-level) =====
+function setupTagsSearch() {
+    const input = document.getElementById('tags-search-input');
+    if (!input || input.dataset.bound === '1') return;
+    input.dataset.bound = '1';
+
+    input.addEventListener('input', () => {
+        const q = input.value.toLowerCase().trim();
+        document.querySelectorAll('#tags-accordion-container .accordion-item').forEach(item => {
+            let visible = 0;
+            item.querySelectorAll('.tag').forEach(tagEl => {
+                const show = !q || tagEl.textContent.toLowerCase().includes(q);
+                tagEl.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            if (q) {
+                if (visible === 0) {
+                    item.style.display = 'none';
+                } else {
+                    item.style.display = '';
+                    item.classList.remove('hidden');
+                    item.querySelector('.accordion-content')?.classList.remove('hidden');
+                    item.querySelector('.accordion-header')?.classList.add('expanded');
+                }
+            } else {
+                item.style.display = '';
+                item.querySelector('.accordion-content')?.classList.add('hidden');
+                item.querySelector('.accordion-header')?.classList.remove('expanded');
+                item.querySelectorAll('.tag').forEach(t => t.style.display = '');
+            }
+        });
+    });
+}
+
 async function corrigirItem(item) {
     const tipo = ["Anime", "Filme"].includes(item.conteudo) ? "anime" : "manga";
 
@@ -116,91 +186,124 @@ async function showListDetails(lista) {
 
 
     mainContent.innerHTML = `
-            <div class="list-header">
-            <h1 class="list-title">${lista.nome}</h1>
-            <div class="controls-container">
-                <div class="censure-toggle">
-                <label class="switch">
-                    <input type="checkbox" id="toggle-censure">
-                    <span class="slider"></span>
-                </label>
-                </div>
-            </div>
-            </div>
-
-            <div class="search-section">
-            <div class="search-filter-container">
-                <div class="search-filter">
-                <input type="text" id="search-name" placeholder="Buscar por nome...">
-                <button type="button" id="filter-toggle">Filtros</button>
-                </div>
-                <div class="action-buttons">
-                <button class="btn" id="add-line-btn">
-                    <i>+</i> Adicionar Linha
-                </button>
-                <button class="btn" id="export-btn">
-                    <i>↓</i> Exportar
-                </button>
-                </div>
-            </div>
-            
-            <!-- Painel de filtros -->
-            <div id="filter-panel" class="hidden">
-                <h4>----------------------------------- Status -------------------------------------</h4>
-                <div class="filter-section" data-type="status"></div>
-                <h4>--------------------------------- Conteúdo ----------------------------------</h4>
-                <div class="filter-section" data-type="conteudo"></div>
-                <h4>----------------------------------- Opinião ------------------------------------</h4>
-                <div class="filter-section" data-type="opiniao"></div>
-                <h4>------------------------------------- Tags -------------------------------------</h4>
-                <div class="filter-section" data-type="tags"></div>
-            </div>
-            </div>
-
-            <div class="order-buttons">
-                <button id="order-az"><i class="fa-solid fa-arrow-down-a-z"></i></i></button>
-                <button id="order-za"><i class="fa-solid fa-arrow-up-a-z"></i></button>
-                <button id="order-ep"><i class="fa-solid fa-arrow-down-1-9"></i></button>
-                <button id="order-ep-desc"><i class="fa-solid fa-arrow-up-1-9"></i></button>
-                <button id="order-opinion"><i class="fas fa-star"></i></button>
-            </div>
-
-            <div class="items-container">
-            <div class="items-grid">
-                ${linhas.length > 0 ? linhas.map(item => `
-                <div class="item-card ${getClasseExtra(item)}" data-item-id="${item.id}">
-                    <div class="status-indicator">${getStatusIcon(item.status)}</div>
-                    <div class="opinion-indicator">${getOpiniaoIcon(item.opiniao)}</div>
-                    
-                    <div class="item-card-image">
-                        <img src="${item.imagem_url || 'https://via.placeholder.com/150'}" alt="${item.nome}">
-                    </div>
-                    
-                    <div class="item-card-content">
-                        <h3 class="item-card-title">${item.nome}</h3>
-                        <div class="item-card-info">
-                        <span>${item.episodio || 'N/A'}</span>
-                        <span>${item.conteudo || ''}</span>
+        <div class="list-view">
+            <!-- HERO HEADER -->
+            <header class="list-header">
+                <div class="list-header-inner">
+                    <div class="list-header-info">
+                        <span class="list-badge"><i class="fas fa-layer-group"></i> Lista</span>
+                        <div class="list-title-row">
+                            <h1 class="list-title">${lista.nome}</h1>
+                        </div>
+                        <div class="list-header-meta">
+                            <span class="meta-chip"><i class="fas fa-film"></i> <strong>${linhas.length}</strong> títulos</span>
+                            <label class="censure-toggle">
+                                <span class="switch">
+                                    <input type="checkbox" id="toggle-censure">
+                                    <span class="slider"></span>
+                                </span>
+                                <span class="censure-label">Conteúdo adulto</span>
+                            </label>
                         </div>
                     </div>
                 </div>
-                `).join('') : `
-                <div class="empty-state">
-                    <i>📭</i>
-                    <h3>Nenhum item encontrado</h3>
-                    <p>Adicione novos itens ou ajuste seus filtros</p>
+            </header>
+
+            <!-- TOOLBAR -->
+            <div class="search-section">
+                <div class="search-toolbar">
+                    <div class="search-filter">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="search-name" placeholder="Buscar por nome ou sinônimo...">
+                    </div>
+                    <button class="toolbar-btn" id="filter-toggle" type="button">
+                        <i class="fas fa-sliders-h"></i>
+                        <span>Filtros</span>
+                    </button>
+                    <div class="toolbar-divider"></div>
+                    <button class="toolbar-btn toolbar-btn-primary" id="add-line-btn" type="button">
+                        <i class="fas fa-plus"></i>
+                        <span>Adicionar</span>
+                    </button>
+                    <button class="toolbar-btn" id="export-btn" type="button">
+                        <i class="fas fa-file-export"></i>
+                        <span>Exportar</span>
+                    </button>
                 </div>
-                `}
-            </div>
-            
-            <div class="highlights-section">
-                <h3>${lista.nome} para Verificar</h3>
-                <div class="highlights-list">
-                <!-- Destaques serão adicionados via JS -->
+
+                <!-- FILTER PANEL -->
+                <div id="filter-panel" class="hidden">
+                    <div class="filter-panel-inner">
+                        <div class="filter-block">
+                            <h4 class="filter-block-title"><i class="fas fa-circle-dot"></i> Status</h4>
+                            <div class="filter-section" data-type="status"></div>
+                        </div>
+                        <div class="filter-block">
+                            <h4 class="filter-block-title"><i class="fas fa-tag"></i> Conteúdo</h4>
+                            <div class="filter-section" data-type="conteudo"></div>
+                        </div>
+                        <div class="filter-block">
+                            <h4 class="filter-block-title"><i class="fas fa-star"></i> Opinião</h4>
+                            <div class="filter-section" data-type="opiniao"></div>
+                        </div>
+                        <div class="filter-block">
+                            <h4 class="filter-block-title"><i class="fas fa-hashtag"></i> Tags</h4>
+                            <div class="filter-section" data-type="tags"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <!-- SORT + COUNT -->
+            <div class="list-toolbar-row">
+                <span class="results-count"><i class="fas fa-list-ul"></i> <span id="results-count-value">${linhas.length}</span> títulos</span>
+                <div class="order-buttons">
+                    <span class="order-label">Ordenar:</span>
+                    <button id="order-az" title="Nome A-Z" type="button"><i class="fas fa-arrow-down-a-z"></i></button>
+                    <button id="order-za" title="Nome Z-A" type="button"><i class="fas fa-arrow-up-a-z"></i></button>
+                    <button id="order-ep" title="Episódio crescente" type="button"><i class="fas fa-arrow-down-1-9"></i></button>
+                    <button id="order-ep-desc" title="Episódio decrescente" type="button"><i class="fas fa-arrow-up-1-9"></i></button>
+                    <button id="order-opinion" title="Opinião" type="button"><i class="fas fa-star"></i></button>
+                </div>
             </div>
-        `;
+
+            <!-- ITENS + HIGHLIGHTS -->
+            <div class="items-container">
+                <div class="items-grid">
+                    ${linhas.length > 0 ? linhas.map(item => `
+                    <div class="item-card ${getClasseExtra(item)}" data-item-id="${item.id}">
+                        <div class="item-card-cover">
+                            <img src="${item.imagem_url || 'https://via.placeholder.com/300x450/1a1e28/6a7184?text=Sem+Capa'}" alt="${item.nome}" loading="lazy">
+                            <div class="item-card-overlay"></div>
+                            <div class="status-indicator">${getStatusIcon(item.status)}</div>
+                            <div class="opinion-indicator">${getOpiniaoIcon(item.opiniao)}</div>
+                        </div>
+                        <div class="item-card-content">
+                            <h3 class="item-card-title">${item.nome}</h3>
+                            <div class="item-card-info">
+                                <span class="info-ep"><i class="fas fa-hashtag"></i> ${item.episodio || '—'}</span>
+                                <span class="info-type">${item.conteudo || ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                    `).join('') : `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h3>Nenhum item encontrado</h3>
+                        <p>Adicione novos itens ou ajuste seus filtros</p>
+                    </div>
+                    `}
+                </div>
+
+                <aside class="highlights-section">
+                    <div class="highlights-header">
+                        <h3><i class="fas fa-fire"></i> Para Verificar</h3>
+                    </div>
+                    <div class="highlights-list"></div>
+                </aside>
+            </div>
+        </div>
+    `;
 
     const header = document.querySelector('.list-header');
     if (header) {
@@ -221,44 +324,6 @@ async function showListDetails(lista) {
         }
     }
 
-    let currentOrder = 'az';
-
-    function sortLines(linhas, order) {
-        if (order === 'az') {
-            return [...linhas].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-        }
-        if (order === 'za') {
-            return [...linhas].sort((a, b) => b.nome.localeCompare(a.nome, 'pt-BR', { sensitivity: 'base' }));
-        }
-        if (order === 'ep') {
-            return [...linhas].sort((a, b) => (parseInt(a.episodio) || 0) - (parseInt(b.episodio) || 0));
-        }
-        if (order === 'ep-desc') {
-            return [...linhas].sort((a, b) => (parseInt(b.episodio) || 0) - (parseInt(a.episodio) || 0));
-        }
-        if (order === 'opinion') {
-            return [...linhas].sort((a, b) => {
-                function getPriority(item) {
-                    const classe = getClasseExtra(item);
-                    const opiniao = (item.opiniao || '').trim();
-
-                    if (classe === 'BestLove' && item.tags.includes('Goat')) return 0;
-                    if (classe === 'BestLove') return 1;
-                    if (classe === 'Goat') return 2;
-                    if (classe === 'Love' && opiniao === "Favorito") return 3;
-
-                    const opiniaoOrder = [
-                        "Favorito", "Muito Bom", "Recomendo", "Bom", "Mediano", "Ruim", "Horrivel", "Não vi"
-                    ];
-                    const idx = opiniaoOrder.indexOf(opiniao);
-                    return idx === -1 ? 99 : (4 + idx);
-                }
-                return getPriority(a) - getPriority(b);
-            });
-        }
-        return linhas;
-    }
-
     // Adicione os listeners:
 
     const faltantes = linhas.filter(item => item.needs_details);
@@ -267,33 +332,26 @@ async function showListDetails(lista) {
     // ...dentro de showListDetails, após definir os listeners:
     function setActiveOrderButton(id) {
         document.querySelectorAll('.order-buttons button').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+        document.getElementById(id)?.classList.add('active');
     }
 
-    document.getElementById('order-az').addEventListener('click', () => {
-        currentOrder = 'az';
-        setActiveOrderButton('order-az');
-        showItems(sortLines(linhas, currentOrder));
-    });
-    document.getElementById('order-za').addEventListener('click', () => {
-        currentOrder = 'za';
-        setActiveOrderButton('order-za');
-        showItems(sortLines(linhas, currentOrder));
-    });
-    document.getElementById('order-ep').addEventListener('click', () => {
-        currentOrder = 'ep';
-        setActiveOrderButton('order-ep');
-        showItems(sortLines(linhas, currentOrder));
-    });
-    document.getElementById('order-ep-desc').addEventListener('click', () => {
-        currentOrder = 'ep-desc';
-        setActiveOrderButton('order-ep-desc');
-        showItems(sortLines(linhas, currentOrder));
-    });
-    document.getElementById('order-opinion').addEventListener('click', () => {
-        currentOrder = 'opinion';
-        setActiveOrderButton('order-opinion');
-        showItems(sortLines(linhas, currentOrder));
+    const orderHandlers = {
+        'order-az':        'az',
+        'order-za':        'za',
+        'order-ep':        'ep',
+        'order-ep-desc':   'ep-desc',
+        'order-opinion':   'opinion',
+    };
+
+    Object.entries(orderHandlers).forEach(([btnId, order]) => {
+        document.getElementById(btnId)?.addEventListener('click', () => {
+            currentOrder = order;
+            setActiveOrderButton(btnId);
+            // ⭐ reordena usando a lista filtrada atual (se existir) ou a completa
+            showItems(window.__itensVisiveis && window.__itensVisiveis.length
+                ? window.__itensVisiveis
+                : linhas);
+        });
     });
 
     const toggleCensure = document.getElementById('toggle-censure');
@@ -372,21 +430,7 @@ async function showListDetails(lista) {
         filterItems(linhas, selected);
     });
 
-    // Adiciona evento ao switch para ativar/desativar conteúdos "Putaria" e "Manhwa"
-    document.getElementById('toggle-censure').addEventListener('change', (event) => {
-        const showPutariaManhwa = event.target.checked;
-
-        const filteredLinhas = linhas.filter(item => {
-            const isPutaria = getClasseExtra(item) === "Putaria";
-            const isManhwa = item.conteudo === "Manhwa";
-
-            // Oculta apenas itens que são "Putaria" e "Manhwa" ao mesmo tempo
-            return showPutariaManhwa || !(isPutaria && isManhwa);
-        });
-
-        showItems(filteredLinhas);
-    });
-
+    // Reaplica a lista quando o switch de Hentai muda
     const filterToggle = document.getElementById('filter-toggle');
 
     document.getElementById('add-line-btn').addEventListener('click', () => {
@@ -398,7 +442,10 @@ async function showListDetails(lista) {
         lineModal.classList.add('show');
         initResizeObserver();
         // Adicione esta linha:
-        setTimeout(() => showAllTags(), 100);
+        setTimeout(() => {
+            showAllTags();
+            setupTagsSearch();
+        }, 100);
     });
 
     // Abertura/Fechamento do modal (mantido igual)
@@ -556,114 +603,84 @@ function filterItems(linhas, selected) {
     const nameFilter = document.getElementById('search-name').value.toLowerCase().trim();
 
     const filtered = linhas.filter(item => {
-        // 1) Filtro por nome OU sinônimo
         if (nameFilter) {
             const nomeMatch = item.nome.toLowerCase().includes(nameFilter);
             let sinonimos = [];
-            if (Array.isArray(item.sinonimos)) {
-                sinonimos = item.sinonimos;
-            } else if (typeof item.sinonimos === 'string') {
-                try {
-                    sinonimos = JSON.parse(item.sinonimos);
-                } catch (e) {
-                    sinonimos = [];
-                }
+            if (Array.isArray(item.sinonimos)) sinonimos = item.sinonimos;
+            else if (typeof item.sinonimos === 'string') {
+                try { sinonimos = JSON.parse(item.sinonimos); } catch { sinonimos = []; }
             }
-            const sinonimoMatch = sinonimos.some(s =>
-                typeof s === 'string' && s.toLowerCase().includes(nameFilter)
-            );
+            const sinonimoMatch = sinonimos.some(s => typeof s === 'string' && s.toLowerCase().includes(nameFilter));
             if (!nomeMatch && !sinonimoMatch) return false;
         }
 
-        // 2) Para cada tipo, aplicamos a nova lógica com modo flexível
         for (let type of ['status', 'conteudo', 'opiniao']) {
             const val = item[type];
             const sel = selected[type];
-
-            // Verifica se sel existe e tem as propriedades necessárias
             if (!sel) continue;
-
             const { include, exclude, flexible } = sel;
-
-            // Exclude tem prioridade máxima
             if (exclude && exclude.size > 0 && exclude.has(val)) return false;
-
-            // Lógica do modo flexível (OU)
             if (flexible && flexible.size > 0) {
-                // Se há filtros flexíveis, o item deve ter PELO MENOS UM deles
                 if (!flexible.has(val)) return false;
             } else if (include && include.size > 0) {
-                // Modo normal (E) - deve ter TODOS os includes
                 if (!include.has(val)) return false;
             }
         }
 
-        // 3) tags: múltiplas por item - lógica similar
         const itemTags = item.tags ? item.tags.split(',').map(t => t.trim()) : [];
         const selTags = selected.tags;
-
         if (selTags) {
             const { include, exclude, flexible } = selTags;
-
-            // a) excluir tags indesejadas (prioridade máxima)
-            if (exclude) {
-                for (let bad of exclude) {
-                    if (itemTags.includes(bad)) return false;
-                }
-            }
-
-            // b) lógica do modo flexível para tags (OU)
+            if (exclude) for (let bad of exclude) if (itemTags.includes(bad)) return false;
             if (flexible && flexible.size > 0) {
-                // Deve ter PELO MENOS UMA das tags flexíveis
-                const hasFlexibleTag = [...flexible].some(tag => itemTags.includes(tag));
-                if (!hasFlexibleTag) return false;
+                if (![...flexible].some(tag => itemTags.includes(tag))) return false;
             } else if (include && include.size > 0) {
-                // Modo normal (E) - deve ter TODAS as tags include
-                const allIncluded = [...include].every(tag => itemTags.includes(tag));
-                if (!allIncluded) return false;
+                if (![...include].every(tag => itemTags.includes(tag))) return false;
             }
         }
-
         return true;
     });
 
     window.__itensVisiveis = filtered;
-    showItems(filtered);
+    showItems(filtered);  // ⭐ showItems ordena por currentOrder
 }
 
 function showItems(linhas) {
-    const showPutariaManhwa = document.getElementById('toggle-censure').checked;
+    const showHentai = document.getElementById('toggle-censure')?.checked ?? false;
 
-    // Filtra as linhas com base no estado do switch
-    const filteredLinhas = linhas.filter(item => {
-        const isPutaria = getClasseExtra(item) === "Putaria";
-        const isManhwa = item.conteudo === "Manhwa";
-
-        // Oculta apenas itens que são "Putaria" e "Manhwa" ao mesmo tempo
-        return showPutariaManhwa || !(isPutaria && isManhwa);
+    const filteredLinhas = (linhas || []).filter(item => {
+        const hasHentaiTag = item.tags?.split(',').some(tag => tag.trim() === 'Hentai') ?? false;
+        return showHentai || !hasHentaiTag;
     });
 
-    const listItemsContainer = document.querySelector('.items-grid');
-    listItemsContainer.innerHTML = filteredLinhas.map(item => `
-            <div class="item-card ${getClasseExtra(item)}" data-item-id="${item.id}">
-                    <div class="status-indicator">${getStatusIcon(item.status)}</div>
-                    <div class="opinion-indicator">${getOpiniaoIcon(item.opiniao)}</div>
-                    
-                    <div class="item-card-image">
-                        <img src="${item.imagem_url || 'https://via.placeholder.com/150'}" alt="${item.nome}">
-                    </div>
-                    
-                    <div class="item-card-content">
-                        <h3 class="item-card-title">${item.nome}</h3>
-                        <div class="item-card-info">
-                        <span>${item.episodio || 'N/A'}</span>
-                        <span>${item.conteudo || ''}</span>
-                        </div>
-                    </div>
-                </div>
-        `).join('');
+    // ⭐ Ordena SEMPRE pela ordem atual (não reseta com filtros)
+    const sorted = sortLines(filteredLinhas, currentOrder);
 
-    addItemClickEvent(filteredLinhas);
+    const listItemsContainer = document.querySelector('.items-grid');
+    if (!listItemsContainer) return;
+
+    listItemsContainer.innerHTML = sorted.map(item => `
+        <div class="item-card ${getClasseExtra(item)}" data-item-id="${item.id}">
+            <div class="item-card-cover">
+                <img src="${item.imagem_url || 'https://via.placeholder.com/300x450/1a1e28/6a7184?text=Sem+Capa'}" alt="${item.nome}" loading="lazy">
+                <div class="item-card-overlay"></div>
+                <div class="status-indicator">${getStatusIcon(item.status)}</div>
+                <div class="opinion-indicator">${getOpiniaoIcon(item.opiniao)}</div>
+            </div>
+            <div class="item-card-content">
+                <h3 class="item-card-title">${item.nome}</h3>
+                <div class="item-card-info">
+                    <span class="info-ep"><i class="fas fa-hashtag"></i> ${item.episodio || '—'}</span>
+                    <span class="info-type">${item.conteudo || ''}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    const counter = document.getElementById('results-count-value');
+    if (counter) counter.textContent = sorted.length;
+
+    addItemClickEvent(sorted);
 }
 
 // Adicionar evento de clique às linhas usando delegação de eventos
@@ -694,56 +711,27 @@ async function fetchImageUrl(query, contentType) {
 function bindSinopseButton(item) {
     const btn = document.getElementById('showSynopsisBtn');
     if (!btn) return;
-
-    // Remove todos os listeners antigos clonando o nó
     const freshBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(freshBtn, btn);
 
     freshBtn.addEventListener('click', () => {
-        // Cria o modal
-        const synopsisModal = document.createElement('div');
-        synopsisModal.id = 'synopsis-modal';
-        synopsisModal.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%;
-            max-width: 600px;
-            max-height: 80vh;
-            background: var(--color-card-bg);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 5px 30px rgba(0,0,0,0.3);
-            z-index: 10000;
-            overflow-y: auto;
+        const m = document.createElement('div');
+        m.className = 'info-extra-modal';
+        m.innerHTML = `
+            <div class="info-extra-content">
+                <button class="modal-close-btn" data-close><i class="fas fa-times"></i></button>
+                <header class="info-extra-header">
+                    <span class="info-extra-badge"><i class="fas fa-book-open"></i> Sinopse</span>
+                    <h3>${item.nome}</h3>
+                </header>
+                <div class="info-extra-body">
+                    <p>${item.sinopse || 'Sinopse não disponível'}</p>
+                </div>
+            </div>
         `;
-
-        synopsisModal.innerHTML = `
-            <h3 style="margin-top: 0;">Sinopse de ${item.nome}</h3>
-            <p id="sinopse-texto" style="line-height: 1.6;">${item.sinopse || 'Sinopse não disponível'}</p>
-            <button id="closeSynopsis" style="
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background: none;
-                border: none;
-                font-size: 1.5rem;
-                cursor: pointer;
-                color: #ccc;
-            ">&times;</button>
-        `;
-
-        document.body.appendChild(synopsisModal);
-
-        // Delegação: fecha se clicar no botão OU fora do conteúdo
-        synopsisModal.addEventListener('click', (e) => {
-            if (
-                e.target === synopsisModal || // clicou fora
-                (e.target.id === 'closeSynopsis') // clicou no botão
-            ) {
-                document.body.removeChild(synopsisModal);
-            }
+        document.body.appendChild(m);
+        m.addEventListener('click', (e) => {
+            if (e.target === m || e.target.closest('[data-close]')) document.body.removeChild(m);
         });
     });
 }
@@ -758,8 +746,6 @@ async function showItemDetails(item, navList = null) {
     } else {
         state.currentNavList = navList || (window.__ultimaChamadaLinhas || []);
     }
-    // no topo do arquivo (perto do state), garanta isso:
-    state.detailsReq = 0;
     state.allIds = state.currentNavList.map(i => i.id);
     state.currentIdx = state.allIds.indexOf(item.id);
     state.currentItem = item;
@@ -825,6 +811,7 @@ async function showItemDetails(item, navList = null) {
     }
 
     const imageUrl = item.imagem_url || await fetchImageUrl(item.nome, contentType);
+    if (reqId !== state.detailsReq) return;
     console.log("URL da imagem:", imageUrl);
 
     let sequenciaInfo = '';
@@ -849,6 +836,7 @@ async function showItemDetails(item, navList = null) {
     } catch (e) {
         console.warn('Erro ao buscar sequência:', e);
     }
+    if (reqId !== state.detailsReq) return;
 
     // --- normaliza e cria HTML seguro para os sinônimos ---
     function escapeHtml(unsafe) {
@@ -898,51 +886,87 @@ async function showItemDetails(item, navList = null) {
         lastHighlightText = `Verificado à ${diffDays} dias e ${diffHours} horas`;
     }
 
-    mainInfoContent.innerHTML = `
-            <div id="info-div-box">
-                <fieldset>
-                    <legend style="font-weight:600;">Conteúdo:</legend>
-                    <p style="margin: 0; border: 0;">${item.conteudo}</p>
-                </fieldset>
-                <fieldset>
-                    <legend style="font-weight:600;">Status:</legend>
-                    <p style="margin: 0; border: 0;">${item.status}</p>
-                </fieldset>
-                <fieldset>
-                    <legend style="font-weight:600;">Opinião:</legend>
-                    <p style="margin: 0; border: 0;">${item.opiniao}</p>
-                </fieldset>
-                <fieldset>
-                    <legend style="font-weight:600;">${getEpisodeLabel(item.conteudo)}:</legend>
-                    <p style="margin: 0; border: 0;">${item.episodio}</p>
-                </fieldset>
-                <fieldset style="width: 80%;">
-                    <legend style="font-weight:600;">Tags:</legend>
-                    <p style="margin: 0; border: 0;">${item.tags}</p>
-                </fieldset>
-                <div style="margin: 0; display:flex; align-items:center; gap:8px;">
-                    <p id="last-highlight-text" style="margin: 0; border: 0;">${lastHighlightText || 'Nunca'}</p>
-                    <button id="update-highlight-btn" data-id="${item.id}" style="padding:4px 8px; font-size:12px; border-radius:4px; cursor:pointer;">Atualizar</button>
+    // ⭐ ADICIONE ESTA LINHA — declara hasSequence ANTES de usar
+    const hasSequence = await checkIfItemHasSequence(item.id);
+    if (reqId !== state.detailsReq) return;
+    const sequenceButtons = await getSequenceButtons(item.id);
+    if (reqId !== state.detailsReq) return;
+
+    if (hasSequence) {
+        modalInfo.classList.remove('no-sequence');
+    } else {
+        modalInfo.classList.add('no-sequence');
+    }
+
+    // ============ INFO PANEL ============
+    itemInfoContent.innerHTML = `
+        <button class="modal-close-btn" id="close-modal-btn" aria-label="Fechar">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="detail-panel">
+            <header class="detail-header">
+                <h2 class="clickable-title" title="Clique para copiar">${escapeHtml(item.nome)}</h2>
+                ${sequenciaInfo ? `<p class="detail-subtitle">${sequenciaInfo}</p>` : ''}
+            </header>
+
+            <div class="detail-grid">
+                <div class="detail-field">
+                    <span class="detail-field-label"><i class="fas fa-film"></i> Conteúdo</span>
+                    <span class="detail-field-value">${escapeHtml(item.conteudo)}</span>
                 </div>
-                <div class="item-actions">
-                    <button id="editLineButton"><i class="fas fa-edit"></i></button>
-                    <div class="sequence-controls">
-                        <button id="mainSequenceBtn">
-                            <i class="fas fa-project-diagram"></i> Sequência
-                        </button>
-                        <div class="sequence-actions" style="display: none;">
-                            ${await getSequenceButtons(item.id)}
-                        </div>
+                <div class="detail-field">
+                    <span class="detail-field-label"><i class="fas fa-circle-dot"></i> Status</span>
+                    <span class="detail-field-value">${escapeHtml(item.status)}</span>
+                </div>
+                <div class="detail-field">
+                    <span class="detail-field-label"><i class="fas fa-star"></i> Opinião</span>
+                    <span class="detail-field-value">${escapeHtml(item.opiniao)}</span>
+                </div>
+                <div class="detail-field">
+                    <span class="detail-field-label"><i class="fas fa-hashtag"></i> ${getEpisodeLabel(item.conteudo)}</span>
+                    <span class="detail-field-value">${escapeHtml(item.episodio ?? '—')}</span>
+                </div>
+                <div class="detail-field detail-field-full">
+                    <span class="detail-field-label"><i class="fas fa-tags"></i> Tags</span>
+                    <div class="detail-tags">
+                        ${(item.tags || '').split(',').map(t => t.trim()).filter(Boolean)
+                            .map(t => `<span class="detail-tag">${escapeHtml(t)}</span>`).join('')
+                            || '<span class="detail-muted">Nenhuma</span>'}
                     </div>
-                    <button id="previewTemplateBtn" style="padding:6px 8px; font-size: 20px; border:none; background:#17a2b8; color:white; border-radius:4px; cursor:pointer;">
-                        <i class="fas fa-image"></i>
-                    </button>
-                    <button id="deleteLineButton"><i class="fas fa-trash-alt"></i></button>
+                </div>
+                <div class="detail-field detail-field-full">
+                    <span class="detail-field-label"><i class="fas fa-clock"></i> Última verificação</span>
+                    <div class="detail-highlight-row">
+                        <span class="detail-field-value" id="last-highlight-text">${lastHighlightText || 'Nunca'}</span>
+                        <button id="update-highlight-btn" class="detail-mini-btn" data-id="${item.id}">
+                            <i class="fas fa-sync-alt"></i> Atualizar
+                        </button>
+                    </div>
                 </div>
             </div>
-        `;
 
-    const hasSequence = await checkIfItemHasSequence(item.id);
+            <div class="item-actions">
+                <button id="editLineButton" class="action-btn action-btn-edit" title="Editar">
+                    <i class="fas fa-edit"></i><span>Editar</span>
+                </button>
+                <div class="sequence-controls">
+                    <button id="mainSequenceBtn" class="action-btn action-btn-seq" title="Sequência">
+                        <i class="fas fa-project-diagram"></i><span>Sequência</span>
+                    </button>
+                    <div class="sequence-actions" style="display: none;">
+                        ${sequenceButtons}
+                    </div>
+                </div>
+                <button id="previewTemplateBtn" class="action-btn action-btn-preview" title="Preview">
+                    <i class="fas fa-image"></i><span>Preview</span>
+                </button>
+                <button id="deleteLineButton" class="action-btn action-btn-delete" title="Excluir">
+                    <i class="fas fa-trash-alt"></i><span>Excluir</span>
+                </button>
+            </div>
+        </div>
+    `;
 
     const previewBtn = document.getElementById('previewTemplateBtn');
 
@@ -979,150 +1003,73 @@ async function showItemDetails(item, navList = null) {
     });
 
     modalPhoto.innerHTML = `
-            <div class="modal-photo-container">
-                <h2 class="clickable-title" style="width: ${hasSequence ? '1010px' : '710px'}">${item.nome}</h2>
-                
-                <img id="modalImage" src="${imageUrl}" alt="${item.nome}" 
-                    style="max-width: 100%; height: 350px; border-radius: 10px; cursor:pointer;">
-                
-                <!-- Botão para abrir sinopse -->
-                <button id="showSynopsisBtn" style="
-                    position: absolute;
-                    bottom: -40px;
-                    right: 90px;
-                    padding: 8px 15px;
-                    background: #4a6fc5;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    z-index: 10;
-                ">
-                    <i class="fas fa-book-open"></i> Ver Sinopse
+        <div class="photo-panel">
+            <div class="photo-frame">
+                <img id="modalImage" src="${imageUrl}" alt="${escapeHtml(item.nome)}">
+            </div>
+            <div class="photo-actions">
+                <button id="showSynopsisBtn" class="photo-btn photo-btn-synopsis">
+                    <i class="fas fa-book-open"></i><span>Sinopse</span>
                 </button>
-
-                <!-- Botão para abrir sinônimos (novo) -->
-                <button id="showSynonymsBtn" style="
-                    position: absolute;
-                    bottom: -40px;
-                    left: -440px;
-                    padding: 8px 15px;
-                    background: #6c8ef0;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    z-index: 10;
-                    width: 140px;
-                ">
-                    <i class="fas fa-tags"></i> Ver Sinônimos
+                <button id="showSynonymsBtn" class="photo-btn photo-btn-synonyms">
+                    <i class="fas fa-tags"></i><span>Sinônimos</span>
                 </button>
             </div>
-        `;
-    setTimeout(() => {
-        const infoBox = document.getElementById('info-div-box');
-        const modalImg = document.getElementById('modalImage');
-        if (infoBox && modalImg) {
-            modalImg.style.height = `${infoBox.offsetHeight}px`;
-        }
-    }, 0);
+        </div>
+    `;
 
     sequenceModal.innerHTML = `
-            <div class="sequence-display" id="sequenceDisplay">
-                <div class="sequence-list" id="sequenceList"></div>
-            </div>
-        `;
+        <div class="sequence-display" id="sequenceDisplay">
+            <div class="sequence-list" id="sequenceList"></div>
+        </div>
+    `;
+
+    // ⭐ Wiring do botão de fechar
+    document.getElementById('close-modal-btn')?.addEventListener('click', () => {
+        modalInfo.classList.remove('show');
+        modalInfo.classList.add('hidden');
+    });
 
     await refreshSequenceDisplay(item.id);
+    if (reqId !== state.detailsReq) return;
 
     function bindSynonymsButton(item) {
         const btn = document.getElementById('showSynonymsBtn');
         if (!btn) return;
-
-        // Remove todos os listeners antigos clonando o nó
         const freshBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(freshBtn, btn);
 
         freshBtn.addEventListener('click', () => {
-            // Cria o modal
-            const synonymsModal = document.createElement('div');
-            synonymsModal.id = 'synonyms-modal';
-            synonymsModal.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%;
-            max-width: 600px;
-            max-height: 80vh;
-            background: var(--color-card-bg);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 5px 30px rgba(0,0,0,0.3);
-            z-index: 10000;
-            overflow-y: auto;
-        `;
+            const list = Array.isArray(item.sinonimos) ? item.sinonimos : [];
+            const content = list.length
+                ? list.map(s => `<div class="synonym-item">${s}</div>`).join('')
+                : '<p class="detail-muted">Nenhum sinônimo disponível</p>';
 
-            // Prepara o conteúdo dos sinônimos
-            let synonymsContent = 'Nenhum sinônimo disponível';
-            if (Array.isArray(item.sinonimos) && item.sinonimos.length > 0) {
-                synonymsContent = item.sinonimos.map(syn => `
-                <div class="synonym-item" style="
-                    padding: 10px;
-                    margin: 5px 0;
-                    background: rgba(0,0,0,0.1);
-                    border-radius: 5px;
-                    cursor: pointer;
-                    border: 1px solid #ddd;
-                    transition: background 0.2s;
-                ">${syn}</div>
-            `).join('');
-            }
-
-            synonymsModal.innerHTML = `
-            <h3 style="margin-top: 0;">Sinônimos de ${item.nome}</h3>
-            <div id="synonyms-list" style="max-height: 300px; overflow-y: auto;">
-                ${synonymsContent}
-            </div>
-            <button id="closeSynonyms" style="
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background: none;
-                border: none;
-                font-size: 1.5rem;
-                cursor: pointer;
-                color: #ccc;
-            ">&times;</button>
-        `;
-
-            document.body.appendChild(synonymsModal);
-
-            // Adiciona funcionalidade de copiar ao clicar em um sinônimo
-            const synonymItems = synonymsModal.querySelectorAll('.synonym-item');
-            synonymItems.forEach(synonym => {
-                synonym.addEventListener('click', () => {
-                    const textToCopy = synonym.textContent;
-                    navigator.clipboard.writeText(textToCopy).then(() => {
-                        // Feedback visual
-                        synonym.style.background = '#4CAF50';
-                        synonym.style.color = 'white';
-                        setTimeout(() => {
-                            synonym.style.background = '';
-                            synonym.style.color = '';
-                        }, 500);
+            const m = document.createElement('div');
+            m.className = 'info-extra-modal';
+            m.innerHTML = `
+                <div class="info-extra-content">
+                    <button class="modal-close-btn" data-close><i class="fas fa-times"></i></button>
+                    <header class="info-extra-header">
+                        <span class="info-extra-badge info-extra-badge-accent"><i class="fas fa-tags"></i> Sinônimos</span>
+                        <h3>${item.nome}</h3>
+                    </header>
+                    <div class="info-extra-body synonyms-list">
+                        ${content}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(m);
+            m.querySelectorAll('.synonym-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    navigator.clipboard.writeText(el.textContent).then(() => {
+                        el.classList.add('copied');
+                        setTimeout(() => el.classList.remove('copied'), 500);
                     });
                 });
             });
-
-            // Delegação: fecha se clicar no botão OU fora do conteúdo
-            synonymsModal.addEventListener('click', (e) => {
-                if (
-                    e.target === synonymsModal || // clicou fora
-                    (e.target.id === 'closeSynonyms') // clicou no botão
-                ) {
-                    document.body.removeChild(synonymsModal);
-                }
+            m.addEventListener('click', (e) => {
+                if (e.target === m || e.target.closest('[data-close]')) document.body.removeChild(m);
             });
         });
     }
@@ -1146,7 +1093,6 @@ async function showItemDetails(item, navList = null) {
         try {
             const response = await fetch(`/linhas/${itemId}/sequencias`);
             const data = await response.json();
-            // ⬇️ aqui, usa o length do arraCcony
             return Array.isArray(data.sequencias) && data.sequencias.length > 0;
         } catch (error) {
             console.error('Erro ao verificar sequências:', error);
@@ -1154,10 +1100,11 @@ async function showItemDetails(item, navList = null) {
         }
     }
 
-    modalPhoto.style.height = `${mainInfoContent.offsetHeight}px`;
-    sequenceModal.style.height = `${mainInfoContent.offsetHeight}px`;
+    modalPhoto.style.height = `${itemInfoContent.offsetHeight}px`;
+    sequenceModal.style.height = `${itemInfoContent.offsetHeight}px`;
     bindSinopseButton(item);
     bindSynonymsButton(item);
+
     // Setup do botão de sequência e painel de ações
     function setupSequenceActionButtons() {
         const mainBtn = document.getElementById('mainSequenceBtn');
@@ -1504,10 +1451,7 @@ function openEditModal(item) {
     document.querySelector('button[type="submit"]').textContent = 'Salvar Alterações';
     lineModal.classList.remove('hidden');
     lineModal.classList.add('show');
-    setTimeout(() => {
-        initResizeObserver();
-        showAllTags();
-    }, 100);
+    setTimeout(() => { initResizeObserver(); showAllTags(); setupTagsSearch(); }, 100);
 }
 
 // Atualizar uma linha
@@ -1532,10 +1476,10 @@ async function updateLine(itemId) {
         console.log(result);
         alert(result.message || 'Erro ao editar a linha.');
 
-        // Recarregar as linhas da lista atual
+        // ⭐ RESTAURAR: buscar linhas atualizadas
         const updatedLinesResponse = await fetch(`/linhas/${state.currentList.id}`);
         const updatedLines = await updatedLinesResponse.json();
-        updatedLines.sort((a, b) => a.nome.localeCompare(b.nome));
+
         showItems(updatedLines);
 
         // Resetar formulário e modo

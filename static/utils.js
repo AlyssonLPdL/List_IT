@@ -72,13 +72,7 @@ function initTheme() {
 }
 
 function applyFilter(linhas) {
-    const showPutariaManhwa = document.getElementById('toggle-censure').checked;
-    const filteredLinhas = linhas.filter(item => {
-        const isPutaria = getClasseExtra(item) === "Putaria";
-        const isManhwa = item.conteudo === "Manhwa";
-        return showPutariaManhwa || !(isPutaria && isManhwa);
-    });
-    showItems(filteredLinhas);
+    showItems(linhas);
 }
 
 function getEpisodeLabel(contentType) {

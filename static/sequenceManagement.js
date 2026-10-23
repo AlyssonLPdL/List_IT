@@ -81,102 +81,209 @@ async function refreshSequenceDisplay(itemId = null) {
 }
 
 async function showAddToSequenceModal(currentItem) {
-    // 1) Se já existir, remove‑o (ou simplesmente sai)
-    const previous = document.querySelector('.sequence-search-modal');
-    if (previous) {
-        previous.remove();
-        // ou: return;  // só não reabra se já estiver um modal aberto
+    // Remove anterior se existir
+    document.querySelector('.sequence-search-modal')?.remove();
+
+    // ---- Coleta sequência do item atual ----
+    let sequenceId = null;
+    try {
+        const seqRes = await fetch(`/linhas/${currentItem.id}/sequencias`);
+        const seqData = await seqRes.json();
+        sequenceId = seqData.sequencias[0]?.id ?? null;
+    } catch (err) {
+        console.error('Erro ao buscar sequência do item:', err);
     }
-    // 1) Cria e anexa o modal
+
+    if (!sequenceId) {
+        alert('Sequência não encontrada!');
+        return;
+    }
+
+    // ---- Busca todos os itens da lista ----
+    let allItems = [];
+    try {
+        const response = await fetch(`/linhas/${currentItem.lista_id}`);
+        allItems = await response.json();
+    } catch (err) {
+        console.error('Erro ao carregar itens:', err);
+        return;
+    }
+
+    // ---- Busca IDs já presentes na sequência (para marcar/desabilitar) ----
+    let alreadyInSequence = new Set();
+    try {
+        const seqDetailRes = await fetch(`/sequencias/${sequenceId}`);
+        const seqDetail = await seqDetailRes.json();
+        (seqDetail.itens || []).forEach(it => alreadyInSequence.add(String(it.id)));
+    } catch (err) {
+        console.warn('Não foi possível verificar itens da sequência:', err);
+    }
+
+    // ---- Monta o modal ----
     const modal = document.createElement('div');
     modal.className = 'sequence-search-modal';
     modal.innerHTML = `
-                <div class="sequence-search-content">
-                <h3>Adicionar à Sequência</h3>
-                <input type="text" placeholder="Pesquisar itens..." id="sequenceSearchInput">
-                <div class="search-results" id="sequenceSearchResults"></div>
+        <div class="sequence-search-content">
+            <button class="modal-close-btn" data-close aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <header class="info-extra-header">
+                <span class="info-extra-badge info-extra-badge-accent">
+                    <i class="fas fa-project-diagram"></i> Adicionar à sequência
+                </span>
+                <h3>${escapeHtmlClient(currentItem.nome)}</h3>
+            </header>
+
+            <div class="sequence-search-body">
+                <div class="sequence-search-input-wrap">
+                    <i class="fas fa-search"></i>
+                    <input
+                        type="text"
+                        id="sequenceSearchInput"
+                        placeholder="Pesquisar itens da lista..."
+                        autocomplete="off"
+                    >
                 </div>
-            `;
+
+                <div class="search-results" id="sequenceSearchResults">
+                    <div class="sequence-search-empty">
+                        <i class="fas fa-search"></i>
+                        <p>Digite para buscar itens da lista</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     document.body.appendChild(modal);
 
-    // 2) Busca todos os itens da lista
-    const response = await fetch(`/linhas/${currentItem.lista_id}`);
-    const allItems = await response.json();
-
-    // 3) Capture o input e o container DE DENTRO do modal  
     const input = modal.querySelector('#sequenceSearchInput');
     const resultsContainer = modal.querySelector('#sequenceSearchResults');
 
-    // 4) Limpa inicialmente
-    resultsContainer.innerHTML = '';
+    // Foco automático na busca
+    setTimeout(() => input.focus(), 50);
 
-    // 5) Adiciona o listener no input escopo-local
-    input.addEventListener('input', e => {
-        const term = e.target.value.toLowerCase().trim();
-        console.log('Buscando termo:', term);               // agora vai logar
-        if (!term) {
-            resultsContainer.innerHTML = '';
+    // ---- Helpers ----
+    const showEmpty = (icon, text) => {
+        resultsContainer.innerHTML = `
+            <div class="sequence-search-empty">
+                <i class="fas ${icon}"></i>
+                <p>${text}</p>
+            </div>
+        `;
+    };
+
+    const renderResults = (items) => {
+        if (items.length === 0) {
+            showEmpty('fa-inbox', 'Nenhum resultado');
             return;
         }
+
+        resultsContainer.innerHTML = items.map(item => {
+            const inSeq = alreadyInSequence.has(String(item.id));
+            return `
+                <div class="sequence-search-result ${inSeq ? 'in-sequence' : ''}"
+                     data-id="${item.id}"
+                     ${inSeq ? 'data-disabled="1"' : ''}>
+                    <img src="${item.imagem_url || 'https://via.placeholder.com/60x90/1a1e28/6a7184?text=?'}"
+                         alt="${escapeHtmlClient(item.nome)}" loading="lazy">
+                    <div class="sequence-search-result-info">
+                        <span class="sequence-search-result-name">${escapeHtmlClient(item.nome)}</span>
+                        <div class="sequence-search-result-meta">
+                            ${item.conteudo ? `<span class="info-type">${escapeHtmlClient(item.conteudo)}</span>` : ''}
+                            ${item.episodio ? `<span class="info-ep"><i class="fas fa-hashtag"></i> ${escapeHtmlClient(String(item.episodio))}</span>` : ''}
+                        </div>
+                    </div>
+                    <span class="sequence-search-result-action">
+                        ${inSeq
+                            ? '<i class="fas fa-check"></i>'
+                            : '<i class="fas fa-plus"></i>'}
+                    </span>
+                </div>
+            `;
+        }).join('');
+
+        // Listeners dos cards
+        resultsContainer.querySelectorAll('.sequence-search-result').forEach(div => {
+            div.addEventListener('click', async () => {
+                if (div.dataset.disabled === '1') return;
+
+                div.classList.add('loading');
+                div.querySelector('.sequence-search-result-action').innerHTML =
+                    '<i class="fas fa-spinner fa-spin"></i>';
+
+                try {
+                    // Descobre a próxima ordem
+                    const seqDetailRes = await fetch(`/sequencias/${sequenceId}`);
+                    const seqDetail = await seqDetailRes.json();
+                    const ordem = (seqDetail.itens?.length || 0) + 1;
+
+                    // Adiciona
+                    await fetch(`/sequencias/${sequenceId}/itens`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ linha_id: parseInt(div.dataset.id), ordem })
+                    });
+
+                    // Marca como já adicionado
+                    alreadyInSequence.add(String(div.dataset.id));
+                    div.classList.add('in-sequence');
+                    div.dataset.disabled = '1';
+                    div.querySelector('.sequence-search-result-action').innerHTML =
+                        '<i class="fas fa-check"></i>';
+
+                    // Atualiza painel da sequência
+                    await refreshSequenceDisplay(currentItem.id);
+                } catch (err) {
+                    console.error('Erro ao adicionar item:', err);
+                    div.classList.remove('loading');
+                    div.querySelector('.sequence-search-result-action').innerHTML =
+                        '<i class="fas fa-plus"></i>';
+                    alert('Erro ao adicionar item à sequência.');
+                }
+            });
+        });
+    };
+
+    // ---- Busca ----
+    input.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase().trim();
+
+        if (!term) {
+            showEmpty('fa-search', 'Digite para buscar itens da lista');
+            return;
+        }
+
         const filtered = allItems.filter(i =>
             i.id !== currentItem.id &&
             i.nome.toLowerCase().includes(term)
         );
-        console.log('Filtrados:', filtered);                // e aqui também
-        displaySearchResults(filtered, currentItem, modal);
+
+        renderResults(filtered);
     });
 
-    // 6) Fecha se clicar fora
-    modal.addEventListener('click', e => {
-        if (e.target === modal) document.body.removeChild(modal);
+    // ---- Fechar ----
+    const close = () => document.body.removeChild(modal);
+    modal.querySelector('[data-close]')?.addEventListener('click', close);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
     });
 
-    function displaySearchResults(items, currentItem, modal) {
-        const resultsContainer = modal.querySelector('#sequenceSearchResults');
-        resultsContainer.innerHTML = '';
-
-        if (items.length === 0) {
-            resultsContainer.innerHTML = '<div class="no-results">Nenhum resultado</div>';
-            return;
+    // ESC fecha
+    const escHandler = (e) => {
+        if (e.key === 'Escape') {
+            close();
+            document.removeEventListener('keydown', escHandler);
         }
+    };
+    document.addEventListener('keydown', escHandler);
+}
 
-        items.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'search-result-item add-to-sequence-btn';
-            div.dataset.id = item.id;
-            div.innerHTML = `
-                <img src="${item.imagem_url}" width="50" height="75" alt="${item.nome}">
-                <span>${item.nome}</span>
-            `;
-            resultsContainer.appendChild(div);
-
-            div.addEventListener('click', async () => {
-                // 1. Buscar a sequência do currentItem
-                const seqRes = await fetch(`/linhas/${currentItem.id}/sequencias`);
-                const seqData = await seqRes.json();
-                const sequenceId = seqData.sequencias[0]?.id;
-                if (!sequenceId) {
-                    alert("Sequência não encontrada!");
-                    return;
-                }
-
-                // 2. Descobrir a ordem máxima atual
-                const seqDetailRes = await fetch(`/sequencias/${sequenceId}`);
-                const seqDetail = await seqDetailRes.json();
-                const ordem = (seqDetail.itens?.length || 0) + 1;
-
-                // 3. Adicionar o item selecionado à sequência
-                await fetch(`/sequencias/${sequenceId}/itens`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ linha_id: item.id, ordem })
-                });
-
-                document.body.removeChild(modal);
-                refreshSequenceDisplay(currentItem.id);
-            });
-        });
-    }
+// Helper local de escape (para evitar depender de exports)
+function escapeHtmlClient(str) {
+    return String(str ?? '').replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
 }
 
 async function getSequenceButtons(itemId) {

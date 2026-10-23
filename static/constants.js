@@ -12,6 +12,7 @@ const mainInfoContent = modalInfo.querySelector('.modal-content');
 const mainInfoContentId = document.getElementById('mainInfoContent');
 const tagsContainerId = document.getElementById('tags-container');
 const sequenceModal = document.getElementById('modal-sequence');
+const itemInfoContent = document.getElementById('itemInfoContent');
 
 // Listas
 const sidebarLists = document.querySelector('.sidebar-lists');
@@ -31,7 +32,8 @@ export const state = {
     selectedTags: [],
     allIds: [],
     currentIdx: 0,
-    currentNavList: []
+    currentNavList: [],
+    detailsReq: 0
 };
 
 // Theme Toggle
@@ -42,5 +44,5 @@ export {
     modal, createListBtn, closeModal, listForm, lineModal, closeLineModal,
     modalInfo, modalPhoto, mainInfoContent, mainInfoContentId, tagsContainerId,
     sequenceModal, sidebarLists, mainContent, lineForm, selectedTagsContainer,
-    themeToggle
+    themeToggle, itemInfoContent
 };
