@@ -1054,10 +1054,25 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Container vertical: linha de cima + bloco de tags embaixo */
 .filter-panel-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Linha superior com os 3 filtros lado a lado (responsivo) */
+.filter-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 18px;
+}
+
+/* Bloco de Tags: ocupa a largura toda e tem um separador em cima */
+.filter-block-tags {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 2px;
 }
 .filter-block {
   display: flex;
@@ -2636,4 +2651,69 @@ progress::-webkit-progress-value {
 }
 @media (max-width: 992px) {
   .sidebar-toggle { display: block; }
+}
+
+/* ============================================================
+   TAG FILTER — colunas com afinidades empilhadas
+   ============================================================ */
+
+/* A seção de tags deixa de ser "chips soltos" e vira container de colunas */
+.filter-section[data-type="tags"] {
+  display: block;
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+  width: 100%;
+}
+
+.tag-filter-columns {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+}
+
+.tag-filter-column {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.tag-filter-column-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
+.tag-filter-affinity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+/* Separador sutil entre afinidades da mesma coluna */
+.tag-filter-affinity + .tag-filter-affinity {
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
+}
+
+/* Responsivo */
+@media (max-width: 900px) {
+  .tag-filter-columns { flex-wrap: wrap; }
+  .tag-filter-column  { flex: 1 1 calc(50% - 7px); }
+}
+@media (max-width: 560px) {
+  .tag-filter-column  { flex: 1 1 100%; }
 }

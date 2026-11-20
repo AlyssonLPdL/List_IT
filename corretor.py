@@ -176,7 +176,7 @@ def padronizar_tags():
         "Shounen", "Shoujo-ai", "Mahou Shoujo", "Yuri", "Gender bender",
         
         # Adulto e Controverso
-        "Ecchi", "Nudez", "Sexo", "Incesto", "NTR", "Harem", "Nudez Nippleless", "Hentai",
+        "Ecchi", "Nudez", "Sexo", "Incesto", "NTR", "Harem", "Censurado", "Hentai",
         
         # Isekai
         "Isekai", "MC Vilão",
@@ -279,8 +279,7 @@ def padronizar_tags():
         "incesto": "Incesto",
         "ntr": "NTR",
         "harem": "Harem",
-        "nudez nippleless": "Nudez Nippleless",
-        "nippleless": "Nudez Nippleless",
+        "censurado": "Censurado",
         "hentai": "Hentai",
         
         # Isekai

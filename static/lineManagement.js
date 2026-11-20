@@ -55,6 +55,47 @@ function sortLines(linhas, order) {
     return linhas;
 }
 
+const filterTagGroups = {
+    "Romance": [
+        // ciclo do relacionamento
+        ["Beijo", "Namoro", "Noivado", "Casamento"],
+        // consequências
+        ["Morar Juntos", "Gravidez", "Fez Filho(s)"],
+        // categorias amplas
+        ["Romance", "Romance do bom"]
+    ],
+    "Ação": [
+        // combate direto
+        ["Ação", "Poder", "Overpower", "Aventura"],
+        // cenário
+        ["Dungeon", "Mecha", "Monstros", "Demônio"],
+        // sobrenatural
+        ["Magia", "Sobrenatural", "Deuses", "Fantasia"]
+    ],
+    "Gênero": [
+        // demografias (público)
+        ["Shounen", "Shoujo-ai", "Mahou Shoujo", "Yuri", "Gender bender"],
+        // formato / ambientação
+        ["Slice of Life", "Vida Escolar", "Dormitorios", "Medieval"],
+        // tom / emoção
+        ["Drama", "Tristeza", "Vergonhoso", "Fofo"],
+        // gêneros de impacto
+        ["Terror", "Gore", "Comédia"],
+        // tropes / fantasia
+        ["Isekai", "Reencarnar", "MC Vilão", "Kemonomimi", "Goat"],
+        // sistemas / técnicos
+        ["System", "VR/Jogo", "SciFi"],
+        // nicho
+        ["Esporte", "Musical"]
+    ],
+    "Adulto": [
+        // leve
+        ["Ecchi", "Harem", "Incesto", "Censurado"],
+        // pesado
+        ["NTR", "Sexo", "Nudez", "Hentai"]
+    ],
+};
+
 // ===== TAGS SEARCH (module-level) =====
 function setupTagsSearch() {
     const input = document.getElementById('tags-search-input');
@@ -161,6 +202,63 @@ async function processarFilaItens(itens) {
     }
 }
 
+function buildTagFilterGroups(tagsFromList, sectionEl) {
+    sectionEl.innerHTML = '';
+
+    const present = new Set(
+        (tagsFromList || []).map(t => String(t).trim()).filter(Boolean)
+    );
+    const usedInGroups = new Set();
+
+    const columnsWrap = document.createElement('div');
+    columnsWrap.className = 'tag-filter-columns';
+    sectionEl.appendChild(columnsWrap);
+
+    const makeColumn = (labelText, affinityRows) => {
+        const col = document.createElement('div');
+        col.className = 'tag-filter-column';
+
+        const header = document.createElement('div');
+        header.className = 'tag-filter-column-header';
+        header.textContent = labelText;
+        col.appendChild(header);
+
+        affinityRows.forEach(groupTags => {
+            const row = document.createElement('div');
+            row.className = 'tag-filter-affinity';
+            groupTags.forEach(tag => {
+                const span = document.createElement('span');
+                span.textContent = tag;
+                span.classList.add('filter-option');
+                span.dataset.value = tag;
+                row.appendChild(span);
+            });
+            col.appendChild(row);
+        });
+
+        columnsWrap.appendChild(col);
+    };
+
+    // 1) Colunas fixas — inclui só afinidades que tenham ao menos 1 tag presente
+    Object.entries(filterTagGroups).forEach(([groupName, affinityRows]) => {
+        const visibleAffinities = [];
+        affinityRows.forEach(groupTags => {
+            const visible = groupTags.filter(t => present.has(t));
+            if (visible.length === 0) return;
+            visible.forEach(t => usedInGroups.add(t));
+            visibleAffinities.push(visible);
+        });
+        if (visibleAffinities.length === 0) return;
+        makeColumn(groupName, visibleAffinities);
+    });
+
+    // 2) Tags personalizadas que não caem em nenhum grupo → coluna "Outras"
+    const extras = [...present].filter(t => !usedInGroups.has(t));
+    if (extras.length > 0) {
+        makeColumn('Outras', [extras]);
+    }
+}
+
 // Função para exibir detalhes da lista e suas linhas
 async function showListDetails(lista) {
     initImageTestModal();
@@ -202,7 +300,7 @@ async function showListDetails(lista) {
                                     <input type="checkbox" id="toggle-censure">
                                     <span class="slider"></span>
                                 </span>
-                                <span class="censure-label">Conteúdo adulto</span>
+                                <span class="censure-label"></span>
                             </label>
                         </div>
                     </div>
@@ -234,19 +332,24 @@ async function showListDetails(lista) {
                 <!-- FILTER PANEL -->
                 <div id="filter-panel" class="hidden">
                     <div class="filter-panel-inner">
-                        <div class="filter-block">
-                            <h4 class="filter-block-title"><i class="fas fa-circle-dot"></i> Status</h4>
-                            <div class="filter-section" data-type="status"></div>
+                        <!-- Linha 1: Status | Conteúdo | Opinião -->
+                        <div class="filter-row">
+                            <div class="filter-block">
+                                <h4 class="filter-block-title"><i class="fas fa-circle-dot"></i> Status</h4>
+                                <div class="filter-section" data-type="status"></div>
+                            </div>
+                            <div class="filter-block">
+                                <h4 class="filter-block-title"><i class="fas fa-tag"></i> Conteúdo</h4>
+                                <div class="filter-section" data-type="conteudo"></div>
+                            </div>
+                            <div class="filter-block">
+                                <h4 class="filter-block-title"><i class="fas fa-star"></i> Opinião</h4>
+                                <div class="filter-section" data-type="opiniao"></div>
+                            </div>
                         </div>
-                        <div class="filter-block">
-                            <h4 class="filter-block-title"><i class="fas fa-tag"></i> Conteúdo</h4>
-                            <div class="filter-section" data-type="conteudo"></div>
-                        </div>
-                        <div class="filter-block">
-                            <h4 class="filter-block-title"><i class="fas fa-star"></i> Opinião</h4>
-                            <div class="filter-section" data-type="opiniao"></div>
-                        </div>
-                        <div class="filter-block">
+
+                        <!-- Linha 2: Tags (full width) -->
+                        <div class="filter-block filter-block-tags">
                             <h4 class="filter-block-title"><i class="fas fa-hashtag"></i> Tags</h4>
                             <div class="filter-section" data-type="tags"></div>
                         </div>
@@ -380,7 +483,7 @@ async function showListDetails(lista) {
     buildSection(statuses, panel.querySelector('[data-type="status"]'));
     buildSection(conteudos, panel.querySelector('[data-type="conteudo"]'));
     buildSection(opinioes, panel.querySelector('[data-type="opiniao"]'));
-    buildSection(tags, panel.querySelector('[data-type="tags"]'));
+    buildTagFilterGroups(tags, panel.querySelector('[data-type="tags"]'));
 
     // 3) Toggle do painel
     document.getElementById('filter-toggle').addEventListener('click', () => {
